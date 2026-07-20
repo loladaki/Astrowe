@@ -87,6 +87,16 @@ button:hover { filter: brightness(1.08); }
   font-size: 1.05rem;
 }
 
+.site {
+  max-width: 720px;
+  margin: -0.75rem auto 1.5rem;
+  padding: 0.6rem 1.25rem;
+  color: var(--muted);
+  font-size: 0.88rem;
+  text-align: center;
+}
+.site-missing { color: var(--ok); }
+
 .nights {
   max-width: 720px;
   margin: 0 auto;

@@ -5,10 +5,14 @@ from pathlib import Path
 from typing import Literal
 
 import httpx
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.staticfiles import StaticFiles
 
-from app import openmeteo, score
+from app import lightpollution, openmeteo, score
+
+# Lê LIGHTPOLLUTIONMAP_API_KEY de um .env na raiz do projeto, se existir.
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 app = FastAPI(title="Astrowe", description="Score de observação astronómica por noite")
 
@@ -30,7 +34,20 @@ async def forecast(
         data = await openmeteo.fetch_forecast(lat, lon)
     except httpx.HTTPError as exc:
         raise HTTPException(status_code=502, detail=f"Open-Meteo indisponível: {exc}")
-    return score.build_forecast(data, lat, lon, mode)
+
+    # Degradação graciosa: sem chave da API (ou se ela falhar) devolve None e a
+    # previsão sai na mesma, apenas sem o fator de poluição luminosa.
+    lp = await lightpollution.fetch(lat, lon)
+    return score.build_forecast(data, lat, lon, mode, lp)
+
+
+@app.get("/api/health")
+async def health():
+    """Diagnóstico rápido: que ingredientes estão disponíveis."""
+    return {
+        "open_meteo": True,  # aberta, sem chave
+        "light_pollution_key_configured": lightpollution.api_key_configured(),
+    }
 
 
 # Serve o frontend estático em / (depois das rotas /api).

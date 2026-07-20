@@ -26,6 +26,11 @@ Se aparecer código fora da linha acima, é derrapagem.
 - **Efemérides (Sol, Lua, escuridão astronómica):** [Skyfield](https://rhodesmill.org/skyfield/)
   — cálculo local, determinístico, offline. Descarrega `de421.bsp` (~17 MB) na 1ª execução.
 - **Geocodificação (nome → lat/lon):** Open-Meteo Geocoding API (usada no frontend).
+- **Poluição luminosa:** [lightpollutionmap.info](https://www.lightpollutionmap.info)
+  `QueryRaster` (World Atlas 2015). **Exige chave pessoal** — pede-se por email a
+  Jurij Stare (`starej@t-2.net`), há nível gratuito (~500 pedidos/dia). Lê-se de
+  `LIGHTPOLLUTIONMAP_API_KEY` (ver `.env.example`). Sem chave o Astrowe funciona
+  na mesma, apenas sem este fator.
 
 ## Arquitetura
 
@@ -85,6 +90,26 @@ isto, uma noite inteira impecável de 5.6h seria sempre reportada como "4h".
 | janela | escuridão astronómica (−18°) | do pôr ao nascer do Sol |
 | peso da Lua | 0.70 | 0.05 |
 | chão da transparência | 0.70 | 0.85 |
+
+### Poluição luminosa
+
+Constante no tempo (é propriedade do **sítio**, não da noite), por isso entra
+como fator multiplicativo **no score final** e nunca na qualidade horária — se
+entrasse hora a hora, num sítio Bortle 9 tudo cairia abaixo de `REPORT_FLOOR` e
+deixaríamos de reportar janelas. Aplica-se nos dois modos.
+
+`Bortle 1 → ×1.0` ... `Bortle 9 → ×0.30` (linear, `LP_MIN_FACTOR`).
+
+Conversão (validada contra o DeepskyLog):
+```
+total = artificial_mcd_m2 + 0.132025599479675   # brilho natural do céu
+SQM   = log10(total / 108000000) / −0.4
+```
+Tabela SQM→Bortle em `app/lightpollution.py`, de `laravel-astronomy-library`.
+
+Como não muda de noite para noite, **não altera a ordem das noites** num sítio —
+só o significado absoluto do score e a comparação entre sítios. Resposta em
+cache por coordenada (~100 m) para poupar o limite diário da chave.
 
 ### Limitação conhecida
 

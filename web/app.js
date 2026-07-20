@@ -5,6 +5,7 @@ const placeInput = document.getElementById("place");
 const geoBtn = document.getElementById("geo-btn");
 const statusEl = document.getElementById("status");
 const summaryEl = document.getElementById("summary");
+const siteEl = document.getElementById("site");
 const nightsEl = document.getElementById("nights");
 const modeBtns = document.querySelectorAll(".mode-btn");
 
@@ -36,6 +37,7 @@ async function loadForecast() {
   if (!current) return;
   setStatus(`A calcular as noites para ${current.label}…`);
   summaryEl.hidden = true;
+  siteEl.hidden = true;
   nightsEl.innerHTML = "";
   try {
     const res = await fetch(
@@ -58,9 +60,25 @@ function scoreClass(score, hasWindow) {
   return "score-poor";
 }
 
+function renderSite(data) {
+  siteEl.hidden = false;
+  const lp = data.light_pollution;
+  if (lp) {
+    siteEl.className = "site";
+    siteEl.textContent =
+      `🔦 Bortle ${lp.bortle} · SQM ${lp.sqm} mag/arcsec² — já incluído no score.`;
+  } else {
+    siteEl.className = "site site-missing";
+    siteEl.textContent =
+      "🔦 Poluição luminosa não aplicada (falta a chave da API do lightpollutionmap.info). " +
+      "Os scores estão otimistas para locais urbanos.";
+  }
+}
+
 function render(data) {
   summaryEl.hidden = false;
   summaryEl.textContent = data.summary;
+  renderSite(data);
 
   for (const n of data.nights) {
     const hasWindow = n.window_start !== null;

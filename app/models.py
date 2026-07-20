@@ -4,6 +4,14 @@ from __future__ import annotations
 from pydantic import BaseModel
 
 
+class LightPollution(BaseModel):
+    """Propriedade do local, constante no tempo — não da noite."""
+    bortle: int                          # 1 (pristino) a 9 (centro urbano)
+    sqm: float                           # mag/arcsec²
+    artificial_mcd_m2: float             # brilho artificial bruto
+    source: str
+
+
 class NightScore(BaseModel):
     date: str                            # dia local em que a noite começa
     score: int                           # 0–100
@@ -33,6 +41,7 @@ class ForecastResponse(BaseModel):
     timezone: str
     mode: str                            # "deepsky" | "planetary"
     mode_label: str
+    light_pollution: LightPollution | None   # None se não houver chave da API
     generated_at: str                    # ISO UTC
     summary: str                         # o julgamento de topo
     nights: list[NightScore]

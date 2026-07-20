@@ -12,7 +12,7 @@ import math
 from datetime import datetime, timedelta, timezone
 
 from app import astro
-from app.models import ForecastResponse, NightScore
+from app.models import ForecastResponse, LightPollution, NightScore
 
 # Pesos por camada de nuvens: as baixas tapam tudo, os cirros altos deixam
 # passar bastante. Modeladas como obstruções independentes que se multiplicam.
@@ -35,6 +35,12 @@ TIE_EPSILON = 1e-6
 # relato (quanto céu bom tens), nunca o score — por isso não criam degraus.
 REPORT_RATIO = 0.80   # fração da qualidade do troço ótimo que ainda conta
 REPORT_FLOOR = 0.25   # chão absoluto, para não alargar para dentro de lixo
+
+# Poluição luminosa: Bortle 1 (pristino) não corta nada, Bortle 9 (centro
+# urbano) corta até LP_MIN_FACTOR. Aplica-se ao score final e nunca à
+# qualidade horária — senão, num sítio Bortle 9 todas as horas cairiam abaixo
+# de REPORT_FLOOR e deixaríamos de reportar janelas.
+LP_MIN_FACTOR = 0.30
 
 PROFILES = {
     "deepsky": {
@@ -147,6 +153,18 @@ def _best_window(qualities: list[float]):
     return best
 
 
+def light_pollution_factor(bortle: int | None) -> float:
+    """Bortle 1 → 1.0, Bortle 9 → LP_MIN_FACTOR, linear pelo meio.
+
+    Sem dados (None) devolve 1.0: não inventamos uma penalização que não
+    sabemos medir.
+    """
+    if bortle is None:
+        return 1.0
+    bortle = max(1, min(9, bortle))
+    return 1.0 - (bortle - 1) * (1.0 - LP_MIN_FACTOR) / 8.0
+
+
 def _extend_window(qualities: list[float], best: dict) -> tuple[int, int]:
     """Alarga a janela reportada às horas vizinhas de qualidade comparável.
 
@@ -187,7 +205,8 @@ def _parse_hourly(data: dict):
 
 
 def build_forecast(data: dict, lat: float, lon: float,
-                   mode: str = DEFAULT_MODE) -> ForecastResponse:
+                   mode: str = DEFAULT_MODE,
+                   light_pollution: dict | None = None) -> ForecastResponse:
     profile = PROFILES.get(mode, PROFILES[DEFAULT_MODE])
     times, h = _parse_hourly(data)
     offset = int(data.get("utc_offset_seconds", 0))
@@ -198,22 +217,27 @@ def build_forecast(data: dict, lat: float, lon: float,
                                     profile["horizon_degrees"])
     moon_alt, moon_illum = astro.moon_series(lat, lon, offset, times)
 
+    bortle = light_pollution.get("bortle") if light_pollution else None
+    lp_factor = light_pollution_factor(bortle)
+
     nights = [
         _build_night(d, windows.get(d, (None, None)), times, h,
-                     moon_alt, moon_illum, profile)
+                     moon_alt, moon_illum, profile, lp_factor)
         for d in dates
     ]
 
     return ForecastResponse(
         latitude=lat, longitude=lon, timezone=tzname,
         mode=mode, mode_label=profile["label"],
+        light_pollution=LightPollution(**light_pollution) if light_pollution else None,
         generated_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        summary=_build_summary(nights, profile["label"]),
+        summary=_build_summary(nights, profile["label"], light_pollution),
         nights=nights,
     )
 
 
-def _build_night(d, window, times, h, moon_alt, moon_illum, profile) -> NightScore:
+def _build_night(d, window, times, h, moon_alt, moon_illum, profile,
+                 lp_factor: float = 1.0) -> NightScore:
     night_start, night_end = window
 
     if night_start is None or night_end is None:
@@ -255,7 +279,7 @@ def _build_night(d, window, times, h, moon_alt, moon_illum, profile) -> NightSco
         qualities.append(quality)
 
     best = _best_window(qualities)
-    score = int(round(max(0.0, min(100.0, 100.0 * best["value"]))))
+    score = int(round(max(0.0, min(100.0, 100.0 * best["value"] * lp_factor))))
 
     # Score sai do troço ótimo; a janela reportada alarga-se ao céu comparável.
     ext_i, ext_j = _extend_window(qualities, best)
@@ -298,11 +322,16 @@ def _build_night(d, window, times, h, moon_alt, moon_illum, profile) -> NightSco
     )
 
 
-def _build_summary(nights: list[NightScore], mode_label: str) -> str:
+def _build_summary(nights: list[NightScore], mode_label: str,
+                   light_pollution: dict | None = None) -> str:
     scored = [n for n in nights if n.score > 0]
     if not scored:
         return f"Nenhuma noite com condições utilizáveis para {mode_label} nos próximos dias."
     best = max(scored, key=lambda n: n.score)
     weekday = datetime.fromisoformat(best.date).strftime("%A")
+    site = ""
+    if light_pollution:
+        site = (f" Local: Bortle {light_pollution['bortle']} "
+                f"(SQM {light_pollution['sqm']}).")
     return (f"Para {mode_label}, a melhor noite é {weekday} ({best.date}) — "
-            f"score {best.score}/100. {best.details}")
+            f"score {best.score}/100. {best.details}{site}")
