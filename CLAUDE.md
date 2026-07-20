@@ -27,8 +27,9 @@ Se aparecer código fora da linha acima, é derrapagem.
   — cálculo local, determinístico, offline. Descarrega `de421.bsp` (~17 MB) na 1ª execução.
 - **Geocodificação (nome → lat/lon):** Open-Meteo Geocoding API (usada no frontend).
 - **Poluição luminosa:** [lightpollutionmap.info](https://www.lightpollutionmap.info)
-  `QueryRaster` (World Atlas 2015). **Exige chave pessoal** — pede-se por email a
-  Jurij Stare (`starej@t-2.net`), há nível gratuito (~500 pedidos/dia). Lê-se de
+  `QueryRaster`, camada **Sky Brightness 2025** (`sb_2025`), com recuo automático
+  para `wa_2015`. **Exige chave pessoal** — pede-se por email a Jurij Stare
+  (`starej@t-2.net`), há nível gratuito (~500 pedidos/dia). Lê-se de
   `LIGHTPOLLUTIONMAP_API_KEY` (ver `.env.example`). Sem chave o Astrowe funciona
   na mesma, apenas sem este fator.
 
@@ -100,11 +101,18 @@ deixaríamos de reportar janelas. Aplica-se nos dois modos.
 
 `Bortle 1 → ×1.0` ... `Bortle 9 → ×0.30` (linear, `LP_MIN_FACTOR`).
 
-Conversão (validada contra o DeepskyLog):
+Conversão (retirada do próprio código do lightpollutionmap.info, que aplica a
+mesma fórmula às camadas SB e WA_2015):
 ```
-total = artificial_mcd_m2 + 0.132025599479675   # brilho natural do céu
+total = artificial_mcd_m2 + 0.171168465   # brilho natural do céu
 SQM   = log10(total / 108000000) / −0.4
 ```
+Dá SQM 22.00 para céu pristino — o valor canónico, e o máximo possível.
+
+⚠️ Não usar `0.132025599479675` (a constante do DeepskyLog): produz SQM 22.28
+para céu pristino, e a própria `laravel-astronomy-library` deles lança exceção
+para SQM > 22.0. É um bug do lado deles.
+
 Tabela SQM→Bortle em `app/lightpollution.py`, de `laravel-astronomy-library`.
 
 Como não muda de noite para noite, **não altera a ordem das noites** num sítio —
