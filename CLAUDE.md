@@ -54,12 +54,40 @@ uvicorn app.main:app --reload
 
 A **primeira** chamada à API é lenta (Skyfield descarrega `de421.bsp`). Depois fica em cache.
 
-## A fórmula do score (v1 — a afinar)
+## A fórmula do score (v2)
 
-Por noite, dentro da janela de escuridão astronómica:
-- `cloud_score = 100 − nuvens_médias`  (fator dominante)
-- `moon_factor = 1 − 0.6 × (iluminação × fração_da_noite_com_Lua_acima)`
-- `transparency_factor` a partir da humidade média (proxy)
-- `score = cloud_score × moon_factor × transparency_factor`  → 0–100
+A ideia central: **nunca fazer a média da noite toda**. "Limpo até à 1h, depois
+fecha" tem a mesma média que "meio encoberto a noite inteira" — e uma é uma boa
+noite, a outra é inútil. Por isso calcula-se **qualidade hora a hora** e
+procura-se a **melhor janela contígua**.
 
-A fórmula é o local certo para iterar; ver `app/score.py`.
+Qualidade de cada hora (0–1), tudo contínuo (sem degraus):
+- **Nuvens por camada** — `(1−1.0·baixas)(1−0.85·médias)(1−0.5·altas)`.
+  Cirros altos deixam passar; estratos baixos não.
+- **Lua** — `1 − peso × iluminação × sin(altitude)`. `sin` vale 0 no horizonte e
+  1 no zénite: uma Lua cheia rasante quase não incomoda.
+- **Transparência** — do *spread* temperatura−ponto de orvalho (1 °C = nevoeiro,
+  9 °C = ar seco), não da humidade a 2 m.
+
+Depois: o troço contíguo que maximiza `qualidade_média × fator_duração`, com
+`fator_duração = min(1, horas/4)^0.5` (crédito total às 4h, retornos
+decrescentes). **Não há limiar de "hora utilizável"** — acrescentar uma hora
+fraca baixa a média mas sobe a duração, e o ótimo aparece sozinho.
+
+⚠️ Distinção importante: o **score** vem do troço ótimo (satura às 4h), mas a
+**janela reportada** alarga-se às horas vizinhas de qualidade comparável. Sem
+isto, uma noite inteira impecável de 5.6h seria sempre reportada como "4h".
+
+### Perfis (`mode`)
+
+|  | céu profundo | planetas e Lua |
+|---|---|---|
+| janela | escuridão astronómica (−18°) | do pôr ao nascer do Sol |
+| peso da Lua | 0.70 | 0.05 |
+| chão da transparência | 0.70 | 0.85 |
+
+### Limitação conhecida
+
+Em modo *planetas* os scores comprimem-se no topo (quase tudo "Excelente"),
+porque o discriminador real é o **seeing** (turbulência atmosférica) e não o
+temos. Um proxy possível: vento em altitude (`wind_speed_250hPa` no Open-Meteo).

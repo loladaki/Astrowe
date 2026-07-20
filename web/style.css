@@ -55,6 +55,26 @@ button {
 #geo-btn { background: var(--panel-2); color: var(--text); border: 1px solid var(--border); }
 button:hover { filter: brightness(1.08); }
 
+.modes {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  margin: 0 auto 1.5rem;
+}
+.mode-btn {
+  background: var(--panel);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  font-weight: 500;
+  font-size: 0.9rem;
+  padding: 0.5rem 1rem;
+}
+.mode-btn.active {
+  background: var(--panel-2);
+  color: var(--text);
+  border-color: var(--accent);
+}
+
 .status { text-align: center; color: var(--muted); }
 .summary {
   max-width: 720px;
