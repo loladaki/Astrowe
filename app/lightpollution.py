@@ -10,14 +10,23 @@ tabela SQM→Bortle da laravel-astronomy-library dos mesmos autores.
 """
 from __future__ import annotations
 
+import logging
 import math
 import os
 
 import httpx
 
-QUERY_URL = "https://www.lightpollutionmap.info/QueryRaster/"
+logger = logging.getLogger(__name__)
+
+# Endpoint documentado em /api-html/doc-rasterquery.html. O antigo
+# (/QueryRaster/) ainda responde para wa_2015 mas dá HTTP 500 para sb_*.
+QUERY_URL = "https://www.lightpollutionmap.info/api/queryraster"
 API_KEY_ENV = "LIGHTPOLLUTIONMAP_API_KEY"
 LAYER_ENV = "LIGHTPOLLUTIONMAP_LAYER"
+
+# A API devolve erros em texto simples com HTTP 200 — não dá para confiar no
+# código de estado. Estes são fatais: tentar outra camada não ajuda.
+FATAL_ERROR_MARKERS = ("authentication", "quota")
 
 # Sky Brightness 2025: dados dez anos mais recentes que o World Atlas 2015.
 # O WA_2015 fica como recurso — a lista de camadas aceites pela API não está
@@ -65,14 +74,32 @@ def api_key_configured() -> bool:
     return bool(os.environ.get(API_KEY_ENV, "").strip())
 
 
+class LightPollutionError(Exception):
+    """Erro devolvido pela API em texto simples (com HTTP 200)."""
+
+    def __init__(self, message: str, fatal: bool):
+        super().__init__(message)
+        self.fatal = fatal
+
+
 async def _query_layer(client: httpx.AsyncClient, layer: str,
                        lat: float, lon: float, key: str) -> float:
-    """Brilho artificial (mcd/m²) nesta camada. Levanta em caso de falha."""
+    """Brilho artificial (mcd/m²) nesta camada.
+
+    A API sinaliza erros com texto simples e HTTP 200 ("Invalid
+    authentication.", "Daily quota exceeded."), por isso é o corpo que decide,
+    não o código de estado.
+    """
     params = {"ql": layer, "qt": "point", "qd": f"{lon},{lat}", "key": key}
     resp = await client.get(QUERY_URL, params=params)
     resp.raise_for_status()
-    # A resposta é um número simples (por vezes entre aspas).
-    return float(resp.text.strip().strip('"'))
+
+    body = resp.text.strip().strip('"')
+    try:
+        return float(body)
+    except ValueError:
+        fatal = any(m in body.lower() for m in FATAL_ERROR_MARKERS)
+        raise LightPollutionError(body[:200], fatal) from None
 
 
 async def fetch(lat: float, lon: float) -> dict | None:
@@ -98,9 +125,16 @@ async def fetch(lat: float, lon: float) -> dict | None:
         for layer in layers:
             try:
                 artificial = await _query_layer(client, layer, lat, lon, key)
-            except (httpx.HTTPError, ValueError):
+            except LightPollutionError as exc:
+                logger.warning("lightpollutionmap (%s): %s", layer, exc)
+                if exc.fatal:
+                    break  # chave inválida ou quota esgotada: não insistir
+                continue
+            except httpx.HTTPError as exc:
+                logger.warning("lightpollutionmap (%s) falhou: %s", layer, exc)
                 continue
             if artificial < 0:  # sentinela de "sem dados" do raster
+                logger.warning("lightpollutionmap (%s): sem dados neste ponto", layer)
                 continue
             sqm = sqm_from_artificial(artificial)
             result = {

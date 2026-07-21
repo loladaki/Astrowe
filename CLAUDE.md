@@ -26,12 +26,22 @@ Se aparecer código fora da linha acima, é derrapagem.
 - **Efemérides (Sol, Lua, escuridão astronómica):** [Skyfield](https://rhodesmill.org/skyfield/)
   — cálculo local, determinístico, offline. Descarrega `de421.bsp` (~17 MB) na 1ª execução.
 - **Geocodificação (nome → lat/lon):** Open-Meteo Geocoding API (usada no frontend).
-- **Poluição luminosa:** [lightpollutionmap.info](https://www.lightpollutionmap.info)
-  `QueryRaster`, camada **Sky Brightness 2025** (`sb_2025`), com recuo automático
-  para `wa_2015`. **Exige chave pessoal** — pede-se por email a Jurij Stare
-  (`starej@t-2.net`), há nível gratuito (~500 pedidos/dia). Lê-se de
-  `LIGHTPOLLUTIONMAP_API_KEY` (ver `.env.example`). Sem chave o Astrowe funciona
-  na mesma, apenas sem este fator.
+- **Poluição luminosa:** [lightpollutionmap.info](https://www.lightpollutionmap.info),
+  endpoint `https://www.lightpollutionmap.info/api/queryraster`
+  ([docs](https://www.lightpollutionmap.info/api-html/doc-rasterquery.html)),
+  camada **Sky Brightness 2025** (`sb_2025`), com recuo para `wa_2015`.
+  **Exige chave pessoal** — pede-se por email a Jurij Stare (`starej@t-2.net`).
+  Gratuito até **1000 pedidos/dia** (reset à meia-noite UTC+1); ilimitado por
+  100 €/ano. Lê-se de `LIGHTPOLLUTIONMAP_API_KEY` (ver `.env.example`). Sem
+  chave o Astrowe funciona na mesma, apenas sem este fator.
+
+  ⚠️ Dois detalhes que só se descobrem a usar:
+  - O endpoint **antigo** (`/QueryRaster/`) ainda responde para `wa_2015` mas dá
+    HTTP 500 para `sb_*`. Usar sempre `/api/queryraster`.
+  - Os erros vêm em **texto simples com HTTP 200** ("Invalid authentication.",
+    "Daily quota exceeded."). Não dá para confiar no código de estado — é o
+    corpo que decide. Erros de autenticação/quota são fatais e não se repetem
+    noutra camada.
 
 ## Arquitetura
 
