@@ -301,15 +301,14 @@ function buildObjects(objs) {
     const item = document.createElement("div");
     item.className = "object" + (o.washed_out ? " washed" : "");
 
-    // Link para o simulador do Telescopius: dá para espreitar como vai
-    // aparecer no ocular sem sair de casa.
+    // Ficha do objecto no Telescopius (a URL vem do backend).
     const name = document.createElement("a");
     name.className = "obj-name";
     name.textContent = o.name;
-    name.href = `https://telescopius.com/telescope-simulator?ra=${o.ra_h}&dec=${o.dec_deg}`;
+    name.href = o.url;
     name.target = "_blank";
     name.rel = "noopener";
-    name.title = `Ver ${o.name} no simulador do Telescopius`;
+    name.title = `Ver ${o.name} no Telescopius`;
 
     const meta = document.createElement("span");
     meta.className = "obj-meta";

@@ -22,18 +22,24 @@ MIN_ALTITUDE_DEG = 25.0
 # Objectos mais fracos que isto não se veem num telescópio amador típico.
 MAX_MAGNITUDE = 10.0
 
+# (nome em português, chave nas efemérides, slug no Telescopius)
 PLANETS = [
-    ("Mercúrio", "mercury"),
-    ("Vénus", "venus"),
-    ("Marte", "mars"),
-    ("Júpiter", "jupiter barycenter"),
-    ("Saturno", "saturn barycenter"),
-    ("Úrano", "uranus barycenter"),
-    ("Neptuno", "neptune barycenter"),
+    ("Mercúrio", "mercury", "mercury"),
+    ("Vénus", "venus", "venus"),
+    ("Marte", "mars", "mars"),
+    ("Júpiter", "jupiter barycenter", "jupiter"),
+    ("Saturno", "saturn barycenter", "saturn"),
+    ("Úrano", "uranus barycenter", "uranus"),
+    ("Neptuno", "neptune barycenter", "neptune"),
 ]
 
 COMPASS = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
            "S", "SSO", "SO", "OSO", "O", "ONO", "NO", "NNO"]
+
+# Fichas no Telescopius. A forma curta /deep-sky-objects/m-31 redirecciona
+# sozinha para a página completa com os slugs do nome e do tipo.
+TELESCOPIUS_DSO = "https://telescopius.com/deep-sky-objects/m-{n}"
+TELESCOPIUS_PLANET = "https://telescopius.com/solar-system/planet/{slug}"
 
 
 def compass_point(azimuth_deg: float) -> str:
@@ -64,7 +70,7 @@ def visible_objects(lat: float, lon: float, offset_seconds: int,
     found = []
 
     # --- Sistema solar (brilhante, não sofre com o luar) ---
-    for label, key in PLANETS:
+    for label, key, slug in PLANETS:
         try:
             body = eph[key]
         except KeyError:
@@ -82,6 +88,7 @@ def visible_objects(lat: float, lon: float, offset_seconds: int,
             "washed_out": False,
             "ra_h": round(ra.hours, 5),
             "dec_deg": round(dec.degrees, 4),
+            "url": TELESCOPIUS_PLANET.format(slug=slug),
         })
 
     # --- Céu profundo ---
@@ -103,6 +110,7 @@ def visible_objects(lat: float, lon: float, offset_seconds: int,
             "washed_out": bool(washed),
             "ra_h": obj["ra_h"],
             "dec_deg": obj["dec_deg"],
+            "url": TELESCOPIUS_DSO.format(n=obj["id"].lstrip("Mm")),
         })
 
     # Planetas primeiro, depois o mais brilhante e o mais alto.

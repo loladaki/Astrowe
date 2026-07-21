@@ -24,6 +24,7 @@ class SkyObject(BaseModel):
     washed_out: bool                     # apagado pelo luar
     ra_h: float                          # ascensão recta (horas)
     dec_deg: float                       # declinação (graus)
+    url: str                             # ficha no Telescopius
 
 
 class HourDetail(BaseModel):
