@@ -63,6 +63,21 @@ def sqm_from_artificial(artificial_mcd_m2: float) -> float:
     return math.log10(total / SQM_SCALE) / -0.4
 
 
+def bortle_phrase(bortle: int) -> str:
+    """Bortle em português corrente — o número sozinho não diz nada a ninguém."""
+    if bortle <= 2:
+        return "céu muito escuro"
+    if bortle == 3:
+        return "céu escuro"
+    if bortle == 4:
+        return "céu rural, pouca luz"
+    if bortle == 5:
+        return "céu suburbano"
+    if bortle <= 7:
+        return "muita luz à volta"
+    return "céu urbano, muito poluído"
+
+
 def bortle_from_sqm(sqm: float) -> int:
     for threshold, bortle in BORTLE_THRESHOLDS:
         if sqm <= threshold:
@@ -137,10 +152,12 @@ async def fetch(lat: float, lon: float) -> dict | None:
                 logger.warning("lightpollutionmap (%s): sem dados neste ponto", layer)
                 continue
             sqm = sqm_from_artificial(artificial)
+            bortle = bortle_from_sqm(sqm)
             result = {
                 "artificial_mcd_m2": round(artificial, 4),
                 "sqm": round(sqm, 2),
-                "bortle": bortle_from_sqm(sqm),
+                "bortle": bortle,
+                "description": bortle_phrase(bortle),
                 "source": f"lightpollutionmap.info ({layer})",
             }
             break

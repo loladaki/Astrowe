@@ -172,6 +172,8 @@ button:hover { filter: brightness(1.08); }
   text-align: center;
 }
 .site-missing { color: var(--ok); }
+.site strong { display: block; color: var(--text); font-size: 1rem; }
+.site-nums { display: block; font-size: 0.8rem; margin-top: 0.15rem; }
 
 .nights {
   max-width: 720px;
@@ -246,6 +248,46 @@ button:hover { filter: brightness(1.08); }
   font-size: 0.85rem;
   color: var(--text);
 }
+
+/* ---- factos da noite ---- */
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+.fact {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 0.6rem 0.8rem;
+}
+.fact-label { color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.4px; }
+.fact-value { color: var(--text); font-size: 0.98rem; margin-top: 0.15rem; }
+.fact-hint { color: var(--muted); font-size: 0.74rem; margin-top: 0.1rem; }
+
+/* ---- objectos visíveis ---- */
+.objects { margin-top: 1.1rem; }
+.objects-title { color: var(--text); font-size: 0.9rem; margin-bottom: 0.5rem; }
+.object-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 0.4rem;
+}
+.object {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem;
+  padding: 0.4rem 0.7rem;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.object.washed { opacity: 0.55; }
+.obj-name { color: var(--accent); font-weight: 600; font-size: 0.9rem; }
+.obj-meta { color: var(--muted); font-size: 0.78rem; }
+.obj-warn { color: var(--ok); font-size: 0.7rem; width: 100%; }
 
 .hour-strip {
   display: flex;

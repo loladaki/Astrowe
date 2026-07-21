@@ -9,7 +9,19 @@ class LightPollution(BaseModel):
     bortle: int                          # 1 (pristino) a 9 (centro urbano)
     sqm: float                           # mag/arcsec²
     artificial_mcd_m2: float             # brilho artificial bruto
+    description: str                     # "céu rural, pouca luz"
     source: str
+
+
+class SkyObject(BaseModel):
+    """Algo que se pode observar à hora recomendada."""
+    name: str                            # "M31", "Saturno"
+    kind: str                            # "galáxia", "planeta", …
+    magnitude: float | None
+    altitude_deg: float
+    azimuth_deg: float
+    direction: str                       # "SE", "ONO", …
+    washed_out: bool                     # apagado pelo luar
 
 
 class HourDetail(BaseModel):
@@ -73,7 +85,18 @@ class NightScore(BaseModel):
 
     details: str                         # frase legível para humanos
 
+    # Condições na janela recomendada, em linguagem corrente
+    moon_phase: str                      # "Lua gibosa baixa no céu"
+    moonrise: str | None                 # hora local ISO
+    moonset: str | None
+    seeing: str                          # "excelente" / "bom" / "médio" / "fraco"
+    dew_risk: str                        # "baixo" / "moderado" / "alto"
+    temperature_c: float | None          # média na janela
+    feels_like_c: float | None           # sensação térmica (vento)
+    wind_kmh: float | None
+
     limiting: list[FactorImpact]         # o que custa pontos, do pior ao menor
+    objects: list[SkyObject]             # o que se vê a meio da janela
     hours: list[HourDetail]              # detalhe hora a hora da noite
 
 

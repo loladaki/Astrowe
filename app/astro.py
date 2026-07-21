@@ -85,6 +85,29 @@ def compute_windows(lat: float, lon: float, offset_seconds: int,
     return out
 
 
+def moon_rise_set(lat: float, lon: float, offset_seconds: int, d: date):
+    """Nascer e pôr da Lua na noite deste dia (hora local naive, ou None)."""
+    ts, eph = _ensure_loaded()
+    obs = eph["earth"] + wgs84.latlon(lat, lon)
+    moon = eph["moon"]
+
+    local_noon = datetime(d.year, d.month, d.day, 12, 0, 0)
+    t0 = ts.from_datetime(_local_to_utc(local_noon, offset_seconds))
+    t1 = ts.from_datetime(
+        _local_to_utc(local_noon + timedelta(days=1), offset_seconds))
+
+    rises, _ = almanac.find_risings(obs, moon, t0, t1)
+    sets, _ = almanac.find_settings(obs, moon, t0, t1)
+
+    first = lambda arr: (_to_local(arr[0].utc_datetime(), offset_seconds)
+                         if len(arr) else None)
+    return first(rises), first(sets)
+
+
+def _to_local(dt_utc: datetime, offset_seconds: int) -> datetime:
+    return _utc_to_local(dt_utc, offset_seconds)
+
+
 def moon_series(lat: float, lon: float, offset_seconds: int,
                 local_times: list[datetime]):
     """Altitude da Lua (graus) e fração iluminada (0–1) em cada instante dado.

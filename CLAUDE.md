@@ -87,6 +87,11 @@ fecha" tem a mesma média que "meio encoberto a noite inteira" — e uma é uma 
 noite, a outra é inútil. Por isso calcula-se **qualidade hora a hora** e
 procura-se a **melhor janela contígua**.
 
+**Linguagem:** o score e as frases falam português corrente ("Lua gibosa baixa
+no céu", "céu rural, pouca luz"), nunca números crus. Os números vivem na
+tabela de dados completos, para quem os quer interpretar. Regra: a camada de
+cima explica, a de baixo mostra.
+
 Qualidade de cada hora (0–1), tudo contínuo (sem degraus):
 - **Nuvens por camada** — `(1−1.0·baixas)(1−0.85·médias)(1−0.5·altas)`.
   Cirros altos deixam passar; estratos baixos não.
@@ -94,6 +99,9 @@ Qualidade de cada hora (0–1), tudo contínuo (sem degraus):
   1 no zénite: uma Lua cheia rasante quase não incomoda.
 - **Transparência** — do *spread* temperatura−ponto de orvalho (1 °C = nevoeiro,
   9 °C = ar seco), não da humidade a 2 m.
+- **Seeing** — do vento a 250 hPa (jet stream): calmo abaixo de 20 km/h, a ferver
+  acima de 130. Pesa pouco em céu profundo (`seeing_floor` 0.88) e muito em
+  planetas (0.45), onde é ele que decide se vês as bandas de Júpiter.
 
 Depois: o troço contíguo que maximiza `qualidade_média × fator_duração`, com
 `fator_duração = min(1, horas/4)^0.5` (crédito total às 4h, retornos
@@ -139,8 +147,16 @@ Como não muda de noite para noite, **não altera a ordem das noites** num síti
 só o significado absoluto do score e a comparação entre sítios. Resposta em
 cache por coordenada (~100 m) para poupar o limite diário da chave.
 
-### Limitação conhecida
+### Objectos visíveis
 
-Em modo *planetas* os scores comprimem-se no topo (quase tudo "Excelente"),
-porque o discriminador real é o **seeing** (turbulência atmosférica) e não o
-temos. Um proxy possível: vento em altitude (`wind_speed_250hPa` no Open-Meteo).
+`app/objects.py` + `app/data/messier.json` (110 objectos, coordenadas J2000
+validadas contra o SIMBAD; M40, M45 e M102 faltavam na fonte e foram
+acrescentados à mão). Calcula o que está acima de 25° a meio da janela
+recomendada, planetas primeiro, e marca os objectos que o luar apaga.
+
+### Métricas para o observador (não para o céu)
+
+Vais estar horas parado de noite — estas contam tanto como as do céu:
+- **Risco de orvalho** do spread (< 2 °C = as ópticas embaciam).
+- **Sensação térmica** pela fórmula do wind chill (só vale abaixo de 10 °C e
+  acima de 4.8 km/h; fora disso devolve a temperatura).

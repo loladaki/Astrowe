@@ -1,0 +1,992 @@
+[
+{
+"id": "M1",
+"ngc": "NGC 1952",
+"tipo": "remanescente de supernova",
+"const": "Tau",
+"mag": 8.0,
+"ra_h": 5.57555,
+"dec_deg": 22.0145
+},
+{
+"id": "M2",
+"ngc": "NGC 7089",
+"tipo": "enxame globular",
+"const": "Aqr",
+"mag": 6.0,
+"ra_h": 21.5575,
+"dec_deg": -0.8233
+},
+{
+"id": "M3",
+"ngc": "NGC 5272",
+"tipo": "enxame globular",
+"const": "CVn",
+"mag": 6.0,
+"ra_h": 13.70312,
+"dec_deg": 28.3754
+},
+{
+"id": "M4",
+"ngc": "NGC 6121",
+"tipo": "enxame globular",
+"const": "Sco",
+"mag": 5.0,
+"ra_h": 16.39317,
+"dec_deg": -26.5255
+},
+{
+"id": "M5",
+"ngc": "NGC 5904",
+"tipo": "enxame globular",
+"const": "Se1",
+"mag": 5.0,
+"ra_h": 15.30938,
+"dec_deg": 2.0827
+},
+{
+"id": "M6",
+"ngc": "NGC 6504",
+"tipo": "enxame aberto",
+"const": "Sco",
+"mag": 4.0,
+"ra_h": 17.67243,
+"dec_deg": -32.2542
+},
+{
+"id": "M7",
+"ngc": "NGC 6475",
+"tipo": "enxame aberto",
+"const": "Sco",
+"mag": 3.0,
+"ra_h": 17.89755,
+"dec_deg": -34.7928
+},
+{
+"id": "M8",
+"ngc": "NGC 6523",
+"tipo": "nebulosa",
+"const": "Sgr",
+"mag": 5.0,
+"ra_h": 18.06146,
+"dec_deg": -24.3802
+},
+{
+"id": "M9",
+"ngc": "NGC 6333",
+"tipo": "enxame globular",
+"const": "Oph",
+"mag": 7.0,
+"ra_h": 17.31994,
+"dec_deg": -18.5162
+},
+{
+"id": "M10",
+"ngc": "NGC 6254",
+"tipo": "enxame globular",
+"const": "Oph",
+"mag": 6.0,
+"ra_h": 16.9525,
+"dec_deg": -4.0993
+},
+{
+"id": "M11",
+"ngc": "NGC 6705",
+"tipo": "enxame aberto",
+"const": "Sct",
+"mag": 5.0,
+"ra_h": 18.85166,
+"dec_deg": -6.27
+},
+{
+"id": "M12",
+"ngc": "NGC 6218",
+"tipo": "enxame globular",
+"const": "Oph",
+"mag": 6.0,
+"ra_h": 16.78737,
+"dec_deg": -1.9478
+},
+{
+"id": "M13",
+"ngc": "NGC 6205",
+"tipo": "enxame globular",
+"const": "Her",
+"mag": 5.0,
+"ra_h": 16.6949,
+"dec_deg": 36.4613
+},
+{
+"id": "M14",
+"ngc": "NGC 6402",
+"tipo": "enxame globular",
+"const": "Oph",
+"mag": 7.0,
+"ra_h": 17.62671,
+"dec_deg": -3.2459
+},
+{
+"id": "M15",
+"ngc": "NGC 7078",
+"tipo": "enxame globular",
+"const": "Peg",
+"mag": 6.0,
+"ra_h": 21.49955,
+"dec_deg": 12.1668
+},
+{
+"id": "M16",
+"ngc": "NGC 6611",
+"tipo": "nebulosa",
+"const": "Se2",
+"mag": 6.0,
+"ra_h": 18.31338,
+"dec_deg": -13.8072
+},
+{
+"id": "M17",
+"ngc": "NGC 6618",
+"tipo": "nebulosa",
+"const": "Sgr",
+"mag": 6.0,
+"ra_h": 18.34642,
+"dec_deg": -16.1715
+},
+{
+"id": "M18",
+"ngc": "NGC 6613",
+"tipo": "enxame aberto",
+"const": "Sgr",
+"mag": 6.0,
+"ra_h": 18.33291,
+"dec_deg": -17.102
+},
+{
+"id": "M19",
+"ngc": "NGC 6273",
+"tipo": "enxame globular",
+"const": "Oph",
+"mag": 7.0,
+"ra_h": 17.0438,
+"dec_deg": -26.2679
+},
+{
+"id": "M20",
+"ngc": "NGC 6514",
+"tipo": "nebulosa",
+"const": "Sgr",
+"mag": 6.0,
+"ra_h": 18.04503,
+"dec_deg": -22.9719
+},
+{
+"id": "M21",
+"ngc": "NGC 6531",
+"tipo": "enxame aberto",
+"const": "Sgr",
+"mag": 5.0,
+"ra_h": 18.0704,
+"dec_deg": -22.4901
+},
+{
+"id": "M22",
+"ngc": "NGC 6656",
+"tipo": "enxame globular",
+"const": "Sgr",
+"mag": 5.0,
+"ra_h": 18.60672,
+"dec_deg": -23.9034
+},
+{
+"id": "M23",
+"ngc": "NGC 6494",
+"tipo": "enxame aberto",
+"const": "Sgr",
+"mag": 5.0,
+"ra_h": 17.95133,
+"dec_deg": -18.9853
+},
+{
+"id": "M24",
+"ngc": "NGC 6603",
+"tipo": "enxame aberto",
+"const": "Sgr",
+"mag": 11.0,
+"ra_h": 18.28226,
+"dec_deg": -18.5146
+},
+{
+"id": "M25",
+"ngc": "IC4725",
+"tipo": "enxame aberto",
+"const": "Sgr",
+"mag": 4.0,
+"ra_h": 18.52966,
+"dec_deg": -19.1149
+},
+{
+"id": "M26",
+"ngc": "NGC 6694",
+"tipo": "enxame aberto",
+"const": "Sct",
+"mag": 8.0,
+"ra_h": 18.75518,
+"dec_deg": -9.3836
+},
+{
+"id": "M27",
+"ngc": "NGC 6853",
+"tipo": "nebulosa planetária",
+"const": "Vul",
+"mag": 8.0,
+"ra_h": 19.99344,
+"dec_deg": 22.721
+},
+{
+"id": "M28",
+"ngc": "NGC 6626",
+"tipo": "enxame globular",
+"const": "Sgr",
+"mag": 6.0,
+"ra_h": 18.40914,
+"dec_deg": -24.8698
+},
+{
+"id": "M29",
+"ngc": "NGC 6913",
+"tipo": "enxame aberto",
+"const": "Cyg",
+"mag": 6.0,
+"ra_h": 20.39938,
+"dec_deg": 38.5077
+},
+{
+"id": "M30",
+"ngc": "NGC 7099",
+"tipo": "enxame globular",
+"const": "Cap",
+"mag": 7.0,
+"ra_h": 21.67278,
+"dec_deg": -23.1791
+},
+{
+"id": "M31",
+"ngc": "NGC 224",
+"tipo": "galáxia",
+"const": "And",
+"mag": 3.0,
+"ra_h": 0.71232,
+"dec_deg": 41.2691
+},
+{
+"id": "M32",
+"ngc": "NGC 221",
+"tipo": "galáxia",
+"const": "And",
+"mag": 8.0,
+"ra_h": 0.71162,
+"dec_deg": 40.8653
+},
+{
+"id": "M33",
+"ngc": "NGC 598",
+"tipo": "galáxia",
+"const": "Tri",
+"mag": 5.0,
+"ra_h": 1.56414,
+"dec_deg": 30.6602
+},
+{
+"id": "M34",
+"ngc": "NGC 1039",
+"tipo": "enxame aberto",
+"const": "Per",
+"mag": 5.0,
+"ra_h": 2.70206,
+"dec_deg": 42.7461
+},
+{
+"id": "M35",
+"ngc": "NGC 2168",
+"tipo": "enxame aberto",
+"const": "Gem",
+"mag": 5.0,
+"ra_h": 6.15141,
+"dec_deg": 24.3386
+},
+{
+"id": "M36",
+"ngc": "NGC 1960",
+"tipo": "enxame aberto",
+"const": "Aur",
+"mag": 6.0,
+"ra_h": 5.60493,
+"dec_deg": 34.1407
+},
+{
+"id": "M37",
+"ngc": "NGC 2099",
+"tipo": "enxame aberto",
+"const": "Aur",
+"mag": 5.0,
+"ra_h": 5.87176,
+"dec_deg": 32.553
+},
+{
+"id": "M38",
+"ngc": "NGC 1912",
+"tipo": "enxame aberto",
+"const": "Aur",
+"mag": 6.0,
+"ra_h": 5.47847,
+"dec_deg": 35.8549
+},
+{
+"id": "M39",
+"ngc": "NGC 7092",
+"tipo": "enxame aberto",
+"const": "Cyg",
+"mag": 4.0,
+"ra_h": 21.53009,
+"dec_deg": 48.4382
+},
+{
+"id": "M40",
+"ngc": "Winnecke 4",
+"tipo": "estrela dupla",
+"const": "UMa",
+"mag": 8.4,
+"ra_h": 12.37014,
+"dec_deg": 58.0831
+},
+{
+"id": "M41",
+"ngc": "NGC 2287",
+"tipo": "enxame aberto",
+"const": "CMa",
+"mag": 4.0,
+"ra_h": 6.76665,
+"dec_deg": -20.7542
+},
+{
+"id": "M42",
+"ngc": "NGC 9176",
+"tipo": "nebulosa",
+"const": "Ori",
+"mag": 4.0,
+"ra_h": 5.58791,
+"dec_deg": -5.3897
+},
+{
+"id": "M43",
+"ngc": "NGC 1982",
+"tipo": "nebulosa",
+"const": "Ori",
+"mag": 9.0,
+"ra_h": 5.59205,
+"dec_deg": -5.2675
+},
+{
+"id": "M44",
+"ngc": "NGC 2632",
+"tipo": "enxame aberto",
+"const": "Cnc",
+"mag": 3.0,
+"ra_h": 8.67283,
+"dec_deg": 19.6721
+},
+{
+"id": "M45",
+"ngc": null,
+"tipo": "enxame aberto",
+"const": "Tau",
+"mag": 1.6,
+"ra_h": 3.79,
+"dec_deg": 24.1167
+},
+{
+"id": "M46",
+"ngc": "NGC 2437",
+"tipo": "enxame aberto",
+"const": "Pup",
+"mag": 6.0,
+"ra_h": 7.69634,
+"dec_deg": -14.81
+},
+{
+"id": "M47",
+"ngc": "NGC 2422",
+"tipo": "enxame aberto",
+"const": "Pup",
+"mag": 4.0,
+"ra_h": 7.60973,
+"dec_deg": -14.4826
+},
+{
+"id": "M48",
+"ngc": "NGC 2548",
+"tipo": "enxame aberto",
+"const": "Hya",
+"mag": 5.0,
+"ra_h": 8.22866,
+"dec_deg": -5.7504
+},
+{
+"id": "M49",
+"ngc": "NGC 4472",
+"tipo": "galáxia",
+"const": "Vir",
+"mag": 8.0,
+"ra_h": 12.49632,
+"dec_deg": 8.0005
+},
+{
+"id": "M50",
+"ngc": "NGC 2323",
+"tipo": "enxame aberto",
+"const": "Mon",
+"mag": 5.0,
+"ra_h": 7.04458,
+"dec_deg": -8.364
+},
+{
+"id": "M51",
+"ngc": "NGC 5194",
+"tipo": "galáxia",
+"const": "CVn",
+"mag": 8.0,
+"ra_h": 13.49797,
+"dec_deg": 47.1952
+},
+{
+"id": "M52",
+"ngc": "NGC 7654",
+"tipo": "enxame aberto",
+"const": "Cas",
+"mag": 6.0,
+"ra_h": 23.41344,
+"dec_deg": 61.5932
+},
+{
+"id": "M53",
+"ngc": "NGC 5024",
+"tipo": "enxame globular",
+"const": "Com",
+"mag": 7.0,
+"ra_h": 13.21534,
+"dec_deg": 18.1691
+},
+{
+"id": "M54",
+"ngc": "NGC 6715",
+"tipo": "enxame globular",
+"const": "Sgr",
+"mag": 7.0,
+"ra_h": 18.91758,
+"dec_deg": -30.4785
+},
+{
+"id": "M55",
+"ngc": "NGC 6809",
+"tipo": "enxame globular",
+"const": "Sgr",
+"mag": 7.0,
+"ra_h": 19.6665,
+"dec_deg": -30.9621
+},
+{
+"id": "M56",
+"ngc": "NGC 6779",
+"tipo": "enxame globular",
+"const": "Lyr",
+"mag": 8.0,
+"ra_h": 19.27653,
+"dec_deg": 30.1845
+},
+{
+"id": "M57",
+"ngc": "NGC 6720",
+"tipo": "nebulosa planetária",
+"const": "Lyr",
+"mag": 9.0,
+"ra_h": 18.89306,
+"dec_deg": 33.0286
+},
+{
+"id": "M58",
+"ngc": "NGC 4579",
+"tipo": "galáxia",
+"const": "Vir",
+"mag": 9.0,
+"ra_h": 12.62876,
+"dec_deg": 11.8182
+},
+{
+"id": "M59",
+"ngc": "NGC 4621",
+"tipo": "galáxia",
+"const": "Vir",
+"mag": 9.0,
+"ra_h": 12.70062,
+"dec_deg": 11.647
+},
+{
+"id": "M60",
+"ngc": "NGC 4649",
+"tipo": "galáxia",
+"const": "Vir",
+"mag": 8.0,
+"ra_h": 12.72777,
+"dec_deg": 11.5527
+},
+{
+"id": "M61",
+"ngc": "NGC 4303",
+"tipo": "galáxia",
+"const": "Vir",
+"mag": 9.0,
+"ra_h": 12.36525,
+"dec_deg": 4.4736
+},
+{
+"id": "M62",
+"ngc": "NGC 6266",
+"tipo": "enxame globular",
+"const": "Oph",
+"mag": 6.0,
+"ra_h": 17.02017,
+"dec_deg": -30.1124
+},
+{
+"id": "M63",
+"ngc": "NGC 5055",
+"tipo": "galáxia",
+"const": "CVn",
+"mag": 8.0,
+"ra_h": 13.2637,
+"dec_deg": 42.0293
+},
+{
+"id": "M64",
+"ngc": "NGC 4826",
+"tipo": "galáxia",
+"const": "Com",
+"mag": 8.0,
+"ra_h": 12.94546,
+"dec_deg": 21.683
+},
+{
+"id": "M65",
+"ngc": "NGC 3623",
+"tipo": "galáxia",
+"const": "Leo",
+"mag": 9.0,
+"ra_h": 11.31553,
+"dec_deg": 13.0924
+},
+{
+"id": "M66",
+"ngc": "NGC 3627",
+"tipo": "galáxia",
+"const": "Leo",
+"mag": 9.0,
+"ra_h": 11.33749,
+"dec_deg": 12.9915
+},
+{
+"id": "M67",
+"ngc": "NGC 2682",
+"tipo": "enxame aberto",
+"const": "Cnc",
+"mag": 6.0,
+"ra_h": 8.85559,
+"dec_deg": 11.8119
+},
+{
+"id": "M68",
+"ngc": "NGC 4590",
+"tipo": "enxame globular",
+"const": "Hya",
+"mag": 8.0,
+"ra_h": 12.65778,
+"dec_deg": -26.743
+},
+{
+"id": "M69",
+"ngc": "NGC 6637",
+"tipo": "enxame globular",
+"const": "Sgr",
+"mag": 7.0,
+"ra_h": 18.52312,
+"dec_deg": -32.348
+},
+{
+"id": "M70",
+"ngc": "NGC 6681",
+"tipo": "enxame globular",
+"const": "Sgr",
+"mag": 8.0,
+"ra_h": 18.72018,
+"dec_deg": -32.2919
+},
+{
+"id": "M71",
+"ngc": "NGC 6838",
+"tipo": "enxame globular",
+"const": "Sge",
+"mag": 8.0,
+"ra_h": 19.89614,
+"dec_deg": 18.7784
+},
+{
+"id": "M72",
+"ngc": "NGC 6981",
+"tipo": "enxame globular",
+"const": "Aqr",
+"mag": 9.0,
+"ra_h": 20.89109,
+"dec_deg": -12.5371
+},
+{
+"id": "M73",
+"ngc": "NGC 6994",
+"tipo": "enxame aberto",
+"const": "Aqr",
+"mag": 9.0,
+"ra_h": 20.98221,
+"dec_deg": -12.6355
+},
+{
+"id": "M74",
+"ngc": "NGC 628",
+"tipo": "galáxia",
+"const": "Psc",
+"mag": 9.0,
+"ra_h": 1.6116,
+"dec_deg": 15.7837
+},
+{
+"id": "M75",
+"ngc": "NGC 6864",
+"tipo": "enxame globular",
+"const": "Sgr",
+"mag": 8.0,
+"ra_h": 20.10134,
+"dec_deg": -21.9222
+},
+{
+"id": "M76",
+"ngc": "NGC 650",
+"tipo": "nebulosa planetária",
+"const": "Per",
+"mag": 10.0,
+"ra_h": 1.70547,
+"dec_deg": 51.5755
+},
+{
+"id": "M77",
+"ngc": "NGC 1068",
+"tipo": "galáxia",
+"const": "Cet",
+"mag": 8.0,
+"ra_h": 2.71131,
+"dec_deg": -0.0133
+},
+{
+"id": "M78",
+"ngc": "NGC 2068",
+"tipo": "nebulosa",
+"const": "Ori",
+"mag": 8.0,
+"ra_h": 5.77939,
+"dec_deg": 0.0793
+},
+{
+"id": "M79",
+"ngc": "NGC 1904",
+"tipo": "enxame globular",
+"const": "Lep",
+"mag": 8.0,
+"ra_h": 5.40294,
+"dec_deg": -24.5242
+},
+{
+"id": "M80",
+"ngc": "NGC 6093",
+"tipo": "enxame globular",
+"const": "Sco",
+"mag": 7.0,
+"ra_h": 16.28403,
+"dec_deg": -22.9751
+},
+{
+"id": "M81",
+"ngc": "NGC 3031",
+"tipo": "galáxia",
+"const": "UMa",
+"mag": 6.0,
+"ra_h": 9.92588,
+"dec_deg": 69.0653
+},
+{
+"id": "M82",
+"ngc": "NGC 3034",
+"tipo": "galáxia",
+"const": "UMa",
+"mag": 8.0,
+"ra_h": 9.93131,
+"dec_deg": 69.6794
+},
+{
+"id": "M83",
+"ngc": "NGC 5236",
+"tipo": "galáxia",
+"const": "Hya",
+"mag": 7.0,
+"ra_h": 13.61693,
+"dec_deg": -29.8654
+},
+{
+"id": "M84",
+"ngc": "NGC 4374",
+"tipo": "galáxia",
+"const": "Vir",
+"mag": 9.0,
+"ra_h": 12.41771,
+"dec_deg": 12.887
+},
+{
+"id": "M85",
+"ngc": "NGC 4382",
+"tipo": "galáxia",
+"const": "Com",
+"mag": 9.0,
+"ra_h": 12.42336,
+"dec_deg": 18.1915
+},
+{
+"id": "M86",
+"ngc": "NGC 4406",
+"tipo": "galáxia",
+"const": "Vir",
+"mag": 9.0,
+"ra_h": 12.43659,
+"dec_deg": 12.9462
+},
+{
+"id": "M87",
+"ngc": "NGC 4486",
+"tipo": "galáxia",
+"const": "Vir",
+"mag": 8.0,
+"ra_h": 12.51373,
+"dec_deg": 12.3911
+},
+{
+"id": "M88",
+"ngc": "NGC 4501",
+"tipo": "galáxia",
+"const": "Com",
+"mag": 9.0,
+"ra_h": 12.5331,
+"dec_deg": 14.4204
+},
+{
+"id": "M89",
+"ngc": "NGC 4552",
+"tipo": "galáxia",
+"const": "Vir",
+"mag": 9.0,
+"ra_h": 12.59439,
+"dec_deg": 12.5563
+},
+{
+"id": "M90",
+"ngc": "NGC 4560",
+"tipo": "galáxia",
+"const": "Vir",
+"mag": 9.0,
+"ra_h": 12.61383,
+"dec_deg": 13.1629
+},
+{
+"id": "M91",
+"ngc": "NGC 4548",
+"tipo": "galáxia",
+"const": "Com",
+"mag": 10.0,
+"ra_h": 12.59068,
+"dec_deg": 14.4963
+},
+{
+"id": "M92",
+"ngc": "NGC 6341",
+"tipo": "enxame globular",
+"const": "Her",
+"mag": 6.0,
+"ra_h": 17.28535,
+"dec_deg": 43.1365
+},
+{
+"id": "M93",
+"ngc": "NGC 2447",
+"tipo": "enxame aberto",
+"const": "Pup",
+"mag": 6.0,
+"ra_h": 7.74145,
+"dec_deg": -23.8531
+},
+{
+"id": "M94",
+"ngc": "NGC 4736",
+"tipo": "galáxia",
+"const": "CVn",
+"mag": 8.0,
+"ra_h": 12.84807,
+"dec_deg": 41.1204
+},
+{
+"id": "M95",
+"ngc": "NGC 3351",
+"tipo": "galáxia",
+"const": "Leo",
+"mag": 9.0,
+"ra_h": 10.73269,
+"dec_deg": 11.7038
+},
+{
+"id": "M96",
+"ngc": "NGC 3368",
+"tipo": "galáxia",
+"const": "Leo",
+"mag": 9.0,
+"ra_h": 10.77937,
+"dec_deg": 11.8199
+},
+{
+"id": "M97",
+"ngc": "NGC 3587",
+"tipo": "nebulosa planetária",
+"const": "UMa",
+"mag": 11.0,
+"ra_h": 11.24659,
+"dec_deg": 55.019
+},
+{
+"id": "M98",
+"ngc": "NGC 4192",
+"tipo": "galáxia",
+"const": "Com",
+"mag": 10.0,
+"ra_h": 12.23008,
+"dec_deg": 14.9003
+},
+{
+"id": "M99",
+"ngc": "NGC 4254",
+"tipo": "galáxia",
+"const": "Com",
+"mag": 9.0,
+"ra_h": 12.31378,
+"dec_deg": 14.4165
+},
+{
+"id": "M100",
+"ngc": "NGC 4321",
+"tipo": "galáxia",
+"const": "Com",
+"mag": 9.0,
+"ra_h": 12.3819,
+"dec_deg": 15.8218
+},
+{
+"id": "M101",
+"ngc": "NGC 5457",
+"tipo": "galáxia",
+"const": "UMa",
+"mag": 7.0,
+"ra_h": 14.05348,
+"dec_deg": 54.3489
+},
+{
+"id": "M102",
+"ngc": "NGC 5866",
+"tipo": "galáxia",
+"const": "Dra",
+"mag": 9.9,
+"ra_h": 15.10819,
+"dec_deg": 55.7633
+},
+{
+"id": "M103",
+"ngc": "NGC 581",
+"tipo": "enxame aberto",
+"const": "Cas",
+"mag": 7.0,
+"ra_h": 1.55606,
+"dec_deg": 60.658
+},
+{
+"id": "M104",
+"ngc": "NGC 4594",
+"tipo": "galáxia",
+"const": "Crv",
+"mag": 8.0,
+"ra_h": 12.66651,
+"dec_deg": -11.6231
+},
+{
+"id": "M105",
+"ngc": "NGC 3379",
+"tipo": "galáxia",
+"const": "Leo",
+"mag": 9.0,
+"ra_h": 10.79711,
+"dec_deg": 12.5816
+},
+{
+"id": "M106",
+"ngc": "NGC 4258",
+"tipo": "galáxia",
+"const": "CVn",
+"mag": 8.0,
+"ra_h": 12.31597,
+"dec_deg": 47.304
+},
+{
+"id": "M107",
+"ngc": "NGC 6171",
+"tipo": "enxame globular",
+"const": "Oph",
+"mag": 8.0,
+"ra_h": 16.5422,
+"dec_deg": -13.0536
+},
+{
+"id": "M108",
+"ngc": "NGC 3556",
+"tipo": "galáxia",
+"const": "UMa",
+"mag": 10.0,
+"ra_h": 11.19194,
+"dec_deg": 55.6741
+},
+{
+"id": "M109",
+"ngc": "NGC 3992",
+"tipo": "galáxia",
+"const": "UMa",
+"mag": 9.0,
+"ra_h": 11.95999,
+"dec_deg": 53.3745
+},
+{
+"id": "M110",
+"ngc": "NGC 205",
+"tipo": "galáxia",
+"const": "And",
+"mag": 8.0,
+"ra_h": 0.6728,
+"dec_deg": 41.6853
+}
+]

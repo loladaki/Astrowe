@@ -11,9 +11,9 @@ from __future__ import annotations
 import math
 from datetime import datetime, timedelta, timezone
 
-from app import astro
+from app import astro, objects
 from app.models import (FactorImpact, ForecastResponse, HourDetail,
-                        LightPollution, NightScore)
+                        LightPollution, NightScore, SkyObject)
 
 # Pesos por camada de nuvens: as baixas tapam tudo, os cirros altos deixam
 # passar bastante. Modeladas como obstruções independentes que se multiplicam.
@@ -43,20 +43,29 @@ REPORT_FLOOR = 0.25   # chão absoluto, para não alargar para dentro de lixo
 # de REPORT_FLOOR e deixaríamos de reportar janelas.
 LP_MIN_FACTOR = 0.30
 
+# Seeing a partir do vento a 250 hPa (jet stream). Abaixo de JET_CALM a
+# atmosfera está estável; acima de JET_ROUGH a imagem ferve.
+JET_CALM = 20.0
+JET_ROUGH = 130.0
+
 PROFILES = {
     "deepsky": {
         "label": "céu profundo",
         # Galáxias e nebulosas exigem escuridão real e sofrem muito com a Lua.
+        # O seeing conta pouco: o que importa é recolher luz, não resolver detalhe.
         "horizon_degrees": astro.ASTRONOMICAL_TWILIGHT_DEG,
         "moon_weight": 0.70,
         "transparency_floor": 0.70,
+        "seeing_floor": 0.88,
     },
     "planetary": {
         "label": "planetas e Lua",
         # Planetas veem-se no crepúsculo e a Lua não atrapalha (é o alvo!).
+        # Aqui o seeing é tudo — é ele que decide se vês as bandas de Júpiter.
         "horizon_degrees": astro.SUNSET_DEG,
         "moon_weight": 0.05,
         "transparency_floor": 0.85,
+        "seeing_floor": 0.45,
     },
 }
 DEFAULT_MODE = "deepsky"
@@ -104,6 +113,73 @@ def _transparency_label(spread) -> str:
     if spread >= 3.0:
         return "razoável"
     return "fraca"
+
+
+def _seeing_factor(jet_kmh, floor: float) -> float:
+    """Estabilidade atmosférica a partir do jet stream — contínua, sem degraus."""
+    if jet_kmh is None:
+        return (1.0 + floor) / 2.0          # meio-termo quando não há dados
+    t = (jet_kmh - JET_CALM) / (JET_ROUGH - JET_CALM)
+    t = max(0.0, min(1.0, t))
+    return 1.0 - (1.0 - floor) * t
+
+
+def _seeing_label(jet_kmh) -> str:
+    if jet_kmh is None:
+        return "desconhecido"
+    if jet_kmh < 30:
+        return "excelente"
+    if jet_kmh < 60:
+        return "bom"
+    if jet_kmh < 100:
+        return "médio"
+    return "fraco"
+
+
+def _dew_risk(spread) -> str:
+    """Spread baixo = orvalho nas ópticas, e a sessão acaba mais cedo."""
+    if spread is None:
+        return "desconhecido"
+    if spread < 2.0:
+        return "alto"
+    if spread < 4.0:
+        return "moderado"
+    return "baixo"
+
+
+def _feels_like(temp_c, wind_kmh):
+    """Sensação térmica (fórmula norte-americana do wind chill)."""
+    if temp_c is None:
+        return None
+    if wind_kmh is None or temp_c > 10.0 or wind_kmh < 4.8:
+        return temp_c
+    v = wind_kmh ** 0.16
+    return 13.12 + 0.6215 * temp_c - 11.37 * v + 0.3965 * temp_c * v
+
+
+def _moon_phase_name(illum_pct: float) -> str:
+    if illum_pct < 5:
+        return "Lua nova"
+    if illum_pct < 35:
+        return "Lua fina"
+    if illum_pct < 65:
+        return "meia Lua"
+    if illum_pct < 95:
+        return "Lua gibosa"
+    return "Lua cheia"
+
+
+def _moon_phrase(illum_pct: float, max_alt: float) -> str:
+    """"Lua gibosa baixa no céu" — em vez de "Lua 94% a 21°"."""
+    if max_alt <= 0:
+        return f"{_moon_phase_name(illum_pct)} abaixo do horizonte"
+    if max_alt < 15:
+        height = "rasante"
+    elif max_alt < 40:
+        height = "baixa no céu"
+    else:
+        height = "alta no céu"
+    return f"{_moon_phase_name(illum_pct)} {height}"
 
 
 def _moon_factor(illum_frac: float, alt_deg: float, weight: float) -> float:
@@ -193,7 +269,8 @@ def _quality_without(part: dict, skip: str) -> float:
     """Qualidade da hora com um ingrediente neutralizado (posto a 1.0)."""
     return ((1.0 if skip == "nuvens" else part["transmission"])
             * (1.0 if skip == "lua" else part["mf"])
-            * (1.0 if skip == "transparencia" else part["tf"]))
+            * (1.0 if skip == "transparencia" else part["tf"])
+            * (1.0 if skip == "seeing" else part["sf"]))
 
 
 def _factor_impacts(parts: list[dict], lp_factor: float,
@@ -203,7 +280,7 @@ def _factor_impacts(parts: list[dict], lp_factor: float,
     esta noite?" — a informação mais acionável que a app pode dar.
     """
     labels = {"nuvens": "as nuvens", "lua": "a Lua",
-              "transparencia": "a transparência"}
+              "transparencia": "a transparência", "seeing": "o seeing"}
     impacts = []
     for skip, label in labels.items():
         ideal = _score_from([_quality_without(p, skip) for p in parts], lp_factor)
@@ -313,7 +390,7 @@ def build_forecast(data: dict, lat: float, lon: float,
 
     nights = [
         _build_night(d, windows.get(d, (None, None)), times, h,
-                     moon_alt, moon_illum, profile, lp_factor)
+                     moon_alt, moon_illum, profile, lat, lon, offset, lp_factor)
         for d in dates
     ]
 
@@ -322,19 +399,23 @@ def build_forecast(data: dict, lat: float, lon: float,
         mode=mode, mode_label=profile["label"],
         light_pollution=LightPollution(**light_pollution) if light_pollution else None,
         generated_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        summary=_build_summary(nights, profile["label"], light_pollution),
+        summary=_build_summary(nights, profile["label"]),
         nights=nights,
     )
 
 
 def _build_night(d, window, times, h, moon_alt, moon_illum, profile,
+                 lat: float, lon: float, offset: int,
                  lp_factor: float = 1.0) -> NightScore:
     night_start, night_end = window
 
     if night_start is None or night_end is None:
         return NightScore(
             date=d.isoformat(), score=0, verdict="Sem noite escura",
-            limiting=[], hours=[],
+            moon_phase="—", moonrise=None, moonset=None,
+            seeing="desconhecido", dew_risk="desconhecido",
+            temperature_c=None, feels_like_c=None, wind_kmh=None,
+            limiting=[], objects=[], hours=[],
             window_start=None, window_end=None, window_hours=None,
             night_start=None, night_end=None, night_hours=None,
             cloud_cover_pct=None, transparency="—",
@@ -346,7 +427,10 @@ def _build_night(d, window, times, h, moon_alt, moon_illum, profile,
     if not idx:
         return NightScore(
             date=d.isoformat(), score=0, verdict="Sem dados",
-            limiting=[], hours=[],
+            moon_phase="—", moonrise=None, moonset=None,
+            seeing="desconhecido", dew_risk="desconhecido",
+            temperature_c=None, feels_like_c=None, wind_kmh=None,
+            limiting=[], objects=[], hours=[],
             window_start=None, window_end=None, window_hours=None,
             night_start=night_start.isoformat(timespec="minutes"),
             night_end=night_end.isoformat(timespec="minutes"),
@@ -359,16 +443,22 @@ def _build_night(d, window, times, h, moon_alt, moon_illum, profile,
     floor = profile["transparency_floor"]
     weight = profile["moon_weight"]
 
+    seeing_floor = profile["seeing_floor"]
+    jet_series = h.get("wind_speed_250hPa")
+
     parts = []
     for i in idx:
         transmission = _cloud_transmission(
             h["cloud_cover_low"][i], h["cloud_cover_mid"][i],
             h["cloud_cover_high"][i], h["cloud_cover"][i])
         spread = _spread(h["temperature_2m"][i], h["dew_point_2m"][i])
+        jet = jet_series[i] if jet_series else None
         tf = _transparency_factor(spread, floor)
         mf = _moon_factor(float(moon_illum[i]), float(moon_alt[i]), weight)
+        sf = _seeing_factor(jet, seeing_floor)
         parts.append({"i": i, "transmission": transmission, "tf": tf, "mf": mf,
-                      "spread": spread, "quality": transmission * tf * mf})
+                      "sf": sf, "spread": spread, "jet": jet,
+                      "quality": transmission * tf * mf * sf})
 
     qualities = [p["quality"] for p in parts]
     spreads = [p["spread"] for p in parts]
@@ -394,20 +484,52 @@ def _build_night(d, window, times, h, moon_alt, moon_illum, profile,
     max_alt = max(float(moon_alt[i]) for i in win_idx)
     label = _transparency_label(_mean([s for s in spreads if s is not None]))
 
-    cloud_txt = "—" if cloud is None else f"{round(cloud)}%"
-    moon_txt = (f"Lua {round(illum_pct)}% a {round(max_alt)}° na janela"
-                if max_alt > 0 else f"Lua {round(illum_pct)}% abaixo do horizonte")
+    # Condições em linguagem corrente. O "porquê", não os números crus —
+    # esses vivem na tabela de dados para quem os quiser.
+    jet_avg = _mean([p["jet"] for p in parts])
+    temp = _mean([h["temperature_2m"][i] for i in win_idx])
+    wind = _mean([h.get("wind_speed_10m", [None] * len(times))[i] for i in win_idx])
+    spread_win = _mean([p["spread"] for p in parts[ext_i:ext_j + 1]])
+    moon_phrase = _moon_phrase(illum_pct, max_alt)
+
+    phrases = []
+    if cloud is not None:
+        phrases.append("céu limpo" if cloud < 15
+                       else "poucas nuvens" if cloud < 40 else "muitas nuvens")
+    phrases.append(moon_phrase)
+    if spread_win is not None:
+        phrases.append("ar seco" if spread_win >= 6
+                       else "ar húmido" if spread_win < 3 else "humidade moderada")
+    seeing_label = _seeing_label(jet_avg)
+    if seeing_label != "desconhecido":
+        phrases.append(f"seeing {seeing_label}")
+
     details = (f"{win_hours:.1f}h das {win_start.strftime('%H:%M')} às "
-               f"{win_end.strftime('%H:%M')} · nuvens {cloud_txt} · {moon_txt} · "
-               f"transparência {label}.")
+               f"{win_end.strftime('%H:%M')} · " + ", ".join(phrases) + ".")
 
     window_positions = set(range(ext_i, ext_j + 1))
     hours = [_hour_detail(p, times, h, moon_alt, moon_illum, pos in window_positions)
              for pos, p in enumerate(parts)]
 
+    # O que se vê a meio da janela recomendada.
+    mid = win_idx[len(win_idx) // 2]
+    sky = objects.visible_objects(lat, lon, offset, times[mid],
+                                  float(moon_illum[mid]), float(moon_alt[mid]))
+    moonrise, moonset = astro.moon_rise_set(lat, lon, offset, d)
+
     return NightScore(
         date=d.isoformat(), score=score, verdict=_verdict(score),
+        moon_phase=moon_phrase,
+        moonrise=moonrise.isoformat(timespec="minutes") if moonrise else None,
+        moonset=moonset.isoformat(timespec="minutes") if moonset else None,
+        seeing=seeing_label,
+        dew_risk=_dew_risk(spread_win),
+        temperature_c=None if temp is None else round(temp, 1),
+        feels_like_c=(None if temp is None
+                      else round(_feels_like(temp, wind), 1)),
+        wind_kmh=None if wind is None else round(wind, 1),
         limiting=_factor_impacts(parts, lp_factor, score),
+        objects=[SkyObject(**o) for o in sky],
         hours=hours,
         window_start=win_start.isoformat(timespec="minutes"),
         window_end=win_end.isoformat(timespec="minutes"),
@@ -423,16 +545,19 @@ def _build_night(d, window, times, h, moon_alt, moon_illum, profile,
     )
 
 
-def _build_summary(nights: list[NightScore], mode_label: str,
-                   light_pollution: dict | None = None) -> str:
+WEEKDAYS_PT = ["segunda", "terça", "quarta", "quinta",
+               "sexta", "sábado", "domingo"]
+
+
+def _build_summary(nights: list[NightScore], mode_label: str) -> str:
+    """As horas e o porquê. A poluição luminosa fica de fora de propósito:
+    é propriedade do local, não da noite, e tem caixa própria na interface.
+    """
     scored = [n for n in nights if n.score > 0]
     if not scored:
         return f"Nenhuma noite com condições utilizáveis para {mode_label} nos próximos dias."
+
     best = max(scored, key=lambda n: n.score)
-    weekday = datetime.fromisoformat(best.date).strftime("%A")
-    site = ""
-    if light_pollution:
-        site = (f" Local: Bortle {light_pollution['bortle']} "
-                f"(SQM {light_pollution['sqm']}).")
-    return (f"Para {mode_label}, a melhor noite é {weekday} ({best.date}) — "
-            f"score {best.score}/100. {best.details}{site}")
+    d = datetime.fromisoformat(best.date)
+    weekday = WEEKDAYS_PT[d.weekday()]
+    return (f"Melhor noite: {weekday}, {d.strftime('%d/%m')} — {best.details}")

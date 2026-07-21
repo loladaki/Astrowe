@@ -131,8 +131,11 @@ function renderSite(data) {
   const lp = data.light_pollution;
   if (lp) {
     siteEl.className = "site";
-    siteEl.textContent =
-      `🔦 Bortle ${lp.bortle} · SQM ${lp.sqm} mag/arcsec² — já incluído no score.`;
+    // Linguagem corrente à frente; os números para quem os quiser.
+    siteEl.innerHTML =
+      `<strong>🔦 ${lp.description}</strong>` +
+      `<span class="site-nums">Bortle ${lp.bortle} · SQM ${lp.sqm} mag/arcsec²` +
+      ` — propriedade do local, já incluída no score</span>`;
   } else {
     siteEl.className = "site site-missing";
     siteEl.textContent =
@@ -229,6 +232,86 @@ function buildRawTable(hours) {
   return wrap;
 }
 
+function factBox(label, value, hint) {
+  const box = document.createElement("div");
+  box.className = "fact";
+  const l = document.createElement("div");
+  l.className = "fact-label";
+  l.textContent = label;
+  const v = document.createElement("div");
+  v.className = "fact-value";
+  v.textContent = value;
+  box.append(l, v);
+  if (hint) {
+    const t = document.createElement("div");
+    t.className = "fact-hint";
+    t.textContent = hint;
+    box.appendChild(t);
+  }
+  return box;
+}
+
+function buildConditions(n) {
+  const grid = document.createElement("div");
+  grid.className = "facts";
+
+  grid.appendChild(factBox("Lua", n.moon_phase,
+    [n.moonrise && `nasce ${hhmm(n.moonrise)}`,
+     n.moonset && `põe-se ${hhmm(n.moonset)}`].filter(Boolean).join(" · ")));
+
+  grid.appendChild(factBox("Seeing", n.seeing, "estabilidade do ar"));
+
+  grid.appendChild(factBox("Risco de orvalho", n.dew_risk,
+    n.dew_risk === "alto" ? "as ópticas vão embaciar"
+      : n.dew_risk === "moderado" ? "leva resistência anti-orvalho" : "sem problema"));
+
+  if (n.temperature_c !== null) {
+    const feels = n.feels_like_c !== null && Math.abs(n.feels_like_c - n.temperature_c) >= 1
+      ? `sente-se ${n.feels_like_c}°C` : "";
+    const wind = n.wind_kmh !== null ? `vento ${Math.round(n.wind_kmh)} km/h` : "";
+    grid.appendChild(factBox("Temperatura", `${n.temperature_c}°C`,
+      [feels, wind].filter(Boolean).join(" · ")));
+  }
+  return grid;
+}
+
+function buildObjects(objs) {
+  const wrap = document.createElement("div");
+  wrap.className = "objects";
+
+  const title = document.createElement("div");
+  title.className = "objects-title";
+  title.textContent = "O que se vê a meio da janela";
+  wrap.appendChild(title);
+
+  const list = document.createElement("div");
+  list.className = "object-list";
+  for (const o of objs) {
+    const item = document.createElement("div");
+    item.className = "object" + (o.washed_out ? " washed" : "");
+
+    const name = document.createElement("span");
+    name.className = "obj-name";
+    name.textContent = o.name;
+
+    const meta = document.createElement("span");
+    meta.className = "obj-meta";
+    const mag = o.magnitude !== null ? ` · mag ${o.magnitude}` : "";
+    meta.textContent = `${o.kind}${mag} · ${Math.round(o.altitude_deg)}° ${o.direction}`;
+
+    item.append(name, meta);
+    if (o.washed_out) {
+      const warn = document.createElement("span");
+      warn.className = "obj-warn";
+      warn.textContent = "apagado pelo luar";
+      item.appendChild(warn);
+    }
+    list.appendChild(item);
+  }
+  wrap.appendChild(list);
+  return wrap;
+}
+
 function buildDetail(n) {
   const detail = document.createElement("div");
   detail.className = "night-detail";
@@ -255,7 +338,9 @@ function buildDetail(n) {
     detail.appendChild(lim);
   }
 
+  detail.appendChild(buildConditions(n));
   detail.appendChild(buildHourStrip(n.hours));
+  if (n.objects.length) detail.appendChild(buildObjects(n.objects));
 
   const toggle = document.createElement("button");
   toggle.type = "button";

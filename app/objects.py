@@ -1,0 +1,107 @@
+"""O que está no céu à hora recomendada — planetas, Lua e Messier.
+
+Tudo calculado offline com Skyfield. O catálogo Messier vive em
+`data/messier.json` (coordenadas J2000, validadas contra o SIMBAD).
+"""
+from __future__ import annotations
+
+import json
+from datetime import datetime
+from functools import lru_cache
+from pathlib import Path
+
+from skyfield.api import Star, wgs84
+
+from app.astro import _ensure_loaded, _local_to_utc
+
+CATALOG_PATH = Path(__file__).resolve().parent / "data" / "messier.json"
+
+# Abaixo disto a atmosfera estraga a vista e as árvores/casas costumam tapar.
+MIN_ALTITUDE_DEG = 25.0
+
+# Objectos mais fracos que isto não se veem num telescópio amador típico.
+MAX_MAGNITUDE = 10.0
+
+PLANETS = [
+    ("Mercúrio", "mercury"),
+    ("Vénus", "venus"),
+    ("Marte", "mars"),
+    ("Júpiter", "jupiter barycenter"),
+    ("Saturno", "saturn barycenter"),
+    ("Úrano", "uranus barycenter"),
+    ("Neptuno", "neptune barycenter"),
+]
+
+COMPASS = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
+           "S", "SSO", "SO", "OSO", "O", "ONO", "NO", "NNO"]
+
+
+def compass_point(azimuth_deg: float) -> str:
+    return COMPASS[int((azimuth_deg % 360) / 22.5 + 0.5) % 16]
+
+
+@lru_cache(maxsize=1)
+def _catalog() -> list[dict]:
+    with open(CATALOG_PATH, encoding="utf-8") as fh:
+        return json.load(fh)
+
+
+def visible_objects(lat: float, lon: float, offset_seconds: int,
+                    when_local: datetime, moon_illum: float,
+                    moon_alt: float, limit: int = 12) -> list[dict]:
+    """Objectos acima de MIN_ALTITUDE_DEG neste instante, do mais fácil ao mais difícil.
+
+    `moon_illum` (0–1) e `moon_alt` servem para avisar quando o luar apaga os
+    objectos ténues — não os escondemos, marcamo-los.
+    """
+    ts, eph = _ensure_loaded()
+    observer = eph["earth"] + wgs84.latlon(lat, lon)
+    t = ts.from_datetime(_local_to_utc(when_local, offset_seconds))
+
+    # Luar a lavar o céu: só relevante para objectos de céu profundo.
+    moonlight = moon_illum * max(0.0, moon_alt / 90.0)
+
+    found = []
+
+    # --- Sistema solar (brilhante, não sofre com o luar) ---
+    for label, key in PLANETS:
+        try:
+            body = eph[key]
+        except KeyError:
+            continue
+        alt, az, _ = observer.at(t).observe(body).apparent().altaz()
+        if alt.degrees < MIN_ALTITUDE_DEG:
+            continue
+        found.append({
+            "name": label, "kind": "planeta", "magnitude": None,
+            "altitude_deg": round(alt.degrees, 1),
+            "azimuth_deg": round(az.degrees, 1),
+            "direction": compass_point(az.degrees),
+            "washed_out": False,
+        })
+
+    # --- Céu profundo ---
+    for obj in _catalog():
+        mag = obj.get("mag")
+        if mag is not None and mag > MAX_MAGNITUDE:
+            continue
+        star = Star(ra_hours=obj["ra_h"], dec_degrees=obj["dec_deg"])
+        alt, az, _ = observer.at(t).observe(star).apparent().altaz()
+        if alt.degrees < MIN_ALTITUDE_DEG:
+            continue
+        # Regra prática: com a Lua alta e cheia, tudo abaixo de ~mag 7 desaparece.
+        washed = mag is not None and moonlight > 0.25 and mag > 7.0 - 4.0 * moonlight
+        found.append({
+            "name": obj["id"], "kind": obj["tipo"], "magnitude": mag,
+            "altitude_deg": round(alt.degrees, 1),
+            "azimuth_deg": round(az.degrees, 1),
+            "direction": compass_point(az.degrees),
+            "washed_out": bool(washed),
+        })
+
+    # Planetas primeiro, depois o mais brilhante e o mais alto.
+    found.sort(key=lambda o: (o["kind"] != "planeta",
+                              o["washed_out"],
+                              o["magnitude"] if o["magnitude"] is not None else -5,
+                              -o["altitude_deg"]))
+    return found[:limit]
