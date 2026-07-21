@@ -12,6 +12,45 @@ class LightPollution(BaseModel):
     source: str
 
 
+class HourDetail(BaseModel):
+    """Uma hora da noite: o veredicto e os dados crus por trás dele."""
+    time: str                        # hora local ISO
+    quality: float                   # 0–1, o que alimenta o score
+    in_window: bool                  # dentro da janela recomendada
+    reason: str                      # "bom", "nuvens", "Lua alta", …
+
+    # Decomposição do score — porque é que esta hora vale o que vale
+    cloud_transmission: float        # 0–1, céu que passa depois das camadas
+    moon_factor: float               # 0–1
+    transparency_factor: float       # 0–1
+
+    # Meteorologia crua, para quem prefere interpretar sozinho
+    cloud_total_pct: float | None
+    cloud_low_pct: float | None
+    cloud_mid_pct: float | None
+    cloud_high_pct: float | None
+    temperature_c: float | None
+    dew_point_c: float | None
+    dew_spread_c: float | None
+    humidity_pct: float | None
+    visibility_m: float | None
+    wind_speed_kmh: float | None
+    wind_gusts_kmh: float | None
+    jet_stream_kmh: float | None     # vento a 250 hPa — indicador de seeing
+    precipitation_prob_pct: float | None
+
+    # Astronomia
+    moon_altitude_deg: float
+    moon_illumination_pct: float
+
+
+class FactorImpact(BaseModel):
+    """Quantos pontos um ingrediente está a custar nesta noite."""
+    factor: str                      # "nuvens" | "lua" | "transparencia" | "poluicao"
+    label: str
+    cost_points: int
+
+
 class NightScore(BaseModel):
     date: str                            # dia local em que a noite começa
     score: int                           # 0–100
@@ -33,6 +72,9 @@ class NightScore(BaseModel):
     moon_max_altitude_deg: float | None  # altura máxima da Lua durante a noite
 
     details: str                         # frase legível para humanos
+
+    limiting: list[FactorImpact]         # o que custa pontos, do pior ao menor
+    hours: list[HourDetail]              # detalhe hora a hora da noite
 
 
 class ForecastResponse(BaseModel):

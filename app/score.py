@@ -12,7 +12,8 @@ import math
 from datetime import datetime, timedelta, timezone
 
 from app import astro
-from app.models import ForecastResponse, LightPollution, NightScore
+from app.models import (FactorImpact, ForecastResponse, HourDetail,
+                        LightPollution, NightScore)
 
 # Pesos por camada de nuvens: as baixas tapam tudo, os cirros altos deixam
 # passar bastante. Modeladas como obstruções independentes que se multiplicam.
@@ -181,6 +182,96 @@ def _extend_window(qualities: list[float], best: dict) -> tuple[int, int]:
     return i, j
 
 
+def _score_from(qualities: list[float], lp_factor: float) -> int:
+    best = _best_window(qualities)
+    if best is None:
+        return 0
+    return int(round(max(0.0, min(100.0, 100.0 * best["value"] * lp_factor))))
+
+
+def _quality_without(part: dict, skip: str) -> float:
+    """Qualidade da hora com um ingrediente neutralizado (posto a 1.0)."""
+    return ((1.0 if skip == "nuvens" else part["transmission"])
+            * (1.0 if skip == "lua" else part["mf"])
+            * (1.0 if skip == "transparencia" else part["tf"]))
+
+
+def _factor_impacts(parts: list[dict], lp_factor: float,
+                    base_score: int) -> list[FactorImpact]:
+    """Quantos pontos cada ingrediente custa, medindo o que o score subiria
+    se esse ingrediente fosse perfeito. É o que responde a "o que me limita
+    esta noite?" — a informação mais acionável que a app pode dar.
+    """
+    labels = {"nuvens": "as nuvens", "lua": "a Lua",
+              "transparencia": "a transparência"}
+    impacts = []
+    for skip, label in labels.items():
+        ideal = _score_from([_quality_without(p, skip) for p in parts], lp_factor)
+        cost = ideal - base_score
+        if cost > 0:
+            impacts.append(FactorImpact(factor=skip, label=label, cost_points=cost))
+
+    # A poluição luminosa é constante na noite, mas conta como limitação.
+    if lp_factor < 1.0:
+        cost = _score_from([p["quality"] for p in parts], 1.0) - base_score
+        if cost > 0:
+            impacts.append(FactorImpact(factor="poluicao",
+                                        label="a poluição luminosa",
+                                        cost_points=cost))
+
+    impacts.sort(key=lambda f: -f.cost_points)
+    return impacts
+
+
+def _hour_reason(part: dict) -> str:
+    """Uma razão legível para o valor desta hora — não um número a mais."""
+    if part["transmission"] < 0.30:
+        return "encoberto"
+    if part["transmission"] < 0.70:
+        return "nuvens"
+    if part["mf"] < 0.75:
+        return "Lua alta"
+    if part["tf"] < 0.85:
+        return "ar húmido"
+    if part["mf"] < 0.92:
+        return "Lua baixa"
+    return "bom"
+
+
+def _hour_detail(part: dict, times, h, moon_alt, moon_illum,
+                 in_window: bool) -> HourDetail:
+    i = part["i"]
+
+    def val(name):
+        series = h.get(name)
+        return None if series is None else series[i]
+
+    return HourDetail(
+        time=times[i].isoformat(timespec="minutes"),
+        quality=round(part["quality"], 3),
+        in_window=in_window,
+        reason=_hour_reason(part),
+        cloud_transmission=round(part["transmission"], 3),
+        moon_factor=round(part["mf"], 3),
+        transparency_factor=round(part["tf"], 3),
+        cloud_total_pct=val("cloud_cover"),
+        cloud_low_pct=val("cloud_cover_low"),
+        cloud_mid_pct=val("cloud_cover_mid"),
+        cloud_high_pct=val("cloud_cover_high"),
+        temperature_c=val("temperature_2m"),
+        dew_point_c=val("dew_point_2m"),
+        dew_spread_c=None if part["spread"] is None else round(part["spread"], 1),
+        humidity_pct=val("relative_humidity_2m"),
+        visibility_m=val("visibility"),
+        wind_speed_kmh=val("wind_speed_10m"),
+        wind_gusts_kmh=val("wind_gusts_10m"),
+        jet_stream_kmh=val("wind_speed_250hPa"),
+        precipitation_prob_pct=val("precipitation_probability"),
+        moon_altitude_deg=round(float(moon_alt[i]), 1),
+        moon_illumination_pct=round(float(moon_illum[i]) * 100, 1),
+    )
+
+
 def _verdict(score: int) -> str:
     if score >= 75:
         return "Excelente"
@@ -243,6 +334,7 @@ def _build_night(d, window, times, h, moon_alt, moon_illum, profile,
     if night_start is None or night_end is None:
         return NightScore(
             date=d.isoformat(), score=0, verdict="Sem noite escura",
+            limiting=[], hours=[],
             window_start=None, window_end=None, window_hours=None,
             night_start=None, night_end=None, night_hours=None,
             cloud_cover_pct=None, transparency="—",
@@ -254,6 +346,7 @@ def _build_night(d, window, times, h, moon_alt, moon_illum, profile,
     if not idx:
         return NightScore(
             date=d.isoformat(), score=0, verdict="Sem dados",
+            limiting=[], hours=[],
             window_start=None, window_end=None, window_hours=None,
             night_start=night_start.isoformat(timespec="minutes"),
             night_end=night_end.isoformat(timespec="minutes"),
@@ -266,17 +359,19 @@ def _build_night(d, window, times, h, moon_alt, moon_illum, profile,
     floor = profile["transparency_floor"]
     weight = profile["moon_weight"]
 
-    qualities, spreads = [], []
+    parts = []
     for i in idx:
         transmission = _cloud_transmission(
             h["cloud_cover_low"][i], h["cloud_cover_mid"][i],
             h["cloud_cover_high"][i], h["cloud_cover"][i])
         spread = _spread(h["temperature_2m"][i], h["dew_point_2m"][i])
-        spreads.append(spread)
-        quality = (transmission
-                   * _transparency_factor(spread, floor)
-                   * _moon_factor(float(moon_illum[i]), float(moon_alt[i]), weight))
-        qualities.append(quality)
+        tf = _transparency_factor(spread, floor)
+        mf = _moon_factor(float(moon_illum[i]), float(moon_alt[i]), weight)
+        parts.append({"i": i, "transmission": transmission, "tf": tf, "mf": mf,
+                      "spread": spread, "quality": transmission * tf * mf})
+
+    qualities = [p["quality"] for p in parts]
+    spreads = [p["spread"] for p in parts]
 
     best = _best_window(qualities)
     score = int(round(max(0.0, min(100.0, 100.0 * best["value"] * lp_factor))))
@@ -306,8 +401,14 @@ def _build_night(d, window, times, h, moon_alt, moon_illum, profile,
                f"{win_end.strftime('%H:%M')} · nuvens {cloud_txt} · {moon_txt} · "
                f"transparência {label}.")
 
+    window_positions = set(range(ext_i, ext_j + 1))
+    hours = [_hour_detail(p, times, h, moon_alt, moon_illum, pos in window_positions)
+             for pos, p in enumerate(parts)]
+
     return NightScore(
         date=d.isoformat(), score=score, verdict=_verdict(score),
+        limiting=_factor_impacts(parts, lp_factor, score),
+        hours=hours,
         window_start=win_start.isoformat(timespec="minutes"),
         window_end=win_end.isoformat(timespec="minutes"),
         window_hours=round(win_hours, 1),

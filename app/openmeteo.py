@@ -11,14 +11,20 @@ OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
 
 # Variáveis horárias que interessam à observação astronómica.
 HOURLY_VARS = [
+    # Entram no score
     "cloud_cover",          # nuvens total (%)
     "cloud_cover_low",
     "cloud_cover_mid",
     "cloud_cover_high",
-    "relative_humidity_2m", # humidade (%) — proxy de transparência
-    "dew_point_2m",         # ponto de orvalho (°C)
+    "relative_humidity_2m", # humidade (%)
+    "dew_point_2m",         # ponto de orvalho (°C) — spread = transparência
     "temperature_2m",       # temperatura (°C)
+    # Contexto para quem quer interpretar os dados por si
     "visibility",           # visibilidade (m)
+    "wind_speed_10m",       # vento à superfície (km/h) — estabilidade do tripé
+    "wind_gusts_10m",       # rajadas (km/h)
+    "wind_speed_250hPa",    # jet stream (km/h) — melhor indicador de seeing
+    "precipitation_probability",
 ]
 
 
