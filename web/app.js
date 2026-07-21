@@ -12,6 +12,16 @@ const mapModal = document.getElementById("map-modal");
 const mapClose = document.getElementById("map-close");
 const mapConfirm = document.getElementById("map-confirm");
 const mapCoords = document.getElementById("map-coords");
+const savedListEl = document.getElementById("saved-list");
+const saveBtn = document.getElementById("save-btn");
+const compareBtn = document.getElementById("compare-btn");
+const saveForm = document.getElementById("save-form");
+const saveName = document.getElementById("save-name");
+const saveConfirm = document.getElementById("save-confirm");
+const saveCancel = document.getElementById("save-cancel");
+const compareModal = document.getElementById("compare-modal");
+const compareClose = document.getElementById("compare-close");
+const compareBody = document.getElementById("compare-body");
 const nightsEl = document.getElementById("nights");
 const modeBtns = document.querySelectorAll(".mode-btn");
 
@@ -113,6 +123,7 @@ async function loadForecast() {
       throw new Error(err.detail || `Erro ${res.status}`);
     }
     render(await res.json());
+    saveBtn.hidden = false;
     setStatus("");
   } catch (e) {
     setStatus(`⚠️ ${e.message}`);
@@ -290,9 +301,15 @@ function buildObjects(objs) {
     const item = document.createElement("div");
     item.className = "object" + (o.washed_out ? " washed" : "");
 
-    const name = document.createElement("span");
+    // Link para o simulador do Telescopius: dá para espreitar como vai
+    // aparecer no ocular sem sair de casa.
+    const name = document.createElement("a");
     name.className = "obj-name";
     name.textContent = o.name;
+    name.href = `https://telescopius.com/telescope-simulator?ra=${o.ra_h}&dec=${o.dec_deg}`;
+    name.target = "_blank";
+    name.rel = "noopener";
+    name.title = `Ver ${o.name} no simulador do Telescopius`;
 
     const meta = document.createElement("span");
     meta.className = "obj-meta";
@@ -562,6 +579,171 @@ geoBtn.addEventListener("click", () => {
   );
 });
 
+/* ------------------------------------------------- locais guardados */
+
+const SAVED_KEY = "astrowe.places";
+
+function loadSaved() {
+  try {
+    return JSON.parse(localStorage.getItem(SAVED_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function storeSaved(list) {
+  try { localStorage.setItem(SAVED_KEY, JSON.stringify(list)); } catch { /* ignorar */ }
+  renderSaved();
+}
+
+function renderSaved() {
+  const list = loadSaved();
+  savedListEl.innerHTML = "";
+  for (const p of list) {
+    const chip = document.createElement("span");
+    chip.className = "saved-chip";
+
+    const go = document.createElement("button");
+    go.type = "button";
+    go.className = "saved-go";
+    go.textContent = p.name;
+    go.title = `${p.lat.toFixed(4)}, ${p.lon.toFixed(4)}`;
+    go.addEventListener("click", () => {
+      current = { lat: p.lat, lon: p.lon, label: p.name };
+      placeInput.value = p.name;
+      loadForecast();
+    });
+
+    const del = document.createElement("button");
+    del.type = "button";
+    del.className = "saved-del";
+    del.textContent = "✕";
+    del.title = `Esquecer ${p.name}`;
+    del.addEventListener("click", () => {
+      storeSaved(loadSaved().filter((x) => x.name !== p.name));
+    });
+
+    chip.append(go, del);
+    savedListEl.appendChild(chip);
+  }
+  compareBtn.hidden = list.length < 2;
+}
+
+saveBtn.addEventListener("click", () => {
+  saveForm.hidden = false;
+  saveName.value = current ? current.label : "";
+  saveName.focus();
+  saveName.select();
+});
+
+saveCancel.addEventListener("click", () => { saveForm.hidden = true; });
+
+saveConfirm.addEventListener("click", () => {
+  const name = saveName.value.trim();
+  if (!name || !current) return;
+  const list = loadSaved().filter((p) => p.name !== name);   // substitui homónimo
+  list.push({ name, lat: current.lat, lon: current.lon });
+  storeSaved(list);
+  saveForm.hidden = true;
+});
+
+saveName.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") { e.preventDefault(); saveConfirm.click(); }
+  if (e.key === "Escape") saveForm.hidden = true;
+});
+
+/* ------------------------------------------------ comparar locais */
+
+function compareCellClass(score) {
+  if (score >= 55) return "cmp-good";
+  if (score >= 35) return "cmp-ok";
+  return "cmp-poor";
+}
+
+async function openCompare() {
+  const places = loadSaved();
+  if (places.length < 2) return;
+
+  compareModal.hidden = false;
+  compareBody.innerHTML = '<p class="cmp-status">A calcular…</p>';
+
+  const results = await Promise.all(places.map(async (p) => {
+    try {
+      const res = await fetch(`/api/forecast?lat=${p.lat}&lon=${p.lon}&mode=${mode}`);
+      if (!res.ok) return { place: p, error: true };
+      return { place: p, data: await res.json() };
+    } catch {
+      return { place: p, error: true };
+    }
+  }));
+
+  const ok = results.filter((r) => !r.error);
+  if (!ok.length) {
+    compareBody.innerHTML = '<p class="cmp-status">Não foi possível calcular.</p>';
+    return;
+  }
+
+  const dates = ok[0].data.nights.map((n) => n.date);
+  // O melhor par (local, noite) de todos — a resposta a "onde e quando vou?"
+  let best = { score: -1 };
+  for (const r of ok) {
+    for (const n of r.data.nights) {
+      if (n.score > best.score) best = { score: n.score, place: r.place.name, night: n };
+    }
+  }
+
+  const table = document.createElement("table");
+  table.className = "cmp-table";
+
+  const thead = document.createElement("thead");
+  const hr = document.createElement("tr");
+  hr.appendChild(document.createElement("th"));
+  for (const d of dates) {
+    const th = document.createElement("th");
+    const dt = new Date(d + "T12:00:00");
+    th.textContent = dt.toLocaleDateString("pt-PT", { weekday: "short", day: "numeric" });
+    hr.appendChild(th);
+  }
+  thead.appendChild(hr);
+
+  const tbody = document.createElement("tbody");
+  for (const r of ok) {
+    const tr = document.createElement("tr");
+    const th = document.createElement("th");
+    th.className = "cmp-place";
+    const lp = r.data.light_pollution;
+    th.innerHTML = `${r.place.name}<span>${lp ? lp.description : "poluição luminosa desconhecida"}</span>`;
+    tr.appendChild(th);
+    for (const n of r.data.nights) {
+      const td = document.createElement("td");
+      td.className = compareCellClass(n.score);
+      if (r.place.name === best.place && n.date === best.night.date) td.classList.add("cmp-best");
+      td.textContent = n.score;
+      td.title = n.details;
+      tr.appendChild(td);
+    }
+    tbody.appendChild(tr);
+  }
+
+  table.append(thead, tbody);
+
+  const verdict = document.createElement("p");
+  verdict.className = "cmp-verdict";
+  const bd = new Date(best.night.date + "T12:00:00");
+  verdict.textContent =
+    `Melhor combinação: ${best.place}, ${bd.toLocaleDateString("pt-PT", { weekday: "long", day: "numeric", month: "short" })}` +
+    ` — score ${best.score}. ${best.night.details}`;
+
+  compareBody.innerHTML = "";
+  compareBody.append(verdict, table);
+}
+
+compareBtn.addEventListener("click", openCompare);
+compareClose.addEventListener("click", () => { compareModal.hidden = true; });
+compareModal.addEventListener("click", (e) => {
+  if (e.target === compareModal) compareModal.hidden = true;
+});
+
 /* ---------------------------------------------------------- mapa */
 
 let map = null;
@@ -630,3 +812,5 @@ modeBtns.forEach((btn) => {
     loadForecast();
   });
 });
+
+renderSaved();

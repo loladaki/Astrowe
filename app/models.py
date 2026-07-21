@@ -22,6 +22,8 @@ class SkyObject(BaseModel):
     azimuth_deg: float
     direction: str                       # "SE", "ONO", …
     washed_out: bool                     # apagado pelo luar
+    ra_h: float                          # ascensão recta (horas)
+    dec_deg: float                       # declinação (graus)
 
 
 class HourDetail(BaseModel):

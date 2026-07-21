@@ -69,15 +69,19 @@ def visible_objects(lat: float, lon: float, offset_seconds: int,
             body = eph[key]
         except KeyError:
             continue
-        alt, az, _ = observer.at(t).observe(body).apparent().altaz()
+        apparent = observer.at(t).observe(body).apparent()
+        alt, az, _ = apparent.altaz()
         if alt.degrees < MIN_ALTITUDE_DEG:
             continue
+        ra, dec, _ = apparent.radec()
         found.append({
             "name": label, "kind": "planeta", "magnitude": None,
             "altitude_deg": round(alt.degrees, 1),
             "azimuth_deg": round(az.degrees, 1),
             "direction": compass_point(az.degrees),
             "washed_out": False,
+            "ra_h": round(ra.hours, 5),
+            "dec_deg": round(dec.degrees, 4),
         })
 
     # --- Céu profundo ---
@@ -97,6 +101,8 @@ def visible_objects(lat: float, lon: float, offset_seconds: int,
             "azimuth_deg": round(az.degrees, 1),
             "direction": compass_point(az.degrees),
             "washed_out": bool(washed),
+            "ra_h": obj["ra_h"],
+            "dec_deg": obj["dec_deg"],
         })
 
     # Planetas primeiro, depois o mais brilhante e o mais alto.

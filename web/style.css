@@ -13,6 +13,12 @@
 
 * { box-sizing: border-box; }
 
+/* O atributo `hidden` do HTML só actua via `display: none` na folha do
+   browser, e QUALQUER regra de autor lhe ganha — basta um `display: flex`
+   num elemento escondido para ele aparecer sempre. Esta regra fecha essa
+   porta de vez, em vez de a remendar selector a selector. */
+[hidden] { display: none !important; }
+
 body {
   margin: 0;
   padding: 0 1rem 3rem;
@@ -97,9 +103,6 @@ button:hover { filter: brightness(1.08); }
   justify-content: center;
   padding: 1rem;
 }
-/* Sem isto o `display: flex` acima anula o atributo `hidden` (que só actua
-   via `display: none` na folha do browser) e o modal fica sempre visível. */
-.modal[hidden] { display: none; }
 .modal-box {
   width: min(860px, 100%);
   background: var(--panel);
@@ -130,6 +133,92 @@ button:hover { filter: brightness(1.08); }
 
 /* O Leaflet injecta fundo branco por omissão — combinar com o tema. */
 .leaflet-container { background: var(--panel-2); }
+
+/* ---- locais guardados ---- */
+.saved-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: center;
+  max-width: 720px;
+  margin: 0 auto 1rem;
+}
+.saved-list { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.saved-chip {
+  display: inline-flex;
+  align-items: stretch;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.saved-go {
+  background: transparent;
+  color: var(--text);
+  border: none;
+  font-size: 0.85rem;
+  padding: 0.35rem 0.5rem 0.35rem 0.9rem;
+}
+.saved-del {
+  background: transparent;
+  color: var(--muted);
+  border: none;
+  font-size: 0.75rem;
+  padding: 0.35rem 0.7rem 0.35rem 0.3rem;
+}
+.saved-del:hover { color: var(--poor); }
+#save-btn, #compare-btn {
+  background: var(--panel);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  font-size: 0.82rem;
+  padding: 0.4rem 0.9rem;
+}
+
+.save-form {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  max-width: 460px;
+  margin: 0 auto 1rem;
+}
+#save-name {
+  flex: 1;
+  padding: 0.5rem 0.8rem;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+}
+#save-name:focus { outline: none; border-color: var(--accent); }
+#save-cancel { background: var(--panel-2); color: var(--muted); border: 1px solid var(--border); }
+
+/* ---- comparação de locais ---- */
+.compare-body { padding: 1.1rem; overflow-x: auto; }
+.cmp-status { color: var(--muted); text-align: center; }
+.cmp-verdict {
+  margin: 0 0 1rem;
+  padding: 0.8rem 1rem;
+  background: var(--panel-2);
+  border-left: 3px solid var(--accent);
+  border-radius: 9px;
+  font-size: 0.92rem;
+}
+.cmp-table { border-collapse: collapse; width: 100%; font-size: 0.85rem; }
+.cmp-table th, .cmp-table td {
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+}
+.cmp-table thead th { color: var(--muted); font-weight: 500; text-transform: capitalize; }
+.cmp-place { text-align: left !important; color: var(--text); font-weight: 600; white-space: nowrap; }
+.cmp-place span { display: block; color: var(--muted); font-weight: 400; font-size: 0.74rem; }
+.cmp-table td { font-weight: 600; color: #06122b; }
+.cmp-good { background: var(--good); }
+.cmp-ok   { background: var(--ok); }
+.cmp-poor { background: var(--poor); }
+.cmp-best { outline: 2px solid var(--accent); outline-offset: -2px; }
 
 .modes {
   display: flex;

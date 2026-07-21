@@ -39,6 +39,28 @@
     </div>
   </div>
 
+  <div class="saved-bar">
+    <div id="saved-list" class="saved-list"></div>
+    <button type="button" id="save-btn" hidden>★ Guardar este local</button>
+    <button type="button" id="compare-btn" hidden>⚖ Comparar locais</button>
+  </div>
+
+  <div id="save-form" class="save-form" hidden>
+    <input id="save-name" type="text" placeholder="Nome do local (ex.: Covão)" />
+    <button type="button" id="save-confirm">Guardar</button>
+    <button type="button" id="save-cancel">Cancelar</button>
+  </div>
+
+  <div id="compare-modal" class="modal" hidden>
+    <div class="modal-box">
+      <div class="modal-head">
+        <strong>Os teus locais, noite a noite</strong>
+        <button type="button" id="compare-close" title="Fechar">✕</button>
+      </div>
+      <div id="compare-body" class="compare-body"></div>
+    </div>
+  </div>
+
   <div class="modes" role="group" aria-label="Tipo de observação">
     <button type="button" class="mode-btn active" data-mode="deepsky">🌌 Céu profundo</button>
     <button type="button" class="mode-btn" data-mode="planetary">🪐 Planetas e Lua</button>

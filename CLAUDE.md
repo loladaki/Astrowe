@@ -154,6 +154,21 @@ validadas contra o SIMBAD; M40, M45 e M102 faltavam na fonte e foram
 acrescentados à mão). Calcula o que está acima de 25° a meio da janela
 recomendada, planetas primeiro, e marca os objectos que o luar apaga.
 
+### Locais guardados
+
+Guardados em `localStorage` (`astrowe.places`) — sem contas nem backend. O botão
+"Comparar locais" faz um pedido por local e desenha uma grelha local × noite,
+com a melhor combinação destacada. É o que responde a "onde **e** quando vou?",
+e só é honesto porque a poluição luminosa entra no score.
+
+### Armadilha do CSS: `[hidden]`
+
+`web/style.css` começa com `[hidden] { display: none !important; }` — **não
+remover**. O atributo `hidden` só actua via `display: none` na folha do browser,
+e qualquer regra de autor lhe ganha: um `display: flex` num elemento escondido
+fá-lo aparecer sempre. Aconteceu duas vezes (modal do mapa e formulário de
+guardar) antes de se pôr a regra global.
+
 ### Métricas para o observador (não para o céu)
 
 Vais estar horas parado de noite — estas contam tanto como as do céu:
