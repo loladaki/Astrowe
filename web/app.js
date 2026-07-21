@@ -6,6 +6,12 @@ const geoBtn = document.getElementById("geo-btn");
 const statusEl = document.getElementById("status");
 const summaryEl = document.getElementById("summary");
 const siteEl = document.getElementById("site");
+const suggestionsEl = document.getElementById("suggestions");
+const mapBtn = document.getElementById("map-btn");
+const mapModal = document.getElementById("map-modal");
+const mapClose = document.getElementById("map-close");
+const mapConfirm = document.getElementById("map-confirm");
+const mapCoords = document.getElementById("map-coords");
 const nightsEl = document.getElementById("nights");
 const modeBtns = document.querySelectorAll(".mode-btn");
 
@@ -21,16 +27,76 @@ function setStatus(msg) {
   statusEl.textContent = msg;
 }
 
-async function geocode(name) {
-  const url = `${GEOCODE_URL}?name=${encodeURIComponent(name)}&count=1&language=pt&format=json`;
+const COUNTRY_KEY = "astrowe.country";
+
+/**
+ * País a privilegiar nas sugestões.
+ *
+ * O locale do browser é só o ponto de partida e engana-se com frequência —
+ * um browser em inglês num utilizador português dá "GB". Por isso, assim que
+ * se escolhe uma localidade, passamos a preferir o país dela.
+ */
+let preferredCountry = (() => {
+  try {
+    const saved = localStorage.getItem(COUNTRY_KEY);
+    if (saved) return saved;
+  } catch { /* localStorage indisponível */ }
+  const m = /-([A-Z]{2})$/.exec(navigator.language || "");
+  return m ? m[1] : null;
+})();
+
+function rememberCountry(code) {
+  if (!code || code === preferredCountry) return;
+  preferredCountry = code;
+  try { localStorage.setItem(COUNTRY_KEY, code); } catch { /* ignorar */ }
+}
+
+async function geocodeRequest(name, count, countryCode) {
+  let url = `${GEOCODE_URL}?name=${encodeURIComponent(name)}&count=${count}&language=pt&format=json`;
+  if (countryCode) url += `&countryCode=${countryCode}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error("Falha na geocodificação");
-  const data = await res.json();
-  if (!data.results || data.results.length === 0) {
-    throw new Error(`Localidade "${name}" não encontrada`);
+  return (await res.json()).results || [];
+}
+
+/**
+ * Resultados com os do país do utilizador à cabeça.
+ *
+ * A API ordena por relevância global, o que enterra localidades pequenas:
+ * escrever "Fund" devolvia cidades americanas antes do Fundão. Fazemos dois
+ * pedidos em paralelo e juntamos, com os locais primeiro.
+ */
+async function geocodeMany(name, count = 6) {
+  const [local, global_] = await Promise.all([
+    preferredCountry ? geocodeRequest(name, count, preferredCountry).catch(() => []) : [],
+    geocodeRequest(name, count).catch(() => []),
+  ]);
+
+  const seen = new Set();
+  const merged = [];
+  for (const r of [...local, ...global_]) {
+    const key = r.id ?? `${r.latitude},${r.longitude}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    merged.push(r);
   }
-  const r = data.results[0];
-  return { lat: r.latitude, lon: r.longitude, label: `${r.name}, ${r.country_code}` };
+  return merged.slice(0, count);
+}
+
+/** Etiqueta legível: "Fundão, Castelo Branco, PT" — sem repetir a região. */
+function placeLabel(r) {
+  const parts = [r.name];
+  if (r.admin1 && r.admin1 !== r.name) parts.push(r.admin1);
+  if (r.country_code) parts.push(r.country_code);
+  return parts.join(", ");
+}
+
+async function geocode(name) {
+  const results = await geocodeMany(name, 1);
+  if (!results.length) throw new Error(`Localidade "${name}" não encontrada`);
+  const r = results[0];
+  rememberCountry(r.country_code);
+  return { lat: r.latitude, lon: r.longitude, label: placeLabel(r) };
 }
 
 async function loadForecast() {
@@ -269,10 +335,120 @@ function render(data) {
   }
 }
 
+/* ---------------------------------------------------- autocomplete */
+
+let suggestions = [];      // resultados actuais do dropdown
+let highlighted = -1;      // índice seleccionado por teclado
+let debounceTimer = null;
+let lastQuery = "";
+
+function closeSuggestions() {
+  suggestionsEl.hidden = true;
+  suggestionsEl.innerHTML = "";
+  placeInput.setAttribute("aria-expanded", "false");
+  suggestions = [];
+  highlighted = -1;
+}
+
+function setHighlight(index) {
+  const items = suggestionsEl.querySelectorAll("li");
+  items.forEach((li, i) => li.classList.toggle("active", i === index));
+  highlighted = index;
+  if (index >= 0 && items[index]) items[index].scrollIntoView({ block: "nearest" });
+}
+
+function chooseSuggestion(index) {
+  const r = suggestions[index];
+  if (!r) return;
+  rememberCountry(r.country_code);
+  placeInput.value = placeLabel(r);
+  closeSuggestions();
+  current = { lat: r.latitude, lon: r.longitude, label: placeLabel(r) };
+  loadForecast();
+}
+
+function renderSuggestions(results) {
+  suggestions = results;
+  highlighted = -1;
+  suggestionsEl.innerHTML = "";
+
+  if (!results.length) {
+    closeSuggestions();
+    return;
+  }
+
+  results.forEach((r, i) => {
+    const li = document.createElement("li");
+    li.setAttribute("role", "option");
+
+    const main = document.createElement("span");
+    main.className = "sug-name";
+    main.textContent = r.name;
+
+    const sub = document.createElement("span");
+    sub.className = "sug-sub";
+    sub.textContent = [r.admin1, r.country].filter(Boolean).join(" · ");
+
+    li.append(main, sub);
+    // mousedown corre antes do blur do input, senão a lista fecha primeiro.
+    li.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      chooseSuggestion(i);
+    });
+    li.addEventListener("mouseenter", () => setHighlight(i));
+    suggestionsEl.appendChild(li);
+  });
+
+  suggestionsEl.hidden = false;
+  placeInput.setAttribute("aria-expanded", "true");
+}
+
+placeInput.addEventListener("input", () => {
+  const q = placeInput.value.trim();
+  clearTimeout(debounceTimer);
+  if (q.length < 2) {
+    closeSuggestions();
+    return;
+  }
+  // Espera que pare de escrever, para não disparar um pedido por tecla.
+  debounceTimer = setTimeout(async () => {
+    lastQuery = q;
+    try {
+      const results = await geocodeMany(q);
+      if (lastQuery === q) renderSuggestions(results);  // ignora respostas fora de ordem
+    } catch {
+      closeSuggestions();
+    }
+  }, 250);
+});
+
+placeInput.addEventListener("keydown", (e) => {
+  if (suggestionsEl.hidden) return;
+  if (e.key === "ArrowDown") {
+    e.preventDefault();
+    setHighlight((highlighted + 1) % suggestions.length);
+  } else if (e.key === "ArrowUp") {
+    e.preventDefault();
+    setHighlight((highlighted - 1 + suggestions.length) % suggestions.length);
+  } else if (e.key === "Enter" && highlighted >= 0) {
+    e.preventDefault();
+    chooseSuggestion(highlighted);
+  } else if (e.key === "Escape") {
+    closeSuggestions();
+  }
+});
+
+placeInput.addEventListener("blur", () => setTimeout(closeSuggestions, 120));
+
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
+  if (highlighted >= 0) {          // Enter com sugestão activa escolhe-a
+    chooseSuggestion(highlighted);
+    return;
+  }
   const name = placeInput.value.trim();
   if (!name) return;
+  closeSuggestions();
   setStatus("A procurar localidade…");
   try {
     current = await geocode(name);
@@ -299,6 +475,66 @@ geoBtn.addEventListener("click", () => {
     },
     () => setStatus("⚠️ Não foi possível obter a localização."),
   );
+});
+
+/* ---------------------------------------------------------- mapa */
+
+let map = null;
+let marker = null;
+let picked = null;   // { lat, lon }
+
+function initMap() {
+  // Leaflet só mede bem o contentor depois de ele estar visível, por isso
+  // o mapa é criado à primeira abertura do modal, não no arranque.
+  map = L.map("map").setView(current ? [current.lat, current.lon] : [39.6, -8.0],
+                             current ? 10 : 6);
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 18,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+  }).addTo(map);
+
+  map.on("click", (e) => {
+    picked = { lat: e.latlng.lat, lon: e.latlng.lng };
+    if (marker) marker.setLatLng(e.latlng);
+    else marker = L.marker(e.latlng).addTo(map);
+    mapCoords.textContent =
+      `${picked.lat.toFixed(4)}, ${picked.lon.toFixed(4)}`;
+    mapConfirm.disabled = false;
+  });
+}
+
+function openMap() {
+  mapModal.hidden = false;
+  if (!map) initMap();
+  // O contentor acabou de ficar visível: forçar o Leaflet a remedir.
+  setTimeout(() => map.invalidateSize(), 50);
+  if (current) map.setView([current.lat, current.lon], 10);
+}
+
+function closeMap() {
+  mapModal.hidden = true;
+}
+
+mapBtn.addEventListener("click", openMap);
+mapClose.addEventListener("click", closeMap);
+mapModal.addEventListener("click", (e) => {
+  if (e.target === mapModal) closeMap();   // clicar fora fecha
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !mapModal.hidden) closeMap();
+});
+
+mapConfirm.addEventListener("click", () => {
+  if (!picked) return;
+  current = {
+    lat: picked.lat,
+    lon: picked.lon,
+    label: `${picked.lat.toFixed(4)}, ${picked.lon.toFixed(4)}`,
+  };
+  placeInput.value = current.label;
+  closeMap();
+  loadForecast();
 });
 
 modeBtns.forEach((btn) => {

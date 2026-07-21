@@ -25,7 +25,17 @@ Se aparecer código fora da linha acima, é derrapagem.
   Ir à *fonte* (Open-Meteo), nunca fazer scraping dos intermediários (Clear Outside/Meteoblue).
 - **Efemérides (Sol, Lua, escuridão astronómica):** [Skyfield](https://rhodesmill.org/skyfield/)
   — cálculo local, determinístico, offline. Descarrega `de421.bsp` (~17 MB) na 1ª execução.
-- **Geocodificação (nome → lat/lon):** Open-Meteo Geocoding API (usada no frontend).
+- **Geocodificação (nome → lat/lon):** Open-Meteo Geocoding API (usada no frontend),
+  com autocomplete. Nota: a API ordena por relevância global e enterra
+  localidades pequenas, por isso fazemos dois pedidos em paralelo (um filtrado
+  pelo país preferido, outro global) e juntamos com os locais à cabeça. O país
+  preferido arranca do locale do browser mas **passa a ser o da última
+  localidade escolhida** (guardado em `localStorage`) — o locale engana-se
+  demasiado (um browser em inglês em Portugal dá "GB").
+  Limitação da API: precisa de ~5 caracteres para algumas localidades
+  ("Covil" encontra Covilhã, "Covi" não devolve nada).
+- **Mapa:** [Leaflet](https://leafletjs.com) 1.9.4 via CDN unpkg + tiles do
+  OpenStreetMap. Sem chave. Manter a atribuição do OSM (é exigida).
 - **Poluição luminosa:** [lightpollutionmap.info](https://www.lightpollutionmap.info),
   endpoint `https://www.lightpollutionmap.info/api/queryraster`
   ([docs](https://www.lightpollutionmap.info/api-html/doc-rasterquery.html)),

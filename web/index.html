@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Astrowe — vale a pena sair esta noite?</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
@@ -13,10 +14,30 @@
   </header>
 
   <form id="search-form" autocomplete="off">
-    <input id="place" type="text" placeholder="Localidade (ex.: Fundão, Covilhã…)" />
+    <div class="search-wrap">
+      <input id="place" type="text" placeholder="Localidade (ex.: Fundão, Covilhã…)"
+             role="combobox" aria-expanded="false" aria-autocomplete="list"
+             aria-controls="suggestions" />
+      <ul id="suggestions" class="suggestions" role="listbox" hidden></ul>
+    </div>
     <button type="submit">Ver noites</button>
     <button type="button" id="geo-btn" title="Usar a minha localização">📍</button>
+    <button type="button" id="map-btn" title="Escolher no mapa">🗺️</button>
   </form>
+
+  <div id="map-modal" class="modal" hidden>
+    <div class="modal-box">
+      <div class="modal-head">
+        <strong>Escolhe o local no mapa</strong>
+        <button type="button" id="map-close" title="Fechar">✕</button>
+      </div>
+      <div id="map"></div>
+      <div class="modal-foot">
+        <span id="map-coords">Clica no mapa para escolher um ponto.</span>
+        <button type="button" id="map-confirm" disabled>Usar este local</button>
+      </div>
+    </div>
+  </div>
 
   <div class="modes" role="group" aria-label="Tipo de observação">
     <button type="button" class="mode-btn active" data-mode="deepsky">🌌 Céu profundo</button>
@@ -34,6 +55,7 @@
     · Efemérides: <a href="https://rhodesmill.org/skyfield/" target="_blank" rel="noopener">Skyfield</a>
   </footer>
 
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="/app.js"></script>
 </body>
 </html>
