@@ -243,15 +243,25 @@ function buildRawTable(hours) {
   return wrap;
 }
 
-function factBox(label, value, hint) {
+function factBox(label, value, hint, href) {
   const box = document.createElement("div");
   box.className = "fact";
   const l = document.createElement("div");
   l.className = "fact-label";
   l.textContent = label;
-  const v = document.createElement("div");
+
+  let v;
+  if (href) {
+    v = document.createElement("a");
+    v.href = href;
+    v.target = "_blank";
+    v.rel = "noopener";
+  } else {
+    v = document.createElement("div");
+  }
   v.className = "fact-value";
   v.textContent = value;
+
   box.append(l, v);
   if (hint) {
     const t = document.createElement("div");
@@ -268,7 +278,8 @@ function buildConditions(n) {
 
   grid.appendChild(factBox("Lua", n.moon_phase,
     [n.moonrise && `nasce ${hhmm(n.moonrise)}`,
-     n.moonset && `põe-se ${hhmm(n.moonset)}`].filter(Boolean).join(" · ")));
+     n.moonset && `põe-se ${hhmm(n.moonset)}`].filter(Boolean).join(" · "),
+    "https://telescopius.com/solar-system/moon-calendar"));
 
   grid.appendChild(factBox("Seeing", n.seeing, "estabilidade do ar"));
 

@@ -19,6 +19,10 @@ CATALOG_PATH = Path(__file__).resolve().parent / "data" / "messier.json"
 # Abaixo disto a atmosfera estraga a vista e as árvores/casas costumam tapar.
 MIN_ALTITUDE_DEG = 25.0
 
+# A Lua e os planetas são brilhantes e atravessam bem a atmosfera baixa —
+# ninguém deixa de olhar para Saturno a 18°. Bar mais baixo para eles.
+MIN_ALTITUDE_BRIGHT_DEG = 15.0
+
 # Objectos mais fracos que isto não se veem num telescópio amador típico.
 MAX_MAGNITUDE = 10.0
 
@@ -40,6 +44,8 @@ COMPASS = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
 # sozinha para a página completa com os slugs do nome e do tipo.
 TELESCOPIUS_DSO = "https://telescopius.com/deep-sky-objects/m-{n}"
 TELESCOPIUS_PLANET = "https://telescopius.com/solar-system/planet/{slug}"
+# A Lua não tem ficha própria; o calendário de fases é o que existe.
+TELESCOPIUS_MOON = "https://telescopius.com/solar-system/moon-calendar"
 
 
 def compass_point(azimuth_deg: float) -> str:
@@ -55,7 +61,7 @@ def _catalog() -> list[dict]:
 def visible_objects(lat: float, lon: float, offset_seconds: int,
                     when_local: datetime, moon_illum: float,
                     moon_alt: float, limit: int = 12) -> list[dict]:
-    """Objectos acima de MIN_ALTITUDE_DEG neste instante, do mais fácil ao mais difícil.
+    """O que está observável neste instante, do mais fácil ao mais difícil.
 
     `moon_illum` (0–1) e `moon_alt` servem para avisar quando o luar apaga os
     objectos ténues — não os escondemos, marcamo-los.
@@ -69,6 +75,24 @@ def visible_objects(lat: float, lon: float, offset_seconds: int,
 
     found = []
 
+    # --- A Lua, quando está no céu ---
+    # Em modo planetas é um alvo por direito próprio; em céu profundo é o
+    # estorvo. Em qualquer dos casos, se está lá em cima deve constar.
+    moon_apparent = observer.at(t).observe(eph["moon"]).apparent()
+    m_alt, m_az, _ = moon_apparent.altaz()
+    if m_alt.degrees >= MIN_ALTITUDE_BRIGHT_DEG:
+        m_ra, m_dec, _ = moon_apparent.radec()
+        found.append({
+            "name": "Lua", "kind": "satélite", "magnitude": None,
+            "altitude_deg": round(m_alt.degrees, 1),
+            "azimuth_deg": round(m_az.degrees, 1),
+            "direction": compass_point(m_az.degrees),
+            "washed_out": False,
+            "ra_h": round(m_ra.hours, 5),
+            "dec_deg": round(m_dec.degrees, 4),
+            "url": TELESCOPIUS_MOON,
+        })
+
     # --- Sistema solar (brilhante, não sofre com o luar) ---
     for label, key, slug in PLANETS:
         try:
@@ -77,7 +101,7 @@ def visible_objects(lat: float, lon: float, offset_seconds: int,
             continue
         apparent = observer.at(t).observe(body).apparent()
         alt, az, _ = apparent.altaz()
-        if alt.degrees < MIN_ALTITUDE_DEG:
+        if alt.degrees < MIN_ALTITUDE_BRIGHT_DEG:
             continue
         ra, dec, _ = apparent.radec()
         found.append({
@@ -113,8 +137,9 @@ def visible_objects(lat: float, lon: float, offset_seconds: int,
             "url": TELESCOPIUS_DSO.format(n=obj["id"].lstrip("Mm")),
         })
 
-    # Planetas primeiro, depois o mais brilhante e o mais alto.
-    found.sort(key=lambda o: (o["kind"] != "planeta",
+    # Lua e planetas primeiro, depois o mais brilhante e o mais alto.
+    order = {"satélite": 0, "planeta": 1}
+    found.sort(key=lambda o: (order.get(o["kind"], 2),
                               o["washed_out"],
                               o["magnitude"] if o["magnitude"] is not None else -5,
                               -o["altitude_deg"]))

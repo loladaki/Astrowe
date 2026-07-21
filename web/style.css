@@ -352,7 +352,9 @@ button:hover { filter: brightness(1.08); }
   padding: 0.6rem 0.8rem;
 }
 .fact-label { color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.4px; }
-.fact-value { color: var(--text); font-size: 0.98rem; margin-top: 0.15rem; }
+.fact-value { color: var(--text); font-size: 0.98rem; margin-top: 0.15rem; display: block; }
+a.fact-value { color: var(--accent); text-decoration: none; }
+a.fact-value:hover { text-decoration: underline; }
 .fact-hint { color: var(--muted); font-size: 0.74rem; margin-top: 0.1rem; }
 
 /* ---- objectos visíveis ---- */
