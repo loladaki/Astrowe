@@ -10,6 +10,7 @@ from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 
+import numpy as np
 from skyfield.api import Star, wgs84
 
 from app.astro import _ensure_loaded, _local_to_utc
@@ -56,6 +57,20 @@ def compass_point(azimuth_deg: float) -> str:
 def _catalog() -> list[dict]:
     with open(CATALOG_PATH, encoding="utf-8") as fh:
         return json.load(fh)
+
+
+@lru_cache(maxsize=1)
+def _catalog_vectorised():
+    """Catálogo observável + um único `Star` com todas as coordenadas.
+
+    O Skyfield aceita arrays, o que permite posicionar os 110 objectos numa
+    só chamada em vez de 110 — a diferença nota-se num host modesto.
+    """
+    usable = [o for o in _catalog()
+              if o.get("mag") is None or o["mag"] <= MAX_MAGNITUDE]
+    stars = Star(ra_hours=np.array([o["ra_h"] for o in usable]),
+                 dec_degrees=np.array([o["dec_deg"] for o in usable]))
+    return usable, stars
 
 
 def visible_objects(lat: float, lon: float, offset_seconds: int,
@@ -115,22 +130,24 @@ def visible_objects(lat: float, lon: float, offset_seconds: int,
             "url": TELESCOPIUS_PLANET.format(slug=slug),
         })
 
-    # --- Céu profundo ---
-    for obj in _catalog():
+    # --- Céu profundo (todos de uma vez) ---
+    catalog, stars = _catalog_vectorised()
+    alt_arr, az_arr, _ = observer.at(t).observe(stars).apparent().altaz()
+    altitudes, azimuths = alt_arr.degrees, az_arr.degrees
+
+    for i, obj in enumerate(catalog):
+        altitude = float(altitudes[i])
+        if altitude < MIN_ALTITUDE_DEG:
+            continue
         mag = obj.get("mag")
-        if mag is not None and mag > MAX_MAGNITUDE:
-            continue
-        star = Star(ra_hours=obj["ra_h"], dec_degrees=obj["dec_deg"])
-        alt, az, _ = observer.at(t).observe(star).apparent().altaz()
-        if alt.degrees < MIN_ALTITUDE_DEG:
-            continue
+        azimuth = float(azimuths[i])
         # Regra prática: com a Lua alta e cheia, tudo abaixo de ~mag 7 desaparece.
         washed = mag is not None and moonlight > 0.25 and mag > 7.0 - 4.0 * moonlight
         found.append({
             "name": obj["id"], "kind": obj["tipo"], "magnitude": mag,
-            "altitude_deg": round(alt.degrees, 1),
-            "azimuth_deg": round(az.degrees, 1),
-            "direction": compass_point(az.degrees),
+            "altitude_deg": round(altitude, 1),
+            "azimuth_deg": round(azimuth, 1),
+            "direction": compass_point(azimuth),
             "washed_out": bool(washed),
             "ra_h": obj["ra_h"],
             "dec_deg": obj["dec_deg"],
