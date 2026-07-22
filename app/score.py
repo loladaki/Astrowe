@@ -422,6 +422,7 @@ def _build_night(d, window, times, h, moon_alt, moon_illum, profile,
             night_start=None, night_end=None, night_hours=None,
             cloud_cover_pct=None, transparency="—",
             moon_illumination_pct=0.0, moon_max_altitude_deg=None,
+            conditions="O Sol não desce o suficiente para haver escuridão.",
             details="O Sol não desce o suficiente nesta noite — sem escuridão utilizável.",
         )
 
@@ -440,6 +441,7 @@ def _build_night(d, window, times, h, moon_alt, moon_illum, profile,
             night_hours=round((night_end - night_start).total_seconds() / 3600, 1),
             cloud_cover_pct=None, transparency="—",
             moon_illumination_pct=0.0, moon_max_altitude_deg=None,
+            conditions="Sem previsão meteorológica para esta noite.",
             details="Sem previsão meteorológica para esta noite.",
         )
 
@@ -507,6 +509,11 @@ def _build_night(d, window, times, h, moon_alt, moon_illum, profile,
     if seeing_label != "desconhecido":
         phrases.append(f"seeing {seeing_label}")
 
+    # A janela e as condições vivem separadas: a interface já mostra as horas,
+    # e repeti-las na frase era a origem do "5.4h" duplicado no card.
+    # `.capitalize()` não serve: põe em minúscula tudo o resto e come o L de "Lua".
+    frase = ", ".join(phrases)
+    conditions = frase[0].upper() + frase[1:] + "."
     details = (f"{win_hours:.1f}h das {win_start.strftime('%H:%M')} às "
                f"{win_end.strftime('%H:%M')} · " + ", ".join(phrases) + ".")
 
@@ -549,6 +556,7 @@ def _build_night(d, window, times, h, moon_alt, moon_illum, profile,
         night_start=night_start.isoformat(timespec="minutes"),
         night_end=night_end.isoformat(timespec="minutes"),
         night_hours=round((night_end - night_start).total_seconds() / 3600, 1),
+        conditions=conditions,
         cloud_cover_pct=None if cloud is None else round(cloud, 1),
         transparency=label,
         moon_illumination_pct=round(illum_pct, 1),

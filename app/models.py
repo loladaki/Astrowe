@@ -113,7 +113,8 @@ class NightScore(BaseModel):
     moon_illumination_pct: float         # fração iluminada da Lua (0–100)
     moon_max_altitude_deg: float | None  # altura máxima da Lua durante a noite
 
-    details: str                         # frase legível para humanos
+    conditions: str                      # só as condições: "céu limpo, ar seco…"
+    details: str                         # frase completa (resumo, comparação)
 
     # Condições na janela recomendada, em linguagem corrente
     moon_phase: str                      # "Lua gibosa baixa no céu"
