@@ -1,6 +1,7 @@
 """Astrowe — API FastAPI + serve o frontend estático."""
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Literal
 
@@ -13,6 +14,8 @@ from app import lightpollution, openmeteo, score
 
 # Lê LIGHTPOLLUTIONMAP_API_KEY de um .env na raiz do projeto, se existir.
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Astrowe", description="Score de observação astronómica por noite")
 
@@ -32,8 +35,15 @@ async def forecast(
     """
     try:
         data = await openmeteo.fetch_forecast(lat, lon)
-    except httpx.HTTPError as exc:
-        raise HTTPException(status_code=502, detail=f"Open-Meteo indisponível: {exc}")
+    except (openmeteo.OpenMeteoUnavailable, httpx.HTTPError) as exc:
+        # O motivo técnico vai para o log; ao utilizador só o que lhe serve.
+        # Despejar a URL do pedido, como acontecia antes, não ajuda ninguém.
+        logger.warning("Falha ao obter meteorologia (%s, %s): %s", lat, lon, exc)
+        raise HTTPException(
+            status_code=502,
+            detail="O serviço de meteorologia está temporariamente indisponível. "
+                   "Tenta outra vez daqui a um minuto.",
+        ) from exc
 
     # Degradação graciosa: sem chave da API (ou se ela falhar) devolve None e a
     # previsão sai na mesma, apenas sem o fator de poluição luminosa.

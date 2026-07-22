@@ -5,9 +5,24 @@ Docs: https://open-meteo.com/en/docs
 """
 from __future__ import annotations
 
+import asyncio
+import logging
+
 import httpx
 
+logger = logging.getLogger(__name__)
+
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
+
+# A API tem soluços passageiros (503/504). Não vale a pena estragar a previsão
+# por causa de um — tenta outra vez antes de desistir.
+TRANSIENT_STATUS = {429, 500, 502, 503, 504}
+MAX_ATTEMPTS = 3
+BACKOFF_BASE_S = 0.6
+
+
+class OpenMeteoUnavailable(Exception):
+    """A API falhou depois de todas as tentativas."""
 
 # Variáveis horárias que interessam à observação astronómica.
 HOURLY_VARS = [
@@ -42,7 +57,26 @@ async def fetch_forecast(lat: float, lon: float, days: int = 7) -> dict:
         "timezone": "auto",
         "forecast_days": days,
     }
+
+    motivo = "desconhecido"
     async with httpx.AsyncClient(timeout=20.0) as client:
-        resp = await client.get(OPEN_METEO_URL, params=params)
-        resp.raise_for_status()
-        return resp.json()
+        for tentativa in range(MAX_ATTEMPTS):
+            try:
+                resp = await client.get(OPEN_METEO_URL, params=params)
+                if resp.status_code not in TRANSIENT_STATUS:
+                    resp.raise_for_status()
+                    return resp.json()
+                motivo = f"HTTP {resp.status_code}"
+            except (httpx.TimeoutException, httpx.TransportError) as exc:
+                motivo = type(exc).__name__
+            except httpx.HTTPError as exc:
+                # Erro não transitório (400, 404…): insistir não ajuda.
+                raise OpenMeteoUnavailable(str(exc)) from exc
+
+            if tentativa < MAX_ATTEMPTS - 1:
+                espera = BACKOFF_BASE_S * (2 ** tentativa)
+                logger.warning("Open-Meteo %s — nova tentativa em %.1fs (%d/%d)",
+                               motivo, espera, tentativa + 2, MAX_ATTEMPTS)
+                await asyncio.sleep(espera)
+
+    raise OpenMeteoUnavailable(motivo)
