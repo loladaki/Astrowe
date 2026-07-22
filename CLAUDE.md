@@ -197,6 +197,13 @@ noites seria insuportável no Render.
 `airmass` usa Kasten-Young, que continua válida perto do horizonte (ao
 contrário de `1/cos(z)`). 1.0 no zénite, 2.0 a 30°, 5.6 a 10°.
 
+⚠️ **Referencial:** o cálculo do trânsito compara ascensão recta com o tempo
+sideral, que é **da data**. As coordenadas têm de vir de `radec(epoch="date")`,
+não do `radec()` (J2000, o padrão do Skyfield) nem directamente do catálogo.
+Misturá-los introduz o desvio da precessão — em 2026 são ~0.37°, ou seja ~1.4
+min no trânsito e ~0.15° na altura. Validado contra o Stellarium para Saturno
+no Fundão: altura de culminação bate ao décimo de grau (53.4°).
+
 `app/events.py` acrescenta o que depende da época: **chuveiros de meteoros**
 (tabela da IMO, ±2 dias do pico, com a altura do radiante — um radiante baixo
 esconde a maioria dos meteoros) e o **núcleo da Via Láctea** (devolve `None`

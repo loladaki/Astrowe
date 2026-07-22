@@ -38,13 +38,19 @@ DAYS_AROUND_PEAK = 2
 
 def _radiant_position(lat: float, lon: float, offset_seconds: int,
                       when_local: datetime, ra_h: float, dec_deg: float):
-    """Altura e azimute de um ponto fixo do céu, neste instante."""
+    """Altura, azimute e coordenadas *da data* de um ponto fixo do céu.
+
+    As coordenadas da tabela são J2000; o trânsito compara-se com o tempo
+    sideral, que é da data. Sem converter, a precessão introduz ~0.37° de erro.
+    """
     ts, eph = _ensure_loaded()
     observer = eph["earth"] + wgs84.latlon(lat, lon)
     t = ts.from_datetime(_local_to_utc(when_local, offset_seconds))
-    alt, az, _ = observer.at(t).observe(
-        Star(ra_hours=ra_h, dec_degrees=dec_deg)).apparent().altaz()
-    return t, alt.degrees, az.degrees
+    apparent = observer.at(t).observe(
+        Star(ra_hours=ra_h, dec_degrees=dec_deg)).apparent()
+    alt, az, _ = apparent.altaz()
+    ra_d, dec_d, _ = apparent.radec(epoch="date")
+    return t, alt.degrees, az.degrees, ra_d.hours, dec_d.degrees
 
 
 def _days_from_peak(night: date, month: int, day: int) -> int:
@@ -72,9 +78,10 @@ def meteor_shower(night: date, lat: float, lon: float, offset_seconds: int,
         return None
 
     dias, nome, zhr, ra, dec = ativo
-    t, alt, az = _radiant_position(lat, lon, offset_seconds, when_local, ra, dec)
+    t, alt, az, ra_d, dec_d = _radiant_position(lat, lon, offset_seconds,
+                                                when_local, ra, dec)
     lst = local_sidereal_hours(t, lon)
-    tempos = _timing(lst, ra, dec, lat, when_local, window_start, window_end)
+    tempos = _timing(lst, ra_d, dec_d, lat, when_local, window_start, window_end)
 
     if alt <= 0:
         nota = "radiante abaixo do horizonte — poucos meteoros"
@@ -104,15 +111,15 @@ def milky_way_core(lat: float, lon: float, offset_seconds: int,
 
     Devolve None onde nunca sobe acima do horizonte.
     """
-    maxima = transit_altitude(lat, MILKY_WAY_DEC_DEG)
-    if maxima <= 0:
+    if transit_altitude(lat, MILKY_WAY_DEC_DEG) <= 0:
         return None
 
-    t, alt, az = _radiant_position(lat, lon, offset_seconds, when_local,
-                                   MILKY_WAY_RA_H, MILKY_WAY_DEC_DEG)
+    t, alt, az, ra_d, dec_d = _radiant_position(lat, lon, offset_seconds,
+                                                when_local, MILKY_WAY_RA_H,
+                                                MILKY_WAY_DEC_DEG)
+    maxima = transit_altitude(lat, dec_d)
     lst = local_sidereal_hours(t, lon)
-    tempos = _timing(lst, MILKY_WAY_RA_H, MILKY_WAY_DEC_DEG, lat,
-                     when_local, window_start, window_end)
+    tempos = _timing(lst, ra_d, dec_d, lat, when_local, window_start, window_end)
 
     if alt <= 0:
         nota = "abaixo do horizonte nesta altura da noite"

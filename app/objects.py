@@ -168,6 +168,9 @@ def visible_objects(lat: float, lon: float, offset_seconds: int,
     m_alt, m_az, _ = moon_apparent.altaz()
     if m_alt.degrees >= MIN_ALTITUDE_BRIGHT_DEG:
         m_ra, m_dec, _ = moon_apparent.radec()
+        # Para o cálculo do trânsito é preciso o referencial *da data*: o tempo
+        # sideral é da data, e J2000 está ~0.37° defasado por precessão.
+        m_ra_d, m_dec_d, _ = moon_apparent.radec(epoch="date")
         found.append({
             "name": "Lua", "kind": "satélite", "magnitude": None,
             "altitude_deg": round(m_alt.degrees, 1),
@@ -178,7 +181,7 @@ def visible_objects(lat: float, lon: float, offset_seconds: int,
             "dec_deg": round(m_dec.degrees, 4),
             "url": TELESCOPIUS_MOON,
             "airmass": _round_airmass(m_alt.degrees),
-            **timing(m_ra.hours, m_dec.degrees),
+            **timing(m_ra_d.hours, m_dec_d.degrees),
         })
 
     # --- Sistema solar (brilhante, não sofre com o luar) ---
@@ -192,6 +195,7 @@ def visible_objects(lat: float, lon: float, offset_seconds: int,
         if alt.degrees < MIN_ALTITUDE_BRIGHT_DEG:
             continue
         ra, dec, _ = apparent.radec()
+        ra_d, dec_d, _ = apparent.radec(epoch="date")
         found.append({
             "name": label, "kind": "planeta", "magnitude": None,
             "altitude_deg": round(alt.degrees, 1),
@@ -202,13 +206,17 @@ def visible_objects(lat: float, lon: float, offset_seconds: int,
             "dec_deg": round(dec.degrees, 4),
             "url": TELESCOPIUS_PLANET.format(slug=slug),
             "airmass": _round_airmass(alt.degrees),
-            **timing(ra.hours, dec.degrees),
+            **timing(ra_d.hours, dec_d.degrees),
         })
 
     # --- Céu profundo (todos de uma vez) ---
     catalog, stars = _catalog_vectorised()
-    alt_arr, az_arr, _ = observer.at(t).observe(stars).apparent().altaz()
+    apparent_dso = observer.at(t).observe(stars).apparent()
+    alt_arr, az_arr, _ = apparent_dso.altaz()
     altitudes, azimuths = alt_arr.degrees, az_arr.degrees
+    # O catálogo é J2000; para o trânsito é preciso o referencial da data.
+    ra_d_arr, dec_d_arr, _ = apparent_dso.radec(epoch="date")
+    ras_d, decs_d = ra_d_arr.hours, dec_d_arr.degrees
 
     for i, obj in enumerate(catalog):
         altitude = float(altitudes[i])
@@ -228,7 +236,7 @@ def visible_objects(lat: float, lon: float, offset_seconds: int,
             "dec_deg": obj["dec_deg"],
             "url": TELESCOPIUS_DSO.format(n=obj["id"].lstrip("Mm")),
             "airmass": _round_airmass(altitude),
-            **timing(obj["ra_h"], obj["dec_deg"]),
+            **timing(float(ras_d[i]), float(decs_d[i])),
         })
 
     # Lua e planetas primeiro, depois o mais brilhante e o mais alto.
