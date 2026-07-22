@@ -1,0 +1,21 @@
+# Blueprint do Render. Em render.com: New → Blueprint → aponta para este repo.
+#
+# A chave da API NÃO está aqui de propósito (`sync: false`): o Render pede-a
+# no dashboard e guarda-a como segredo. Nunca entra no repositório.
+services:
+  - type: web
+    name: astrowe
+    runtime: python
+    plan: free
+    buildCommand: |
+      pip install -r requirements.txt
+      python -c "from skyfield.api import load; load('de421.bsp')"
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      # 3.14 é recente demais para alguns wheels; 3.12 tem tudo compilado.
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      # Preencher no dashboard do Render (Environment → Add Secret).
+      - key: LIGHTPOLLUTIONMAP_API_KEY
+        sync: false

@@ -432,3 +432,29 @@ a.fact-value:hover { text-decoration: underline; }
 
 footer { text-align: center; color: var(--muted); margin-top: 2.5rem; font-size: 0.85rem; }
 footer a { color: var(--accent); }
+
+/* ---- telemóvel: é onde isto se usa a sério, na estrada ---- */
+@media (max-width: 560px) {
+  body { padding: 0 0.7rem 2rem; }
+  header { padding: 1.5rem 0 1rem; }
+  h1 { font-size: 1.9rem; }
+  .tagline { font-size: 0.85rem; }
+
+  /* O campo de pesquisa passa a ocupar a linha toda e os botões descem. */
+  #search-form { flex-wrap: wrap; }
+  .search-wrap { flex: 1 1 100%; }
+  #search-form > button { flex: 1; }
+
+  .night-head {
+    grid-template-columns: 52px 1fr 16px;
+    gap: 0.7rem;
+    padding: 0.85rem 0.9rem;
+  }
+  .score-badge { width: 52px; height: 52px; font-size: 1.2rem; }
+  .night-detail { padding: 0 0.9rem 1rem; }
+  .summary { font-size: 0.95rem; padding: 0.8rem 1rem; }
+
+  .modal { padding: 0.5rem; }
+  #map { height: 55vh; }
+  .object-list, .facts { grid-template-columns: 1fr; }
+}

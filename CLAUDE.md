@@ -80,6 +80,19 @@ uvicorn app.main:app --reload
 
 A **primeira** chamada à API é lenta (Skyfield descarrega `de421.bsp`). Depois fica em cache.
 
+## Deploy
+
+**GitHub Pages não serve** — o backend calcula efemérides em Python. Há
+`render.yaml` (Blueprint do Render) e `Dockerfile` (HF Spaces, Fly.io, etc.).
+
+Duas regras que não se quebram:
+- A chave da API **nunca** entra no repositório nem em JavaScript publicado.
+  No Render é `sync: false` no blueprint, preenchida como segredo no dashboard.
+  Um site estático tornaria a chave pública — foi por isso que se descartou o
+  Pages mesmo com as APIs a suportarem CORS.
+- As efemérides descarregam-se **durante a build**, não em runtime: são 17 MB
+  do JPL a cada arranque a frio se ficarem para o primeiro pedido.
+
 ## A fórmula do score (v2)
 
 A ideia central: **nunca fazer a média da noite toda**. "Limpo até à 1h, depois
