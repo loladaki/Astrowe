@@ -11,9 +11,10 @@ from __future__ import annotations
 import math
 from datetime import datetime, timedelta, timezone
 
-from app import astro, objects
+from app import astro, events, objects
 from app.models import (FactorImpact, ForecastResponse, HourDetail,
-                        LightPollution, NightScore, SkyObject)
+                        LightPollution, MeteorShower, MilkyWay, NightScore,
+                        SkyObject)
 
 # Pesos por camada de nuvens: as baixas tapam tudo, os cirros altos deixam
 # passar bastante. Modeladas como obstruções independentes que se multiplicam.
@@ -415,6 +416,7 @@ def _build_night(d, window, times, h, moon_alt, moon_illum, profile,
             moon_phase="—", moonrise=None, moonset=None,
             seeing="desconhecido", dew_risk="desconhecido",
             temperature_c=None, feels_like_c=None, wind_kmh=None,
+            meteor_shower=None, milky_way=None,
             limiting=[], objects=[], hours=[],
             window_start=None, window_end=None, window_hours=None,
             night_start=None, night_end=None, night_hours=None,
@@ -430,6 +432,7 @@ def _build_night(d, window, times, h, moon_alt, moon_illum, profile,
             moon_phase="—", moonrise=None, moonset=None,
             seeing="desconhecido", dew_risk="desconhecido",
             temperature_c=None, feels_like_c=None, wind_kmh=None,
+            meteor_shower=None, milky_way=None,
             limiting=[], objects=[], hours=[],
             window_start=None, window_end=None, window_hours=None,
             night_start=night_start.isoformat(timespec="minutes"),
@@ -514,8 +517,15 @@ def _build_night(d, window, times, h, moon_alt, moon_illum, profile,
     # O que se vê a meio da janela recomendada.
     mid = win_idx[len(win_idx) // 2]
     sky = objects.visible_objects(lat, lon, offset, times[mid],
-                                  float(moon_illum[mid]), float(moon_alt[mid]))
+                                  float(moon_illum[mid]), float(moon_alt[mid]),
+                                  window_start=win_start, window_end=win_end)
     moonrise, moonset = astro.moon_rise_set(lat, lon, offset, d)
+
+    moonlight = float(moon_illum[mid]) * max(0.0, float(moon_alt[mid]) / 90.0)
+    shower = events.meteor_shower(d, lat, lon, offset, times[mid],
+                                  win_start, win_end)
+    galaxy = events.milky_way_core(lat, lon, offset, times[mid],
+                                   win_start, win_end, moonlight)
 
     return NightScore(
         date=d.isoformat(), score=score, verdict=_verdict(score),
@@ -528,6 +538,8 @@ def _build_night(d, window, times, h, moon_alt, moon_illum, profile,
         feels_like_c=(None if temp is None
                       else round(_feels_like(temp, wind), 1)),
         wind_kmh=None if wind is None else round(wind, 1),
+        meteor_shower=MeteorShower(**shower) if shower else None,
+        milky_way=MilkyWay(**galaxy) if galaxy else None,
         limiting=_factor_impacts(parts, lp_factor, score),
         objects=[SkyObject(**o) for o in sky],
         hours=hours,

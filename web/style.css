@@ -357,6 +357,24 @@ a.fact-value { color: var(--accent); text-decoration: none; }
 a.fact-value:hover { text-decoration: underline; }
 .fact-hint { color: var(--muted); font-size: 0.74rem; margin-top: 0.1rem; }
 
+/* ---- eventos da noite ---- */
+.events {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+.event {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 9px;
+  padding: 0.6rem 0.85rem;
+}
+.event-head { color: var(--text); font-size: 0.92rem; font-weight: 600; }
+.event-text { color: var(--muted); font-size: 0.8rem; margin-top: 0.2rem; }
+.event-when { color: var(--accent); font-size: 0.76rem; margin-top: 0.25rem; }
+
 /* ---- objectos visíveis ---- */
 .objects { margin-top: 1.1rem; }
 .objects-title { color: var(--text); font-size: 0.9rem; margin-bottom: 0.5rem; }
@@ -378,6 +396,7 @@ a.fact-value:hover { text-decoration: underline; }
 .object.washed { opacity: 0.55; }
 .obj-name { color: var(--accent); font-weight: 600; font-size: 0.9rem; }
 .obj-meta { color: var(--muted); font-size: 0.78rem; }
+.obj-when { color: var(--accent); font-size: 0.74rem; width: 100%; }
 .obj-warn { color: var(--ok); font-size: 0.7rem; width: 100%; }
 
 .hour-strip {

@@ -6,7 +6,8 @@ Tudo calculado offline com Skyfield. O catálogo Messier vive em
 from __future__ import annotations
 
 import json
-from datetime import datetime
+import math
+from datetime import datetime, timedelta
 from functools import lru_cache
 from pathlib import Path
 
@@ -49,8 +50,72 @@ TELESCOPIUS_PLANET = "https://telescopius.com/solar-system/planet/{slug}"
 TELESCOPIUS_MOON = "https://telescopius.com/solar-system/moon-calendar"
 
 
+# Uma hora sideral é mais curta que uma solar: a Terra dá a volta em 23h56m.
+SIDEREAL_TO_SOLAR = 0.9972695663
+
+
 def compass_point(azimuth_deg: float) -> str:
     return COMPASS[int((azimuth_deg % 360) / 22.5 + 0.5) % 16]
+
+
+def airmass(altitude_deg: float) -> float | None:
+    """Espessura de atmosfera atravessada — 1.0 no zénite, 2.0 a ~30°.
+
+    Fórmula de Kasten-Young, que continua a valer perto do horizonte, ao
+    contrário do simples 1/cos(z) que dispara para infinito.
+    """
+    if altitude_deg <= 0:
+        return None
+    return 1.0 / (math.sin(math.radians(altitude_deg))
+                  + 0.50572 * (altitude_deg + 6.07995) ** -1.6364)
+
+
+def local_sidereal_hours(t, lon_deg: float) -> float:
+    """Tempo sideral local, em horas. É ele que diz o que está no meridiano."""
+    return (t.gast + lon_deg / 15.0) % 24.0
+
+
+def transit_altitude(lat_deg: float, dec_deg: float) -> float:
+    """Altura máxima que um objecto chega a atingir nesta latitude.
+
+    Exacta e gratuita: no meridiano, a altura é 90 − |latitude − declinação|.
+    Evita ter de amostrar a noite inteira só para descobrir o pico.
+    """
+    return 90.0 - abs(lat_deg - dec_deg)
+
+
+def hours_to_transit(lst_h: float, ra_h: float) -> float:
+    """Horas solares até à culminação. Negativo = já passou o ponto alto."""
+    hour_angle = ((lst_h - ra_h + 12.0) % 24.0) - 12.0
+    return -hour_angle * SIDEREAL_TO_SOLAR
+
+
+def _round_airmass(altitude_deg: float) -> float | None:
+    x = airmass(altitude_deg)
+    return None if x is None else round(x, 2)
+
+
+def _trend(hours: float) -> str:
+    if hours > 0.25:
+        return "a subir"
+    if hours < -0.25:
+        return "a descer"
+    return "no ponto alto"
+
+
+def _timing(lst_h: float, ra_h: float, dec_deg: float, lat: float,
+            when_local: datetime, window_start: datetime | None,
+            window_end: datetime | None) -> dict:
+    """Culminação, tendência e altura máxima deste objecto."""
+    to_transit = hours_to_transit(lst_h, ra_h)
+    transit_at = when_local + timedelta(hours=to_transit)
+    dentro = (window_start is not None and window_end is not None
+              and window_start <= transit_at <= window_end)
+    return {
+        "trend": _trend(to_transit),
+        "max_altitude_deg": round(transit_altitude(lat, dec_deg), 1),
+        "transit_time": transit_at.isoformat(timespec="minutes") if dentro else None,
+    }
 
 
 @lru_cache(maxsize=1)
@@ -75,7 +140,9 @@ def _catalog_vectorised():
 
 def visible_objects(lat: float, lon: float, offset_seconds: int,
                     when_local: datetime, moon_illum: float,
-                    moon_alt: float, limit: int = 12) -> list[dict]:
+                    moon_alt: float, limit: int = 12,
+                    window_start: datetime | None = None,
+                    window_end: datetime | None = None) -> list[dict]:
     """O que está observável neste instante, do mais fácil ao mais difícil.
 
     `moon_illum` (0–1) e `moon_alt` servem para avisar quando o luar apaga os
@@ -87,6 +154,10 @@ def visible_objects(lat: float, lon: float, offset_seconds: int,
 
     # Luar a lavar o céu: só relevante para objectos de céu profundo.
     moonlight = moon_illum * max(0.0, moon_alt / 90.0)
+
+    lst = local_sidereal_hours(t, lon)
+    timing = lambda ra, dec: _timing(lst, ra, dec, lat, when_local,
+                                     window_start, window_end)
 
     found = []
 
@@ -106,6 +177,8 @@ def visible_objects(lat: float, lon: float, offset_seconds: int,
             "ra_h": round(m_ra.hours, 5),
             "dec_deg": round(m_dec.degrees, 4),
             "url": TELESCOPIUS_MOON,
+            "airmass": _round_airmass(m_alt.degrees),
+            **timing(m_ra.hours, m_dec.degrees),
         })
 
     # --- Sistema solar (brilhante, não sofre com o luar) ---
@@ -128,6 +201,8 @@ def visible_objects(lat: float, lon: float, offset_seconds: int,
             "ra_h": round(ra.hours, 5),
             "dec_deg": round(dec.degrees, 4),
             "url": TELESCOPIUS_PLANET.format(slug=slug),
+            "airmass": _round_airmass(alt.degrees),
+            **timing(ra.hours, dec.degrees),
         })
 
     # --- Céu profundo (todos de uma vez) ---
@@ -152,6 +227,8 @@ def visible_objects(lat: float, lon: float, offset_seconds: int,
             "ra_h": obj["ra_h"],
             "dec_deg": obj["dec_deg"],
             "url": TELESCOPIUS_DSO.format(n=obj["id"].lstrip("Mm")),
+            "airmass": _round_airmass(altitude),
+            **timing(obj["ra_h"], obj["dec_deg"]),
         })
 
     # Lua e planetas primeiro, depois o mais brilhante e o mais alto.

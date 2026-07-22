@@ -182,6 +182,26 @@ e qualquer regra de autor lhe ganha: um `display: flex` num elemento escondido
 fá-lo aparecer sempre. Aconteceu duas vezes (modal do mapa e formulário de
 guardar) antes de se pôr a regra global.
 
+### Planear a sessão (culminação, airmass, eventos)
+
+Cada objecto diz **quando** está melhor, não só onde está agora — é o que
+transforma a lista num plano ordenado ("M13 a descer, apanha primeiro; M31 a
+subir, deixa para as 3h").
+
+A culminação e a altura máxima calculam-se **analiticamente**, não amostrando
+a noite: um objecto culmina quando o tempo sideral local iguala a sua ascensão
+recta, e a altura no meridiano é `90 − |latitude − declinação|`. Validado contra
+amostragem do Skyfield: bate ao minuto. Amostrar 110 objectos × 10 horas × 7
+noites seria insuportável no Render.
+
+`airmass` usa Kasten-Young, que continua válida perto do horizonte (ao
+contrário de `1/cos(z)`). 1.0 no zénite, 2.0 a 30°, 5.6 a 10°.
+
+`app/events.py` acrescenta o que depende da época: **chuveiros de meteoros**
+(tabela da IMO, ±2 dias do pico, com a altura do radiante — um radiante baixo
+esconde a maioria dos meteoros) e o **núcleo da Via Láctea** (devolve `None`
+onde nunca sobe; em Portugal só chega a ~21°).
+
 ### Métricas para o observador (não para o céu)
 
 Vais estar horas parado de noite — estas contam tanto como as do céu:

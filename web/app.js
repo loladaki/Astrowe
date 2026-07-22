@@ -297,6 +297,47 @@ function buildConditions(n) {
   return grid;
 }
 
+function eventBox(icon, title, text, when) {
+  const box = document.createElement("div");
+  box.className = "event";
+  const head = document.createElement("div");
+  head.className = "event-head";
+  head.textContent = `${icon} ${title}`;
+  const body = document.createElement("div");
+  body.className = "event-text";
+  body.textContent = text;
+  box.append(head, body);
+  if (when) {
+    const w = document.createElement("div");
+    w.className = "event-when";
+    w.textContent = when;
+    box.appendChild(w);
+  }
+  return box;
+}
+
+function buildEvents(n) {
+  if (!n.meteor_shower && !n.milky_way) return null;
+  const wrap = document.createElement("div");
+  wrap.className = "events";
+
+  if (n.meteor_shower) {
+    const m = n.meteor_shower;
+    wrap.appendChild(eventBox("☄️", m.name, m.summary,
+      `radiante a ${Math.round(m.radiant_altitude_deg)}° ${m.radiant_direction}` +
+      (m.transit_time ? ` · mais alto às ${hhmm(m.transit_time)}` : "")));
+  }
+
+  if (n.milky_way) {
+    const g = n.milky_way;
+    wrap.appendChild(eventBox("🌌", "Via Láctea", g.summary,
+      g.transit_time
+        ? `mais alto às ${hhmm(g.transit_time)} (${Math.round(g.max_altitude_deg)}° máx.)`
+        : `${g.trend} · máximo possível ${Math.round(g.max_altitude_deg)}°`));
+  }
+  return wrap;
+}
+
 function buildObjects(objs) {
   const wrap = document.createElement("div");
   wrap.className = "objects";
@@ -323,10 +364,20 @@ function buildObjects(objs) {
 
     const meta = document.createElement("span");
     meta.className = "obj-meta";
-    const mag = o.magnitude !== null ? ` · mag ${o.magnitude}` : "";
-    meta.textContent = `${o.kind}${mag} · ${Math.round(o.altitude_deg)}° ${o.direction}`;
+    const bits = [o.kind];
+    if (o.magnitude !== null) bits.push(`mag ${o.magnitude}`);
+    bits.push(`${Math.round(o.altitude_deg)}° ${o.direction}`);
+    if (o.airmass !== null) bits.push(`airmass ${o.airmass.toFixed(2)}`);
+    meta.textContent = bits.join(" · ");
 
-    item.append(name, meta);
+    // O que transforma a lista num plano: quando é que este está melhor.
+    const when = document.createElement("span");
+    when.className = "obj-when";
+    when.textContent = o.transit_time
+      ? `${o.trend} · mais alto às ${hhmm(o.transit_time)} (${Math.round(o.max_altitude_deg)}°)`
+      : `${o.trend} · máximo possível ${Math.round(o.max_altitude_deg)}°`;
+
+    item.append(name, meta, when);
     if (o.washed_out) {
       const warn = document.createElement("span");
       warn.className = "obj-warn";
@@ -366,6 +417,8 @@ function buildDetail(n) {
   }
 
   detail.appendChild(buildConditions(n));
+  const eventos = buildEvents(n);
+  if (eventos) detail.appendChild(eventos);
   detail.appendChild(buildHourStrip(n.hours));
   if (n.objects.length) detail.appendChild(buildObjects(n.objects));
 

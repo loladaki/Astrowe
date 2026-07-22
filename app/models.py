@@ -26,6 +26,33 @@ class SkyObject(BaseModel):
     dec_deg: float                       # declinação (graus)
     url: str                             # ficha no Telescopius
 
+    airmass: float | None                # atmosfera atravessada (1.0 no zénite)
+    trend: str                           # "a subir" / "a descer" / "no ponto alto"
+    max_altitude_deg: float              # altura no meridiano, nesta latitude
+    transit_time: str | None             # culminação, se cair dentro da janela
+
+
+class MeteorShower(BaseModel):
+    name: str
+    peak_offset_days: int                # 0 = noite do pico
+    zhr: int                             # meteoros/hora no melhor caso
+    radiant_altitude_deg: float
+    radiant_direction: str
+    summary: str
+    trend: str
+    max_altitude_deg: float
+    transit_time: str | None
+
+
+class MilkyWay(BaseModel):
+    """Núcleo galáctico — o alvo do verão para astrofotografia."""
+    altitude_deg: float
+    direction: str
+    max_altitude_deg: float
+    summary: str
+    trend: str
+    transit_time: str | None
+
 
 class HourDetail(BaseModel):
     """Uma hora da noite: o veredicto e os dados crus por trás dele."""
@@ -97,6 +124,9 @@ class NightScore(BaseModel):
     temperature_c: float | None          # média na janela
     feels_like_c: float | None           # sensação térmica (vento)
     wind_kmh: float | None
+
+    meteor_shower: MeteorShower | None   # se a noite cair perto de um pico
+    milky_way: MilkyWay | None
 
     limiting: list[FactorImpact]         # o que custa pontos, do pior ao menor
     objects: list[SkyObject]             # o que se vê a meio da janela
