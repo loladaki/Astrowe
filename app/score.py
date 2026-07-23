@@ -393,12 +393,12 @@ def _headline(score: int, qualities: list[float], times, win_idx,
 
     sim = "Sim" if score >= 55 else "Talvez"
     if cobre_tudo:
-        return f"{sim} — a noite toda"
+        return f"{sim}, a noite toda"
     if i == 0:
-        return f"{sim} — até às {fim.strftime('%H:%M')}"
+        return f"{sim}, até às {fim.strftime('%H:%M')}"
     if j == len(qualities) - 1:
-        return f"{sim} — melhor depois das {inicio.strftime('%H:%M')}"
-    return f"{sim} — entre as {inicio.strftime('%H:%M')} e as {fim.strftime('%H:%M')}"
+        return f"{sim}, melhor depois das {inicio.strftime('%H:%M')}"
+    return f"{sim}, entre as {inicio.strftime('%H:%M')} e as {fim.strftime('%H:%M')}"
 
 
 def _verdict_reason(parts_win, times_win, moonset, illum_pct) -> str:

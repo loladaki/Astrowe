@@ -271,78 +271,126 @@ const weekdayLong = (d) =>
 
 /* ------------------------------------------------- painéis */
 
-function panel(title, node) {
-  const p = el("section", "panel");
-  if (title) p.append(el("div", "panel-title", title));
-  p.append(node);
-  return p;
+/** Secção sem moldura: só um rótulo pequeno e o conteúdo. É o que tira o
+ *  "caixas dentro de caixas" — a separação é feita por espaço, não por bordas. */
+function block(label, node, aside) {
+  const b = el("section", "block");
+  if (label) {
+    const head = el("div", "block-head");
+    head.append(el("span", "block-label", label));
+    if (aside) head.append(aside);
+    b.append(head);
+  }
+  b.append(node);
+  return b;
 }
 
+/** Factores limitantes como uma barra por linha, compacta e a ocupar a largura
+ *  toda — sem o painel meio vazio de antes. Vive por baixo do veredicto. */
 function buildLimits(n) {
   const box = el("div", "limits");
   if (!n.limiting.length) {
-    box.append(el("div", "limits-none", "Nada a limitar — condições no máximo."));
+    box.append(el("div", "limits-none", "Nada a limitar, condições no máximo."));
     return box;
   }
   const worst = n.limiting[0].cost_points;
   for (const f of n.limiting) {
-    const row = el("div");
-    const head = el("div", "limit-row");
-    head.append(el("span", null, f.label), el("span", null, `−${f.cost_points}`));
-    const bar = el("div", "limit-bar");
+    const row = el("div", "limit");
+    row.append(el("span", "limit-name", f.label));
+    const track = el("div", "limit-track");
     const fill = el("div", "limit-fill");
-    fill.style.width = `${Math.max(6, (f.cost_points / worst) * 100)}%`;
+    fill.style.width = `${Math.max(8, (f.cost_points / worst) * 100)}%`;
     fill.style.background = f.cost_points >= worst * 0.66 ? "var(--poor)"
       : f.cost_points >= worst * 0.33 ? "var(--ok)" : "var(--good)";
-    bar.append(fill);
-    row.append(head, bar);
+    track.append(fill);
+    row.append(track, el("span", "limit-cost", `−${f.cost_points}`));
     box.append(row);
   }
   return box;
 }
 
-function condCard({ icon, tag, value, sub, spark, moon }) {
-  const c = el("div", "card");
-  const top = el("div", "card-top");
-  top.append(moon || icon || el("span"), el("span", "card-tag", tag));
-  c.append(top, el("div", "card-value", value));
-  if (sub) c.append(el("div", "card-sub", sub));
+/** Uma condição: ícone/Lua, o valor legível, e a mini-curva com escala. */
+function condItem({ icon, tag, value, spark, moon }) {
+  const c = el("div", "cond");
+  const head = el("div", "cond-head");
+  head.append(moon || icon || el("span"), el("span", "cond-tag", tag));
+  c.append(head, el("div", "cond-value", value));
   if (spark) c.append(spark);
   return c;
 }
 
-function buildCards(n) {
-  const grid = el("div", "cards");
+function buildConds(n) {
+  const grid = el("div", "conds");
   const c = n.cards;
 
-  grid.append(condCard({
-    moon: moonSVG(n.moon_illumination_pct, n.moon_waxing, 24),
+  grid.append(condItem({
+    moon: moonSVG(n.moon_illumination_pct, n.moon_waxing, 22),
     tag: "Lua",
     value: c ? c.moon_label : n.moon_phase,
-    sub: `${Math.round(n.moon_illumination_pct)}% iluminada`,
+    spark: el("div", "cond-note", `${Math.round(n.moon_illumination_pct)}% iluminada`),
   }));
 
-  grid.append(condCard({
+  grid.append(condItem({
     icon: iconSVG("cloud"), tag: "nuvens",
     value: c ? c.clouds_label : "—",
-    spark: c ? sparkline(c.clouds_spark, true) : null,
+    spark: c ? scaledSpark(c.clouds_spark, "%", true, 25) : null,
   }));
 
   const dewWarn = c && /Prov|Poss/.test(c.dew_label);
-  grid.append(condCard({
+  grid.append(condItem({
     icon: iconSVG("droplet", 20, dewWarn ? "icon warn" : "icon"), tag: "orvalho",
     value: c ? c.dew_label : "—",
-    spark: c ? sparkline(c.dew_spark, false) : null,
+    spark: c ? scaledSpark(c.dew_spark, "°", false, 3) : null,
   }));
 
-  grid.append(condCard({
+  grid.append(condItem({
     icon: iconSVG("thermo"), tag: "temperatura",
     value: c ? c.temp_label : "—",
-    sub: [n.wind_kmh !== null ? `vento ${Math.round(n.wind_kmh)} km/h` : "",
-          `seeing ${n.seeing}`].filter(Boolean).join(" · "),
+    spark: el("div", "cond-note",
+      [n.wind_kmh !== null ? `vento ${Math.round(n.wind_kmh)} km/h` : "",
+       `seeing ${n.seeing}`].filter(Boolean).join(" · ")),
   }));
 
   return grid;
+}
+
+/**
+ * Sparkline com escala: área preenchida, marcas horárias por baixo, e o valor
+ * de referência anotado (o pico das nuvens, o mínimo do orvalho). Uma linha
+ * a subir e a descer não dizia nada; assim vê-se *quando* e *quanto*.
+ */
+function scaledSpark(values, unit, invert, threshold) {
+  const wrap = el("div", "sspark");
+  const vals = values.map((v) => (v === null || v === undefined ? null : v));
+  const real = vals.filter((v) => v !== null);
+  const svgBox = svg("svg", { class: "sspark-svg", viewBox: "0 0 100 30",
+                              preserveAspectRatio: "none", "aria-hidden": "true" });
+  if (real.length >= 2) {
+    const lo = Math.min(...real), hi = Math.max(...real);
+    const span = hi - lo || 1;
+    const y = (v) => { let t = (v - lo) / span; if (invert) t = 1 - t; return 26 - t * 22; };
+    const pts = vals.map((v, i) => v === null ? null
+      : `${((i / (vals.length - 1)) * 100).toFixed(1)},${y(v).toFixed(1)}`).filter(Boolean);
+
+    // linha do limiar (céu limpo / risco de orvalho), para dar referência
+    if (threshold >= lo && threshold <= hi) {
+      const yt = y(threshold).toFixed(1);
+      svgBox.append(svg("line", { x1: 0, y1: yt, x2: 100, y2: yt,
+        stroke: "var(--border-lit)", "stroke-width": 0.7, "stroke-dasharray": "2 2",
+        "vector-effect": "non-scaling-stroke" }));
+    }
+    svgBox.append(svg("polyline", { points: `0,30 ${pts.join(" ")} 100,30`,
+      fill: "rgba(122,162,247,0.10)", stroke: "none" }));
+    svgBox.append(svg("polyline", { points: pts.join(" "), fill: "none",
+      stroke: "var(--dim)", "stroke-width": 1.5, "vector-effect": "non-scaling-stroke" }));
+
+    // anota o extremo que interessa
+    const peak = invert ? hi : lo;   // nuvens: pico; orvalho: mínimo
+    const label = el("span", "sspark-peak", `${peak % 1 ? peak.toFixed(1) : peak}${unit}`);
+    wrap.append(label);
+  }
+  wrap.append(svgBox);
+  return wrap;
 }
 
 /* --- meteograma: horas em colunas, variáveis em linhas --- */
@@ -355,20 +403,25 @@ function timeHeader(win) {
 }
 
 function meteoRow(label, win, kind, fmt) {
-  const row = el("div", "tgrid");
+  const row = el("div", "tgrid heat");
   row.append(el("div", "tgrid-label", label));
-  for (const h of win) {
+  win.forEach((h, i) => {
     const v = kind === "cloud" ? h.cloud_total_pct
       : kind === "jet" ? h.jet_stream_kmh
       : kind === "moon" ? h.moon_altitude_deg
       : kind === "spread" ? h.dew_spread_c
       : h.temperature_c;
-    row.append(el("div", `cell ${cellClass(kind, v)}`, fmt(v)));
-  }
+    const cell = el("div", `cell ${cellClass(kind, v)}`, fmt(v));
+    if (i === 0) cell.classList.add("cell-first");
+    if (i === win.length - 1) cell.classList.add("cell-last");
+    row.append(cell);
+  });
   return row;
 }
 
 function buildMeteogram(win) {
+  // Bandas contínuas em vez de dezenas de caixinhas: as células tocam-se e
+  // cada variável lê-se como uma faixa de cor.
   const box = el("div");
   box.append(timeHeader(win));
   box.append(meteoRow("nuvens", win, "cloud", (v) => v === null ? "—" : `${Math.round(v)}%`));
@@ -376,7 +429,7 @@ function buildMeteogram(win) {
     (v) => v === null ? "—" : v < 60 ? "bom" : v < 100 ? "médio" : "fraco"));
   box.append(meteoRow("Lua", win, "moon",
     (v) => v === null ? "—" : v <= 0 ? "posta" : `${Math.round(v)}°`));
-  box.append(meteoRow("spread", win, "spread", (v) => v === null ? "—" : `${v.toFixed(1)}°`));
+  box.append(meteoRow("orvalho", win, "spread", (v) => v === null ? "—" : `${v.toFixed(1)}°`));
   box.append(meteoRow("temp", win, "temp", (v) => v === null ? "—" : `${Math.round(v)}°`));
   return box;
 }
@@ -402,14 +455,18 @@ function objectRow(o) {
   return row;
 }
 
-function buildObjects(n, win) {
+// Grupos de filtro: rótulo → tipos de símbolo que abrange.
+const OBJECT_GROUPS = [
+  ["Tudo", null],
+  ["Galáxias", ["galaxy"]],
+  ["Nebulosas", ["nebula", "planetary"]],
+  ["Enxames", ["open_cluster", "globular"]],
+  ["Planetas", ["planet", "moon", "double"]],
+];
+
+function buildObjectsFilter(n, win) {
   const box = el("div");
-  box.append(timeHeader(win));
-
-  const shown = n.objects.slice(0, TOP_OBJECTS);
-  const rest = n.objects.slice(TOP_OBJECTS);
-  for (const o of shown) box.append(objectRow(o));
-
+  const rows = el("div", "obj-rows");
   const legend = el("div", "legend");
   const mk = (cls, txt) => {
     const s = el("span");
@@ -418,47 +475,71 @@ function buildObjects(n, win) {
     s.append(sw, document.createTextNode(txt));
     return s;
   };
-  legend.append(mk("var(--good)", "alto (≥35°)"), mk("var(--ok)", "utilizável"),
-                mk("var(--border)", "baixo ou abaixo do horizonte"));
-  box.append(legend);
+  legend.append(mk("var(--good)", "alto"), mk("var(--ok)", "utilizável"),
+                mk("var(--border)", "baixo / abaixo do horizonte"));
 
-  if (rest.length) {
-    const more = el("button", "more", `ver os outros ${rest.length} →`);
-    more.type = "button";
-    more.addEventListener("click", () => {
-      more.remove();
-      for (const o of rest) box.insertBefore(objectRow(o), legend);
-    });
-    box.append(more);
+  let active = null;    // conjunto de símbolos, ou null = tudo
+  let expanded = false;
+
+  function draw() {
+    rows.innerHTML = "";
+    rows.append(timeHeader(win));
+    const matches = n.objects.filter((o) => !active || active.includes(o.symbol));
+    const visible = expanded ? matches : matches.slice(0, TOP_OBJECTS);
+    for (const o of visible) rows.append(objectRow(o));
+
+    if (!matches.length) {
+      rows.append(el("div", "obj-empty", "Nenhum deste tipo acima do horizonte."));
+    } else if (matches.length > TOP_OBJECTS && !expanded) {
+      const more = el("button", "more", `ver os outros ${matches.length - TOP_OBJECTS}`);
+      more.type = "button";
+      more.addEventListener("click", () => { expanded = true; draw(); });
+      rows.append(more);
+    }
   }
+
+  const chips = el("div", "filters");
+  OBJECT_GROUPS.forEach(([label, syms], idx) => {
+    // só mostra o filtro se houver objectos desse tipo
+    if (syms && !n.objects.some((o) => syms.includes(o.symbol))) return;
+    const chip = el("button", "chip" + (idx === 0 ? " is-active" : ""), label);
+    chip.type = "button";
+    chip.addEventListener("click", () => {
+      active = syms;
+      expanded = false;
+      chips.querySelectorAll(".chip").forEach((c) => c.classList.toggle("is-active", c === chip));
+      draw();
+    });
+    chips.append(chip);
+  });
+
+  draw();
+  box.append(chips, rows, legend);
   return box;
 }
 
 /* --- eventos e dados crus --- */
 
-function buildEvents(n) {
+/** Faixa fina de destaques da noite, logo abaixo do veredicto — em vez de uma
+ *  caixa perdida no fim. Só aparece quando há algo a assinalar. */
+function buildHighlights(n) {
   if (!n.meteor_shower && !n.milky_way) return null;
-  const box = el("div", "events");
-  const add = (icon, name, text, when) => {
-    const row = el("div", "event");
-    row.append(el("div", "event-icon", icon));
-    const body = el("div");
-    body.append(el("div", "event-name", name), el("div", "event-text", text));
-    if (when) body.append(el("div", "event-when", when));
-    row.append(body);
+  const box = el("div", "highlights");
+  const add = (icon, name, text) => {
+    const row = el("div", "hl");
+    row.append(el("span", "hl-icon", icon), el("span", "hl-name", name),
+               el("span", "hl-text", text));
     box.append(row);
   };
   if (n.meteor_shower) {
     const m = n.meteor_shower;
-    add("☄️", m.name, m.summary,
-      `radiante a ${Math.round(m.radiant_altitude_deg)}° ${m.radiant_direction}` +
-      (m.transit_time ? ` · mais alto às ${hhmm(m.transit_time)}` : ""));
+    add("☄️", m.name,
+      `${m.summary} Radiante a ${Math.round(m.radiant_altitude_deg)}° ${m.radiant_direction}.`);
   }
   if (n.milky_way) {
     const g = n.milky_way;
-    add("🌌", "Via Láctea", g.summary,
-      g.transit_time ? `mais alto às ${hhmm(g.transit_time)} (${Math.round(g.max_altitude_deg)}° máx.)`
-                     : `${g.trend} · máximo possível ${Math.round(g.max_altitude_deg)}°`);
+    add("🌌", "Via Láctea",
+      `${g.summary}${g.transit_time ? ` Mais alto às ${hhmm(g.transit_time)}.` : ""}`);
   }
   return box;
 }
@@ -516,10 +597,11 @@ function renderStrip(data) {
                            (n.date === bestDate ? " is-best" : "") +
                            (n.date === selectedDate ? " is-selected" : ""));
     b.type = "button";
-    b.append(el("span", "d", weekdayShort(n.date)),
+    const dt = new Date(n.date + "T12:00:00");
+    b.append(el("span", "d", `${weekdayShort(n.date)} ${dt.getDate()}`),
              el("span", "n", usable ? String(n.score) : "—"),
              moonSVG(n.moon_illumination_pct, n.moon_waxing, 17));
-    b.title = `${weekdayLong(n.date)} — ${n.headline}`;
+    b.title = `${weekdayLong(n.date)}: ${n.headline}`;
     b.addEventListener("click", () => { selectedDate = n.date; render(); });
     stripEl.append(b);
   }
@@ -529,16 +611,18 @@ function renderDetail(n) {
   detailEl.innerHTML = "";
   const usable = n.window_start !== null;
 
+  // Veredicto: o herói. Uma frase grande, a razão por baixo, e logo ali os
+  // factores que baixam o score — sem painel meio vazio à parte.
   const v = el("div", "verdict");
   const ring = el("div", `verdict-score ${scoreClass(n.score, usable)}`,
                   usable ? String(n.score) : "—");
-  const body = el("div");
+  const body = el("div", "verdict-body");
   body.append(el("div", "verdict-head", n.headline));
-  // A razão da mudança, não as condições — "Lua põe-se 01:41, seeing melhora".
   const reason = n.verdict_reason || n.conditions;
   body.append(el("div", "verdict-sub", usable
     ? `${weekdayLong(n.date)} · ${hhmm(n.window_start)}–${hhmm(n.window_end)} · ${reason}`
     : `${weekdayLong(n.date)} · ${n.conditions}`));
+  if (usable) body.append(buildLimits(n));
   v.append(ring, body);
   detailEl.append(v);
 
@@ -546,27 +630,28 @@ function renderDetail(n) {
   const win = n.hours.filter((h) => h.in_window);
   detailEl.style.setProperty("--cols", String(win.length));
 
-  const two = el("div", "grid-2");
-  two.append(panel("O que te limita", buildLimits(n)), panel("Condições", buildCards(n)));
-  detailEl.append(two);
+  const hl = buildHighlights(n);
+  if (hl) detailEl.append(hl);
 
-  detailEl.append(panel("A noite hora a hora", buildMeteogram(win)));
-  if (n.objects.length) detailEl.append(panel("Quando observar cada alvo", buildObjects(n, win)));
+  detailEl.append(block("Condições", buildConds(n)));
 
-  const ev = buildEvents(n);
-  if (ev) detailEl.append(panel("Esta noite", ev));
-
+  // "dados completos" mora aqui, ao lado do rótulo do meteograma, não sozinho
+  // lá no fim a obrigar a scroll.
   const raw = buildRaw(n.hours);
   raw.hidden = true;
-  const toggle = el("button", "raw-toggle", "Ver todos os dados ▾");
+  const toggle = el("button", "raw-toggle", "dados completos");
   toggle.type = "button";
   toggle.addEventListener("click", () => {
     raw.hidden = !raw.hidden;
-    toggle.textContent = raw.hidden ? "Ver todos os dados ▾" : "Esconder dados ▴";
+    toggle.classList.toggle("is-open", !raw.hidden);
   });
-  const rawPanel = el("section", "panel");
-  rawPanel.append(toggle, raw);
-  detailEl.append(rawPanel);
+  const meteo = el("div");
+  meteo.append(buildMeteogram(win), raw);
+  detailEl.append(block("Hora a hora", meteo, toggle));
+
+  if (n.objects.length) {
+    detailEl.append(block("Alvos", buildObjectsFilter(n, win)));
+  }
 }
 
 function render() {
@@ -581,7 +666,7 @@ function render() {
     placeSkyEl.textContent = `${lp.description} · Bortle ${lp.bortle} · SQM ${lp.sqm}`;
   } else {
     placeSkyEl.className = "place-sky is-missing";
-    placeSkyEl.textContent = "poluição luminosa não aplicada — scores optimistas em zonas urbanas";
+    placeSkyEl.textContent = "poluição luminosa não aplicada, scores optimistas em zonas urbanas";
   }
 
   if (!selectedDate || !data.nights.some((n) => n.date === selectedDate)) {
@@ -813,7 +898,7 @@ async function openCompare() {
   const verdict = el("p", "cmp-verdict");
   verdict.append(document.createTextNode("Melhor combinação: "));
   verdict.append(el("strong", null, `${best.place}, ${weekdayLong(best.night.date)}`));
-  verdict.append(document.createTextNode(` — ${best.night.headline.toLowerCase()}, score ${best.score}.`));
+  verdict.append(document.createTextNode(`: ${best.night.headline.toLowerCase()}, score ${best.score}.`));
 
   compareBody.innerHTML = "";
   compareBody.append(verdict, table);

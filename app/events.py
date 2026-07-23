@@ -84,7 +84,7 @@ def meteor_shower(night: date, lat: float, lon: float, offset_seconds: int,
     tempos = _timing(lst, ra_d, dec_d, lat, when_local, window_start, window_end)
 
     if alt <= 0:
-        nota = "radiante abaixo do horizonte — poucos meteoros"
+        nota = "radiante abaixo do horizonte, poucos meteoros"
     elif alt < 25:
         nota = "radiante baixo, muitos meteoros ficam escondidos"
     else:
@@ -97,7 +97,7 @@ def meteor_shower(night: date, lat: float, lon: float, offset_seconds: int,
         "zhr": zhr,
         "radiant_altitude_deg": round(alt, 1),
         "radiant_direction": compass_point(az),
-        "summary": f"{nome} — {quando}, até {zhr} meteoros/hora. {nota}.",
+        "summary": f"{quando}, até {zhr} meteoros/hora. {nota.capitalize()}.",
         **tempos,
     }
 
@@ -126,7 +126,7 @@ def milky_way_core(lat: float, lon: float, offset_seconds: int,
     elif moonlight > 0.35:
         nota = "no céu, mas o luar apaga-lhe o contraste"
     elif alt < 15:
-        nota = "muito rasante — precisas de horizonte sul desimpedido"
+        nota = "muito rasante, precisas de horizonte sul desimpedido"
     else:
         nota = "bem posicionado a sul"
 
@@ -134,6 +134,6 @@ def milky_way_core(lat: float, lon: float, offset_seconds: int,
         "altitude_deg": round(alt, 1),
         "direction": compass_point(az),
         "max_altitude_deg": round(maxima, 1),
-        "summary": f"Núcleo da Via Láctea a {round(alt)}° — {nota}.",
+        "summary": f"Núcleo a {round(alt)}° a sul. {nota.capitalize()}.",
         **tempos,
     }

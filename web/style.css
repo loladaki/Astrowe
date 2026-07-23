@@ -203,17 +203,18 @@ button { font-family: inherit; cursor: pointer; border-radius: var(--r2); }
 /* ---------------------------------------------------- veredicto */
 
 .verdict {
-  display: flex; align-items: center; gap: var(--s4);
-  padding: var(--s4); margin-bottom: var(--s3);
+  display: flex; align-items: flex-start; gap: var(--s4);
+  padding: var(--s4); margin-bottom: var(--s5);
   background: var(--surface); border: 1px solid var(--border-lit);
   border-radius: var(--r3);
 }
 .verdict-score {
-  width: 58px; height: 58px; flex-shrink: 0;
+  width: 58px; height: 58px; flex-shrink: 0; margin-top: 2px;
   border-radius: 50%; border: 2px solid currentColor;
   display: grid; place-items: center;
   font-size: 1.3rem; font-weight: 650; font-variant-numeric: tabular-nums;
 }
+.verdict-body { flex: 1; min-width: 0; }
 .s-good { color: var(--good); background: var(--bg-good); }
 .s-ok   { color: var(--ok);   background: var(--bg-ok); }
 .s-poor { color: var(--poor); background: var(--bg-poor); }
@@ -221,74 +222,103 @@ button { font-family: inherit; cursor: pointer; border-radius: var(--r2); }
 .verdict-head { font-size: 1.45rem; font-weight: 600; line-height: 1.2; }
 .verdict-sub { font-size: var(--t-md); color: var(--dim); margin-top: 2px; }
 
-/* ---------------------------------------------------- grelha */
-
-.grid-2 {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
-  gap: var(--s3); margin-bottom: var(--s3);
-}
-.panel {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--r3); padding: var(--s4);
-}
-.panel-title {
-  font-size: var(--t-sm); color: var(--faint); margin-bottom: var(--s3);
-}
-
-/* factores limitantes */
-.limits { display: flex; flex-direction: column; gap: var(--s3); }
-.limit-row { display: flex; justify-content: space-between; font-size: var(--t-sm); }
-.limit-row span:last-child { color: var(--dim); font-variant-numeric: tabular-nums; }
-.limit-bar { height: 5px; border-radius: var(--pill); background: var(--border); overflow: hidden; margin-top: var(--s1); }
+/* factores limitantes, inline sob o veredicto */
+.limits { margin-top: var(--s3); display: flex; flex-direction: column; gap: var(--s2); }
+.limit { display: grid; grid-template-columns: 96px 1fr 34px; gap: var(--s3); align-items: center; }
+.limit-name { font-size: var(--t-sm); color: var(--dim); }
+.limit-track { height: 6px; border-radius: var(--pill); background: var(--border); overflow: hidden; }
 .limit-fill { height: 100%; border-radius: var(--pill); }
-.limits-none { color: var(--good); font-size: var(--t-sm); }
+.limit-cost { font-size: var(--t-sm); color: var(--dim); text-align: right; font-variant-numeric: tabular-nums; }
+.limits-none { margin-top: var(--s2); color: var(--good); font-size: var(--t-sm); }
 
-/* cartões de condições */
-.cards { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s2); }
-.card {
-  background: var(--bg); border: 1px solid var(--border);
-  border-radius: var(--r2); padding: var(--s3);
-  display: flex; flex-direction: column; min-height: 92px;
+/* ---------------------------------------------------- blocos (sem moldura) */
+
+.block { margin-bottom: var(--s5); }
+.block-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: var(--s3); margin-bottom: var(--s3);
+  padding-bottom: var(--s2); border-bottom: 1px solid var(--border);
 }
-.card-top { display: flex; justify-content: space-between; align-items: flex-start; }
-.card-tag { font-size: var(--t-xs); color: var(--faint); }
-.card-value { font-size: var(--t-md); font-weight: 600; margin-top: var(--s2); }
-.card-sub { font-size: var(--t-xs); color: var(--faint); }
-.spark { margin-top: auto; display: block; width: 100%; height: 18px; }
+.block-label { font-size: var(--t-md); font-weight: 600; color: var(--text); }
+
+/* destaques da noite (via láctea, meteoros) */
+.highlights { display: flex; flex-direction: column; gap: var(--s2); margin-bottom: var(--s5); }
+.hl {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s2);
+  padding: var(--s2) 0; border-bottom: 1px solid var(--border);
+}
+.hl:last-child { border-bottom: none; }
+.hl-icon { font-size: var(--t-md); }
+.hl-name { font-size: var(--t-sm); font-weight: 600; }
+.hl-text { font-size: var(--t-sm); color: var(--dim); }
+
+/* condições: sem caixas individuais, separadas por espaço */
+.conds { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s4); }
+.cond { display: flex; flex-direction: column; min-width: 0; }
+.cond-head { display: flex; align-items: center; gap: var(--s2); color: var(--dim); }
+.cond-tag { font-size: var(--t-xs); text-transform: lowercase; }
+.cond-value { font-size: var(--t-md); font-weight: 600; margin: var(--s1) 0; }
+.cond-note { font-size: var(--t-xs); color: var(--faint); }
 .icon { color: var(--dim); }
 .icon.warn { color: var(--ok); }
+
+/* sparkline com escala */
+.sspark { position: relative; margin-top: auto; padding-top: var(--s2); }
+.sspark-svg { display: block; width: 100%; height: 28px; }
+.sspark-peak {
+  position: absolute; top: 0; right: 0;
+  font-size: var(--t-xs); color: var(--faint); font-variant-numeric: tabular-nums;
+}
 
 /* ---------------------------------------------------- blocos temporais */
 
 /* Meteograma e janelas partilham este eixo, rigorosamente. */
+/* gap: 0 para que o meteograma e as janelas partilhem exactamente o mesmo
+   eixo. A separação visual faz-se dentro das células (margem nas barras,
+   borda nas do heatmap), sem alterar a largura das colunas. */
 .tgrid {
   display: grid;
   grid-template-columns: var(--label-w) repeat(var(--cols), minmax(0, 1fr));
-  gap: 3px;
+  gap: 0;
 }
 .tgrid + .tgrid { margin-top: 3px; }
 .tgrid-head { font-size: var(--t-xs); color: var(--faint); text-align: center; margin-bottom: var(--s1); }
-.tgrid-label { font-size: var(--t-sm); color: var(--dim); align-self: center; }
-.cell {
-  border-radius: var(--r1); padding: var(--s1) 0; text-align: center;
-  font-size: var(--t-xs); font-variant-numeric: tabular-nums;
-}
+.tgrid-label { font-size: var(--t-sm); color: var(--dim); align-self: center; padding-right: var(--s2); }
+
+/* heatmap contínuo: as células tocam-se, só as pontas arredondam */
+.heat .cell { border-left: 1px solid var(--bg); }
+.heat .cell.cell-first { border-left: none; border-radius: var(--r1) 0 0 var(--r1); }
+.heat .cell.cell-last { border-radius: 0 var(--r1) var(--r1) 0; }
+.cell { padding: var(--s2) 0; text-align: center; font-size: var(--t-xs); font-variant-numeric: tabular-nums; }
 .c-good { background: var(--bg-good); color: var(--good); }
 .c-ok   { background: var(--bg-ok);   color: var(--ok); }
 .c-poor { background: var(--bg-poor); color: var(--poor); }
 .c-flat { color: var(--dim); }
 
 /* janelas dos objectos */
-.obj-label { display: flex; align-items: center; gap: var(--s2); min-width: 0; }
+.obj-rows { display: flex; flex-direction: column; gap: 3px; }
+.obj-rows .tgrid + .tgrid { margin-top: 0; }
+.obj-label { display: flex; align-items: center; gap: var(--s2); min-width: 0; padding-right: var(--s2); }
 .obj-label a { font-size: var(--t-sm); font-weight: 600; text-decoration: none; white-space: nowrap; }
 .obj-label a:hover { text-decoration: underline; }
 .obj-sym { flex-shrink: 0; }
-.bar { height: 15px; border-radius: 3px; }
+/* margem interna dá o intervalo visual sem mexer na largura da coluna */
+.bar { height: 15px; border-radius: 3px; margin: 0 1.5px; }
 .bar.b-good { background: var(--good); opacity: 0.85; }
 .bar.b-ok   { background: var(--ok);   opacity: 0.6; }
 .bar.b-none { background: transparent; }
 .tgrid.is-washed { opacity: 0.45; }
+.obj-empty { font-size: var(--t-sm); color: var(--faint); padding: var(--s3) 0; }
+
+/* filtros por tipo */
+.filters { display: flex; flex-wrap: wrap; gap: var(--s2); margin-bottom: var(--s3); }
+.chip {
+  padding: 3px var(--s3); border-radius: var(--pill);
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--dim); font-size: var(--t-xs);
+}
+.chip:hover { border-color: var(--border-lit); color: var(--text); }
+.chip.is-active { background: var(--surface-2); border-color: var(--accent); color: var(--text); }
 
 .legend {
   display: flex; flex-wrap: wrap; gap: var(--s4);
@@ -299,40 +329,21 @@ button { font-family: inherit; cursor: pointer; border-radius: var(--r2); }
 .legend span { display: flex; align-items: center; gap: var(--s1); }
 .swatch { width: 10px; height: 10px; border-radius: 2px; }
 
-.more {
-  background: none; border: none; color: var(--accent);
-  font-size: var(--t-sm); padding: 0; margin-top: var(--s3);
-}
+.more { background: none; border: none; color: var(--accent); font-size: var(--t-sm); padding: var(--s2) 0 0; }
 
-/* eventos */
-.events { display: flex; flex-direction: column; gap: var(--s2); }
-.event {
-  display: flex; gap: var(--s3); align-items: flex-start;
-  padding: var(--s3); border-radius: var(--r2);
-  background: var(--bg); border: 1px solid var(--border);
-}
-.event-icon { font-size: var(--t-lg); line-height: 1.2; }
-.event-name { font-size: var(--t-md); font-weight: 600; }
-.event-text { font-size: var(--t-sm); color: var(--dim); }
-.event-when { font-size: var(--t-xs); color: var(--accent); margin-top: 2px; }
-
-/* dados crus */
-.raw-toggle {
-  width: 100%; padding: var(--s2);
-  border: 1px dashed var(--border); background: transparent;
-  color: var(--dim); font-size: var(--t-sm);
-}
-.raw-toggle:hover { border-color: var(--border-lit); color: var(--text); }
+/* dados crus (toggle inline no cabeçalho do meteograma) */
+.raw-toggle { background: none; border: none; color: var(--accent); font-size: var(--t-sm); padding: 0; }
+.raw-toggle::after { content: " ▾"; }
+.raw-toggle.is-open::after { content: " ▴"; }
 .raw-wrap { overflow-x: auto; margin-top: var(--s3); }
 .raw-table { border-collapse: collapse; font-size: var(--t-xs); white-space: nowrap; width: 100%; }
 .raw-table th, .raw-table td {
   padding: var(--s2) var(--s3); text-align: right;
   border-bottom: 1px solid var(--border); font-variant-numeric: tabular-nums;
 }
-.raw-table th { color: var(--faint); font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; }
+.raw-table th { color: var(--faint); font-weight: 500; }
 .raw-table tbody tr { color: var(--faint); }
 .raw-table tbody tr.in-window { color: var(--dim); background: var(--bg); }
-
 /* ---------------------------------------------------- sugestões */
 
 .suggestions {
@@ -390,14 +401,14 @@ footer { margin-top: var(--s7); text-align: center; color: var(--faint); font-si
 
 /* ---------------------------------------------------- estreito */
 
-@media (max-width: 860px) {
-  .grid-2 { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 720px) {
+  .conds { grid-template-columns: 1fr 1fr; gap: var(--s3); }
 }
 
 @media (max-width: 560px) {
   .shell { padding: var(--s4) var(--s3) var(--s6); }
   .brand h1 { font-size: 1.6rem; }
-  :root { --label-w: 62px; }
+  :root { --label-w: 58px; }
 
   #search-form { flex-wrap: wrap; }
   .search-wrap { flex: 1 1 100%; }
@@ -409,12 +420,12 @@ footer { margin-top: var(--s7); text-align: center; color: var(--faint); font-si
   .strip { gap: var(--s1); }
   .night-btn { padding: var(--s2) 2px; }
   .night-btn .n { font-size: 1rem; }
-  .night-btn .d { font-size: 0.65rem; }
+  .night-btn .d { font-size: 0.62rem; }
 
   .verdict { gap: var(--s3); padding: var(--s3); }
   .verdict-score { width: 48px; height: 48px; font-size: 1.1rem; }
   .verdict-head { font-size: 1.15rem; }
-  .panel { padding: var(--s3); }
+  .limit { grid-template-columns: 74px 1fr 30px; }
   .cell, .tgrid-head { font-size: 0.62rem; }
   .obj-label a { font-size: var(--t-xs); }
 }
