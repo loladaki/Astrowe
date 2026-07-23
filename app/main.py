@@ -60,5 +60,25 @@ async def health():
     }
 
 
+@app.get("/api/diag")
+async def diag():
+    """O que o *servidor* vê ao chamar o Open-Meteo — para saber porque falha
+    em produção mas não localmente (suspeita: IP partilhado do Render com
+    limite de pedidos por IP no Open-Meteo). Temporário.
+    """
+    url = "https://api.open-meteo.com/v1/forecast"
+    params = {"latitude": 38.2, "longitude": -7.5, "hourly": "cloud_cover",
+              "timezone": "auto"}
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        resp = await client.get(url, params=params)
+    return {
+        "status": resp.status_code,
+        "body_head": resp.text[:300],
+        "retry_after": resp.headers.get("retry-after"),
+        "ratelimit": {k: v for k, v in resp.headers.items()
+                      if "ratelimit" in k.lower() or "x-ratelimit" in k.lower()},
+    }
+
+
 # Serve o frontend estático em / (depois das rotas /api).
 app.mount("/", StaticFiles(directory=WEB_DIR, html=True), name="web")
