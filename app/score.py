@@ -401,6 +401,33 @@ def _headline(score: int, qualities: list[float], times, win_idx,
     return f"{sim} — entre as {inicio.strftime('%H:%M')} e as {fim.strftime('%H:%M')}"
 
 
+def _verdict_reason(parts_win, times_win, moonset, illum_pct) -> str:
+    """Porque é que a janela é o que é — a razão, não as condições.
+
+    "Lua põe-se 01:41, seeing melhora" diz mais do que "céu limpo": explica o
+    que muda ao longo da noite e justifica a hora do veredicto.
+    """
+    razoes = []
+
+    if moonset and illum_pct > 30 and times_win:
+        # Só interessa se a Lua se põe perto da janela (senão é irrelevante).
+        if times_win[0] <= moonset <= times_win[-1] + timedelta(hours=1):
+            razoes.append(f"Lua põe-se {moonset.strftime('%H:%M')}")
+
+    def melhora(chave):
+        vals = [p[chave] for p in parts_win]
+        return len(vals) >= 2 and vals[-1] > vals[0] + 0.05
+
+    if melhora("sf"):
+        razoes.append("seeing melhora")
+    if melhora("transmission"):
+        razoes.append("céu abre")
+    elif melhora("tf"):
+        razoes.append("ar seca")
+
+    return ", ".join(razoes[:2]).capitalize() if razoes else ""
+
+
 def _first_change(values, times, ok, win_end):
     """Hora a partir da qual a condição passa a estar boa (ou None)."""
     estado = [v is not None and ok(v) for v in values]
@@ -535,7 +562,7 @@ def _build_night(d, window, times, h, moon_alt, moon_illum, profile,
             moon_phase="—", moonrise=None, moonset=None,
             seeing="desconhecido", dew_risk="desconhecido",
             temperature_c=None, feels_like_c=None, wind_kmh=None,
-            headline="Sem noite utilizável", cards=None,
+            headline="Sem noite utilizável", verdict_reason="", cards=None,
             meteor_shower=None, milky_way=None,
             limiting=[], objects=[], hours=[],
             window_start=None, window_end=None, window_hours=None,
@@ -554,7 +581,7 @@ def _build_night(d, window, times, h, moon_alt, moon_illum, profile,
             moon_phase="—", moonrise=None, moonset=None,
             seeing="desconhecido", dew_risk="desconhecido",
             temperature_c=None, feels_like_c=None, wind_kmh=None,
-            headline="Sem noite utilizável", cards=None,
+            headline="Sem noite utilizável", verdict_reason="", cards=None,
             meteor_shower=None, milky_way=None,
             limiting=[], objects=[], hours=[],
             window_start=None, window_end=None, window_hours=None,
@@ -663,6 +690,9 @@ def _build_night(d, window, times, h, moon_alt, moon_illum, profile,
     return NightScore(
         date=d.isoformat(), score=score, verdict=_verdict(score),
         headline=_headline(score, win_qualities, times, win_idx, win_end),
+        verdict_reason=_verdict_reason(parts[ext_i:ext_j + 1],
+                                       [times[i] for i in win_idx],
+                                       moonset, illum_pct),
         cards=NightCards(**_cards(h, times, win_idx, parts[ext_i:ext_j + 1],
                                   win_end, moonset)),
         moon_phase=moon_phrase,

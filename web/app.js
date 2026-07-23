@@ -103,7 +103,10 @@ function symbolSVG(kind, size = 14, color = "var(--dim)") {
   if (kind === "galaxy") {
     g.append(svg("ellipse", { cx: 15, cy: 15, rx: 12, ry: 6, transform: "rotate(-25 15 15)", ...st }));
   } else if (kind === "open_cluster") {
-    g.append(svg("circle", { cx: 15, cy: 15, r: 10, "stroke-dasharray": "4 3", ...st }));
+    g.append(svg("circle", { cx: 15, cy: 15, r: 10, "stroke-dasharray": "3 3", ...st }),
+             svg("circle", { cx: 12, cy: 13, r: 1.4, fill: color }),
+             svg("circle", { cx: 18, cy: 16, r: 1.4, fill: color }),
+             svg("circle", { cx: 15, cy: 19, r: 1.4, fill: color }));
   } else if (kind === "globular") {
     g.append(svg("circle", { cx: 15, cy: 15, r: 10, ...st }), line(15, 5, 15, 25), line(5, 15, 25, 15));
   } else if (kind === "planetary") {
@@ -501,9 +504,16 @@ function buildRaw(hours) {
 
 function renderStrip(data) {
   stripEl.innerHTML = "";
+  const usableNights = data.nights.filter((n) => n.score > 0);
+  const bestDate = usableNights.length
+    ? usableNights.reduce((a, b) => (b.score > a.score ? b : a)).date : null;
+
   for (const n of data.nights) {
     const usable = n.window_start !== null;
+    // A melhor noite fica sempre destacada; a seleccionada leva a moldura de
+    // acento por cima. Coincidem por defeito, divergem quando clicas noutra.
     const b = el("button", `night-btn ${stripClass(n.score, usable)}` +
+                           (n.date === bestDate ? " is-best" : "") +
                            (n.date === selectedDate ? " is-selected" : ""));
     b.type = "button";
     b.append(el("span", "d", weekdayShort(n.date)),
@@ -524,8 +534,10 @@ function renderDetail(n) {
                   usable ? String(n.score) : "—");
   const body = el("div");
   body.append(el("div", "verdict-head", n.headline));
+  // A razão da mudança, não as condições — "Lua põe-se 01:41, seeing melhora".
+  const reason = n.verdict_reason || n.conditions;
   body.append(el("div", "verdict-sub", usable
-    ? `${weekdayLong(n.date)} · ${hhmm(n.window_start)}–${hhmm(n.window_end)} · ${n.conditions}`
+    ? `${weekdayLong(n.date)} · ${hhmm(n.window_start)}–${hhmm(n.window_end)} · ${reason}`
     : `${weekdayLong(n.date)} · ${n.conditions}`));
   v.append(ring, body);
   detailEl.append(v);

@@ -110,6 +110,7 @@ class NightScore(BaseModel):
     score: int                           # 0–100
     verdict: str                         # "Excelente" / "Boa" / "Razoável" / "Fraca"
     headline: str                        # "Sim — melhor depois das 02:00"
+    verdict_reason: str                  # "Lua põe-se 01:41, seeing melhora"
     cards: NightCards | None
 
     # A melhor janela contígua de observação — o coração da resposta.

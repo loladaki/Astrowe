@@ -191,6 +191,7 @@ button { font-family: inherit; cursor: pointer; border-radius: var(--r2); }
   transition: border-color 0.12s, background 0.12s;
 }
 .night-btn:hover { border-color: var(--border-lit); }
+.night-btn.is-best { border: 2px solid var(--good); background: var(--bg-good); }
 .night-btn.is-selected { border-color: var(--accent); background: var(--surface-2); }
 .night-btn .d { font-size: var(--t-xs); color: var(--dim); text-transform: capitalize; }
 .night-btn .n { font-size: 1.15rem; font-weight: 620; font-variant-numeric: tabular-nums; }
@@ -232,8 +233,7 @@ button { font-family: inherit; cursor: pointer; border-radius: var(--r2); }
   border-radius: var(--r3); padding: var(--s4);
 }
 .panel-title {
-  font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.08em;
-  color: var(--faint); margin-bottom: var(--s3);
+  font-size: var(--t-sm); color: var(--faint); margin-bottom: var(--s3);
 }
 
 /* factores limitantes */
