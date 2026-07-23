@@ -35,8 +35,11 @@ Dois perfis: **céu profundo** (exige escuridão astronómica, a Lua pesa muito)
   interpretar sozinho
 - **Objectos visíveis** na janela recomendada: 110 Messier, 7 planetas e a Lua,
   com ligação à ficha no [Telescopius](https://telescopius.com)
-- **Plano de sessão**: cada objecto diz se está a subir ou a descer, a que horas
-  culmina e com que airmass — para saberes por onde começar
+- **Plano de sessão**: uma barra por objecto ao longo da noite — vê-se de
+  relance por onde começar e o que deixar para as 3h
+- **Meteograma**: horas em colunas, variáveis em linhas, célula colorida por
+  qualidade. Alinhado com as barras dos objectos, para cruzar informação
+- **Lua desenhada** com o terminador real, não um ícone genérico
 - **Chuveiros de meteoros** e posição do **núcleo da Via Láctea**
 - Métricas do observador: risco de orvalho, temperatura e sensação térmica
 - **Locais guardados** e comparação lado a lado, noite a noite

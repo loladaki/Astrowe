@@ -108,6 +108,17 @@ def _to_local(dt_utc: datetime, offset_seconds: int) -> datetime:
     return _utc_to_local(dt_utc, offset_seconds)
 
 
+def moon_is_waxing(offset_seconds: int, when_local: datetime) -> bool:
+    """Crescente (iluminada à direita, no hemisfério norte) ou minguante.
+
+    A fração iluminada sozinha não chega para desenhar a Lua: 30% crescente e
+    30% minguante são imagens espelhadas.
+    """
+    ts, eph = _ensure_loaded()
+    t = ts.from_datetime(_local_to_utc(when_local, offset_seconds))
+    return float(almanac.moon_phase(eph, t).degrees) < 180.0
+
+
 def moon_series(lat: float, lon: float, offset_seconds: int,
                 local_times: list[datetime]):
     """Altitude da Lua (graus) e fração iluminada (0–1) em cada instante dado.

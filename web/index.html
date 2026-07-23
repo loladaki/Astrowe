@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#0a0e1a" />
+  <meta name="theme-color" content="#070a12" />
   <title>Astrowe — vale a pena sair esta noite?</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="/style.css" />
@@ -51,14 +51,14 @@
     <p id="status" class="status" hidden></p>
 
     <section id="result" class="result" hidden>
-      <div class="result-head">
-        <div class="place-line">
-          <span id="place-name" class="place-name"></span>
-          <span id="place-sky" class="place-sky"></span>
-        </div>
-        <p id="verdict" class="verdict"></p>
+      <div class="place-line">
+        <span id="place-name" class="place-name"></span>
+        <span id="place-sky" class="place-sky"></span>
       </div>
-      <main id="nights" class="nights"></main>
+
+      <nav id="strip" class="strip" aria-label="Próximas noites"></nav>
+
+      <div id="detail" class="detail"></div>
     </section>
 
     <footer>

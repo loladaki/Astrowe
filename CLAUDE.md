@@ -182,6 +182,30 @@ e qualquer regra de autor lhe ganha: um `display: flex` num elemento escondido
 fá-lo aparecer sempre. Aconteceu duas vezes (modal do mapa e formulário de
 guardar) antes de se pôr a regra global.
 
+### Interface (v1.1)
+
+- **Tira das 7 noites** no topo, clicável. O detalhe é sempre de *uma* noite,
+  não sete cartões expansíveis.
+- **Veredicto em frase**, não em número: "Sim — melhor depois das 02:00", vindo
+  do maior troço de horas boas (`_best_run`), não de uma descrição da noite.
+- **Cada condição com a estatística que interessa**, nunca a média. A média das
+  nuvens engana: 0% durante três horas e 100% na última dá 25%, que soa
+  medíocre quando foram três horas óptimas. Ver `_cards` em `score.py`.
+- **Ícones só onde há convenção** (nuvem, gota, termómetro). Seeing,
+  transparência e airmass ficam em palavras — inventar um símbolo para eles
+  obrigaria a decorá-lo.
+- **A Lua é desenhada, não é um ícone.** Sabemos a fração iluminada exacta, por
+  isso o terminador é uma semi-elipse de raio `R·|1−2k|`: recto na meia-Lua, a
+  inchar para os quartos. `moon_waxing` decide de que lado fica a luz.
+- **Símbolos de atlas** para os tipos de objecto (elipse = galáxia, círculo
+  tracejado = enxame aberto, círculo com cruz = globular…).
+
+⚠️ **Eixo temporal partilhado.** O meteograma e as janelas dos objectos usam a
+mesma `.tgrid` com `var(--label-w) repeat(var(--cols), minmax(0,1fr))`. Se
+desalinharem, perde-se a leitura vertical que cruza informação — que é o valor
+todo de os ter empilhados. Há um teste que compara os `gridTemplateColumns` dos
+dois.
+
 ### Planear a sessão (culminação, airmass, eventos)
 
 Cada objecto diz **quando** está melhor, não só onde está agora — é o que
@@ -193,6 +217,12 @@ a noite: um objecto culmina quando o tempo sideral local iguala a sua ascensão
 recta, e a altura no meridiano é `90 − |latitude − declinação|`. Validado contra
 amostragem do Skyfield: bate ao minuto. Amostrar 110 objectos × 10 horas × 7
 noites seria insuportável no Render.
+
+As **janelas por objecto** (altura hora a hora, para as barras) levam a mesma
+ideia mais longe: `sin(alt) = sin φ · sin δ + cos φ · cos δ · cos H`, vectorizado
+em numpy como produto externo horas × objectos — ver `altitude_series`. Erro
+máximo contra o Skyfield: 0.29°, irrelevante para decidir se um alvo está alto.
+Usa as coordenadas *da data*, não as J2000 do catálogo.
 
 `airmass` usa Kasten-Young, que continua válida perto do horizonte (ao
 contrário de `1/cos(z)`). 1.0 no zénite, 2.0 a 30°, 5.6 a 10°.

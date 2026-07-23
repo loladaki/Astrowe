@@ -42,6 +42,22 @@ PLANETS = [
 COMPASS = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
            "S", "SSO", "SO", "OSO", "O", "ONO", "NO", "NNO"]
 
+# Símbolos convencionais dos atlas celestes. O frontend desenha-os em SVG —
+# são a notação que qualquer observador reconhece sem legenda.
+SYMBOLS = {
+    "galáxia": "galaxy",
+    "enxame aberto": "open_cluster",
+    "nuvem estelar": "open_cluster",
+    "asterismo": "open_cluster",
+    "enxame globular": "globular",
+    "nebulosa planetária": "planetary",
+    "nebulosa": "nebula",
+    "remanescente de supernova": "nebula",
+    "estrela dupla": "double",
+    "planeta": "planet",
+    "satélite": "moon",
+}
+
 # Fichas no Telescopius. A forma curta /deep-sky-objects/m-31 redirecciona
 # sozinha para a página completa com os slugs do nome e do tipo.
 TELESCOPIUS_DSO = "https://telescopius.com/deep-sky-objects/m-{n}"
@@ -88,6 +104,32 @@ def hours_to_transit(lst_h: float, ra_h: float) -> float:
     """Horas solares até à culminação. Negativo = já passou o ponto alto."""
     hour_angle = ((lst_h - ra_h + 12.0) % 24.0) - 12.0
     return -hour_angle * SIDEREAL_TO_SOLAR
+
+
+def altitude_series(lat_deg: float, ra_h, dec_deg, lst_start_h: float,
+                    hours_ahead):
+    """Altura (graus) de cada objecto em cada hora, por forma fechada.
+
+    sin(alt) = sin φ · sin δ + cos φ · cos δ · cos H,  com H = TSL − AR.
+
+    Amostrar isto com o Skyfield seria 110 objectos × 10 horas × 7 noites de
+    observações — insuportável no plano gratuito. Assim é um produto externo
+    de numpy: instantâneo, e exacto para objectos fixos.
+
+    Devolve matriz (n_horas, n_objectos).
+    """
+    ra = np.atleast_1d(np.asarray(ra_h, dtype=float))
+    dec = np.radians(np.atleast_1d(np.asarray(dec_deg, dtype=float)))
+    dt = np.asarray(hours_ahead, dtype=float)
+
+    # O relógio sideral adianta-se ao solar: 24h solares = 24h04m siderais.
+    lst = lst_start_h + dt / SIDEREAL_TO_SOLAR
+    hour_angle = np.radians((lst[:, None] - ra[None, :]) * 15.0)
+
+    phi = math.radians(lat_deg)
+    sin_alt = (math.sin(phi) * np.sin(dec)[None, :]
+               + math.cos(phi) * np.cos(dec)[None, :] * np.cos(hour_angle))
+    return np.degrees(np.arcsin(np.clip(sin_alt, -1.0, 1.0)))
 
 
 def _round_airmass(altitude_deg: float) -> float | None:
@@ -142,7 +184,8 @@ def visible_objects(lat: float, lon: float, offset_seconds: int,
                     when_local: datetime, moon_illum: float,
                     moon_alt: float, limit: int = 12,
                     window_start: datetime | None = None,
-                    window_end: datetime | None = None) -> list[dict]:
+                    window_end: datetime | None = None,
+                    window_times: list[datetime] | None = None) -> list[dict]:
     """O que está observável neste instante, do mais fácil ao mais difícil.
 
     `moon_illum` (0–1) e `moon_alt` servem para avisar quando o luar apaga os
@@ -181,6 +224,7 @@ def visible_objects(lat: float, lon: float, offset_seconds: int,
             "dec_deg": round(m_dec.degrees, 4),
             "url": TELESCOPIUS_MOON,
             "airmass": _round_airmass(m_alt.degrees),
+            "ra_date": m_ra_d.hours, "dec_date": m_dec_d.degrees,
             **timing(m_ra_d.hours, m_dec_d.degrees),
         })
 
@@ -206,6 +250,7 @@ def visible_objects(lat: float, lon: float, offset_seconds: int,
             "dec_deg": round(dec.degrees, 4),
             "url": TELESCOPIUS_PLANET.format(slug=slug),
             "airmass": _round_airmass(alt.degrees),
+            "ra_date": ra_d.hours, "dec_date": dec_d.degrees,
             **timing(ra_d.hours, dec_d.degrees),
         })
 
@@ -236,6 +281,7 @@ def visible_objects(lat: float, lon: float, offset_seconds: int,
             "dec_deg": obj["dec_deg"],
             "url": TELESCOPIUS_DSO.format(n=obj["id"].lstrip("Mm")),
             "airmass": _round_airmass(altitude),
+            "ra_date": float(ras_d[i]), "dec_date": float(decs_d[i]),
             **timing(float(ras_d[i]), float(decs_d[i])),
         })
 
@@ -245,4 +291,37 @@ def visible_objects(lat: float, lon: float, offset_seconds: int,
                               o["washed_out"],
                               o["magnitude"] if o["magnitude"] is not None else -5,
                               -o["altitude_deg"]))
-    return found[:limit]
+    found = found[:limit]
+
+    for o in found:
+        o["symbol"] = SYMBOLS.get(o["kind"], "nebula")
+
+    if window_times:
+        _attach_windows(lat, lon, offset_seconds, window_times, found)
+    return found
+
+
+def _attach_windows(lat: float, lon: float, offset_seconds: int,
+                    window_times: list[datetime], found: list[dict]) -> None:
+    """Altura de cada objecto em cada hora da janela — o plano da sessão.
+
+    Usa as coordenadas *da data* já calculadas (`ra_date`/`dec_date`), por isso
+    não arrasta o desvio da precessão. A Lua é o único caso aproximado: move-se
+    ~0.5°/h em ascensão recta e aqui é tratada como fixa, o que desloca a curva
+    dela alguns minutos — invisível numa barra de resolução horária.
+    """
+    if not found:
+        return
+    ts, _ = _ensure_loaded()
+    t0 = ts.from_datetime(_local_to_utc(window_times[0], offset_seconds))
+    lst0 = local_sidereal_hours(t0, lon)
+    ahead = [(t - window_times[0]).total_seconds() / 3600.0 for t in window_times]
+
+    alts = altitude_series(lat,
+                           [o["ra_date"] for o in found],
+                           [o["dec_date"] for o in found],
+                           lst0, ahead)
+    for j, o in enumerate(found):
+        o["altitudes"] = [round(float(a), 1) for a in alts[:, j]]
+        o.pop("ra_date", None)
+        o.pop("dec_date", None)

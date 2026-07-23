@@ -30,6 +30,18 @@ class SkyObject(BaseModel):
     trend: str                           # "a subir" / "a descer" / "no ponto alto"
     max_altitude_deg: float              # altura no meridiano, nesta latitude
     transit_time: str | None             # culminação, se cair dentro da janela
+    symbol: str                          # símbolo de atlas: "galaxy", "globular"…
+    altitudes: list[float] = []          # altura em cada hora da janela
+
+
+class NightCards(BaseModel):
+    """Cada condição com a estatística que interessa, não a média."""
+    clouds_label: str                    # "Limpa às 02:00"
+    clouds_spark: list[float | None]
+    dew_label: str                       # "Provável às 04:00"
+    dew_spark: list[float | None]
+    temp_label: str                      # "21° → 17°"
+    moon_label: str                      # "Põe-se 01:41"
 
 
 class MeteorShower(BaseModel):
@@ -97,6 +109,8 @@ class NightScore(BaseModel):
     date: str                            # dia local em que a noite começa
     score: int                           # 0–100
     verdict: str                         # "Excelente" / "Boa" / "Razoável" / "Fraca"
+    headline: str                        # "Sim — melhor depois das 02:00"
+    cards: NightCards | None
 
     # A melhor janela contígua de observação — o coração da resposta.
     window_start: str | None             # hora local ISO
@@ -111,6 +125,7 @@ class NightScore(BaseModel):
     cloud_cover_pct: float | None        # nuvens médias durante a janela
     transparency: str                    # "boa" / "razoável" / "fraca"
     moon_illumination_pct: float         # fração iluminada da Lua (0–100)
+    moon_waxing: bool                    # crescente (lado iluminado à direita)
     moon_max_altitude_deg: float | None  # altura máxima da Lua durante a noite
 
     conditions: str                      # só as condições: "céu limpo, ar seco…"

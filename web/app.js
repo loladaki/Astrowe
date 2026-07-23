@@ -1,6 +1,7 @@
 "use strict";
 
 const $ = (id) => document.getElementById(id);
+const NS = "http://www.w3.org/2000/svg";
 
 const form = $("search-form");
 const placeInput = $("place");
@@ -11,8 +12,8 @@ const statusEl = $("status");
 const resultEl = $("result");
 const placeNameEl = $("place-name");
 const placeSkyEl = $("place-sky");
-const verdictEl = $("verdict");
-const nightsEl = $("nights");
+const stripEl = $("strip");
+const detailEl = $("detail");
 const modeBtns = document.querySelectorAll(".mode-btn");
 
 const savedListEl = $("saved-list");
@@ -34,26 +35,133 @@ const compareBody = $("compare-body");
 const GEOCODE_URL = "https://geocoding-api.open-meteo.com/v1/search";
 const SAVED_KEY = "astrowe.places";
 const COUNTRY_KEY = "astrowe.country";
+const TOP_OBJECTS = 6;
 
-let current = null;      // { lat, lon, label }
+let current = null;
 let mode = "deepsky";
+let lastData = null;
+let selectedDate = null;
 
 const hhmm = (iso) => iso.slice(11, 16);
+const hh = (iso) => iso.slice(11, 13) + "h";
 const num = (v, d = 0) => (v === null || v === undefined ? "—" : v.toFixed(d));
+
+function el(tag, cls, text) {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (text !== undefined) n.textContent = text;
+  return n;
+}
+
+function svg(tag, attrs) {
+  const n = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+  return n;
+}
 
 function setStatus(msg) {
   statusEl.hidden = !msg;
   statusEl.textContent = msg || "";
 }
 
-/* ------------------------------------------------- geocodificação */
+/* ------------------------------------------------- desenhos */
 
 /**
- * País a privilegiar nas sugestões. O locale do browser é só o ponto de
- * partida e engana-se com frequência (um browser em inglês num utilizador
- * português dá "GB"), por isso passamos a preferir o país do último local
- * escolhido.
+ * A Lua desenhada com o terminador real, não um de oito ícones genéricos.
+ * Sabemos a fração iluminada exacta — a 78% desenha-se a 78%.
+ *
+ * Dois arcos: o limbo (semicírculo do lado iluminado) e o terminador, que é
+ * uma semi-elipse de raio horizontal R·|1−2k|. Achatada na meia-Lua, a
+ * inchar para os quartos.
  */
+function moonSVG(illumPct, waxing, size = 26) {
+  const k = Math.max(0, Math.min(1, illumPct / 100));
+  const R = 13, cx = 15, cy = 15;
+  const rx = (R * Math.abs(1 - 2 * k)).toFixed(2);
+  const outer = waxing ? 1 : 0;
+  const inner = (waxing === (k > 0.5)) ? 0 : 1;
+
+  const g = svg("svg", { width: size, height: size, viewBox: "0 0 30 30", "aria-hidden": "true" });
+  g.append(svg("circle", { cx, cy, r: R, fill: "var(--border-lit)" }));
+  if (k > 0.01) {
+    g.append(svg("path", {
+      d: `M ${cx} ${cy - R} A ${R} ${R} 0 0 ${outer} ${cx} ${cy + R}` +
+         ` A ${rx} ${R} 0 0 ${inner} ${cx} ${cy - R} Z`,
+      fill: "var(--text)",     // é o objecto mais brilhante do céu; que se veja
+    }));
+  }
+  return g;
+}
+
+/** Símbolos convencionais dos atlas celestes — lêem-se sem legenda. */
+function symbolSVG(kind, size = 14, color = "var(--dim)") {
+  const g = svg("svg", { width: size, height: size, viewBox: "0 0 30 30",
+                         class: "obj-sym", "aria-hidden": "true" });
+  const st = { fill: "none", stroke: color, "stroke-width": 2.5 };
+  const line = (x1, y1, x2, y2) => svg("line", { x1, y1, x2, y2, stroke: color, "stroke-width": 2.5 });
+
+  if (kind === "galaxy") {
+    g.append(svg("ellipse", { cx: 15, cy: 15, rx: 12, ry: 6, transform: "rotate(-25 15 15)", ...st }));
+  } else if (kind === "open_cluster") {
+    g.append(svg("circle", { cx: 15, cy: 15, r: 10, "stroke-dasharray": "4 3", ...st }));
+  } else if (kind === "globular") {
+    g.append(svg("circle", { cx: 15, cy: 15, r: 10, ...st }), line(15, 5, 15, 25), line(5, 15, 25, 15));
+  } else if (kind === "planetary") {
+    g.append(svg("circle", { cx: 15, cy: 15, r: 6, ...st }),
+             line(15, 3, 15, 9), line(15, 21, 15, 27), line(3, 15, 9, 15), line(21, 15, 27, 15));
+  } else if (kind === "double") {
+    g.append(line(9, 15, 21, 15),
+             svg("circle", { cx: 9, cy: 15, r: 3, fill: color }),
+             svg("circle", { cx: 21, cy: 15, r: 2.2, fill: color }));
+  } else if (kind === "planet") {
+    g.append(svg("circle", { cx: 15, cy: 15, r: 7, fill: color }),
+             svg("ellipse", { cx: 15, cy: 15, rx: 13, ry: 3.5, transform: "rotate(-20 15 15)",
+                              fill: "none", stroke: color, "stroke-width": 2 }));
+  } else if (kind === "moon") {
+    return moonSVG(50, true, size);
+  } else {
+    g.append(svg("rect", { x: 5, y: 8, width: 20, height: 14, rx: 2, "stroke-dasharray": "4 3", ...st }));
+  }
+  return g;
+}
+
+/** Sparkline sem eixos nem números: só a forma, para se ver a tendência. */
+function sparkline(values, invert) {
+  const vals = values.filter((v) => v !== null && v !== undefined);
+  const box = svg("svg", { class: "spark", viewBox: "0 0 60 18",
+                           preserveAspectRatio: "none", "aria-hidden": "true" });
+  if (vals.length < 2) return box;
+  const lo = Math.min(...vals), hi = Math.max(...vals);
+  const span = hi - lo || 1;
+  const pts = values.map((v, i) => {
+    const x = (i / (values.length - 1)) * 60;
+    if (v === null || v === undefined) return null;
+    let t = (v - lo) / span;
+    if (invert) t = 1 - t;                 // menos é melhor → desenha para baixo
+    return `${x.toFixed(1)},${(16 - t * 14).toFixed(1)}`;
+  }).filter(Boolean).join(" ");
+  box.append(svg("polyline", { points: pts, fill: "none", stroke: "var(--faint)",
+                               "stroke-width": 1.5, "vector-effect": "non-scaling-stroke" }));
+  return box;
+}
+
+function iconSVG(name, size = 20, cls = "icon") {
+  const g = svg("svg", { width: size, height: size, viewBox: "0 0 24 24", class: cls,
+                         fill: "none", stroke: "currentColor", "stroke-width": 1.7,
+                         "stroke-linecap": "round", "stroke-linejoin": "round",
+                         "aria-hidden": "true" });
+  const paths = {
+    // Só onde existe convenção. Seeing e transparência ficam em palavras.
+    cloud: ["M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.6 1.6A3.5 3.5 0 0 0 6.5 19z"],
+    droplet: ["M12 3.5 6.8 9.9a7 7 0 1 0 10.4 0z"],
+    thermo: ["M14 14.8V5a2 2 0 1 0-4 0v9.8a4 4 0 1 0 4 0z"],
+  }[name] || [];
+  for (const d of paths) g.append(svg("path", { d }));
+  return g;
+}
+
+/* ------------------------------------------------- geocodificação */
+
 let preferredCountry = (() => {
   try {
     const saved = localStorage.getItem(COUNTRY_KEY);
@@ -77,8 +185,7 @@ async function geocodeRequest(name, count, countryCode) {
   return (await res.json()).results || [];
 }
 
-/** A API ordena por relevância global e enterra localidades pequenas: dois
- *  pedidos em paralelo, com os do país preferido à cabeça. */
+/** A API ordena por relevância global e enterra localidades pequenas. */
 async function geocodeMany(name, count = 6) {
   const [local, global_] = await Promise.all([
     preferredCountry ? geocodeRequest(name, count, preferredCountry).catch(() => []) : [],
@@ -110,9 +217,9 @@ async function geocode(name) {
   return { lat: r.latitude, lon: r.longitude, label: placeLabel(r) };
 }
 
-/* ------------------------------------------------- carregar dados */
+/* ------------------------------------------------- dados */
 
-async function loadForecast() {
+async function loadForecast(keepDate) {
   if (!current) return;
   setStatus(`A calcular as noites para ${current.label}…`);
   resultEl.hidden = true;
@@ -123,7 +230,9 @@ async function loadForecast() {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.detail || `Erro ${res.status}`);
     }
-    render(await res.json());
+    lastData = await res.json();
+    if (!keepDate) selectedDate = null;
+    render();
     saveBtn.hidden = false;
     setStatus("");
   } catch (e) {
@@ -131,45 +240,40 @@ async function loadForecast() {
   }
 }
 
-/* ------------------------------------------------- desenhar */
+/* ------------------------------------------------- classificações */
 
-function scoreClass(score, usable) {
-  if (!usable) return "s-none";
-  if (score >= 55) return "s-good";
-  if (score >= 35) return "s-ok";
-  return "s-poor";
+const scoreClass = (s, usable) =>
+  !usable ? "s-none" : s >= 55 ? "s-good" : s >= 35 ? "s-ok" : "s-poor";
+const stripClass = (s, usable) =>
+  !usable ? "q-none" : s >= 55 ? "q-good" : s >= 35 ? "q-ok" : "q-poor";
+
+function cellClass(kind, v) {
+  if (v === null || v === undefined) return "c-flat";
+  if (kind === "cloud") return v < 25 ? "c-good" : v < 60 ? "c-ok" : "c-poor";
+  if (kind === "jet") return v < 60 ? "c-good" : v < 100 ? "c-ok" : "c-poor";
+  if (kind === "moon") return v <= 0 ? "c-good" : v < 15 ? "c-ok" : "c-poor";
+  if (kind === "spread") return v >= 5 ? "c-good" : v >= 2.5 ? "c-ok" : "c-poor";
+  return "c-flat";
 }
 
-function qualityClass(q) {
-  if (q >= 0.7) return "q-good";
-  if (q >= 0.45) return "q-ok";
-  return "q-poor";
+function barClass(alt) {
+  if (alt === null || alt < 15) return "b-none";
+  return alt >= 35 ? "b-good" : "b-ok";
 }
 
-function weekdayLabel(date) {
-  return new Date(date + "T12:00:00").toLocaleDateString("pt-PT", {
-    weekday: "long", day: "numeric", month: "short",
-  });
-}
+const weekdayShort = (d) =>
+  new Date(d + "T12:00:00").toLocaleDateString("pt-PT", { weekday: "short" }).replace(".", "");
+const weekdayLong = (d) =>
+  new Date(d + "T12:00:00").toLocaleDateString("pt-PT", { weekday: "long", day: "numeric", month: "short" });
 
-function section(title, node) {
-  const sec = document.createElement("section");
-  sec.className = "sec";
-  const h = document.createElement("div");
-  h.className = "sec-title";
-  h.textContent = title;
-  sec.append(h, node);
-  return sec;
-}
+/* ------------------------------------------------- painéis */
 
-function el(tag, cls, text) {
-  const n = document.createElement(tag);
-  if (cls) n.className = cls;
-  if (text !== undefined) n.textContent = text;
-  return n;
+function panel(title, node) {
+  const p = el("section", "panel");
+  if (title) p.append(el("div", "panel-title", title));
+  p.append(node);
+  return p;
 }
-
-/* --- secções do detalhe --- */
 
 function buildLimits(n) {
   const box = el("div", "limits");
@@ -179,54 +283,159 @@ function buildLimits(n) {
   }
   const worst = n.limiting[0].cost_points;
   for (const f of n.limiting) {
-    const row = el("div", "limit");
-    row.append(el("span", "limit-label", f.label),
-               el("span", "limit-cost", `−${f.cost_points}`));
+    const row = el("div");
+    const head = el("div", "limit-row");
+    head.append(el("span", null, f.label), el("span", null, `−${f.cost_points}`));
     const bar = el("div", "limit-bar");
     const fill = el("div", "limit-fill");
     fill.style.width = `${Math.max(6, (f.cost_points / worst) * 100)}%`;
+    fill.style.background = f.cost_points >= worst * 0.66 ? "var(--poor)"
+      : f.cost_points >= worst * 0.33 ? "var(--ok)" : "var(--good)";
     bar.append(fill);
-    row.append(bar);
+    row.append(head, bar);
     box.append(row);
   }
   return box;
 }
 
-function fact(label, value, hint, href) {
-  const box = el("div", "fact");
-  box.append(el("div", "fact-label", label));
-  const v = href ? el("a", "fact-value", value) : el("div", "fact-value", value);
-  if (href) { v.href = href; v.target = "_blank"; v.rel = "noopener"; }
-  box.append(v);
-  if (hint) box.append(el("div", "fact-hint", hint));
+function condCard({ icon, tag, value, sub, spark, moon }) {
+  const c = el("div", "card");
+  const top = el("div", "card-top");
+  top.append(moon || icon || el("span"), el("span", "card-tag", tag));
+  c.append(top, el("div", "card-value", value));
+  if (sub) c.append(el("div", "card-sub", sub));
+  if (spark) c.append(spark);
+  return c;
+}
+
+function buildCards(n) {
+  const grid = el("div", "cards");
+  const c = n.cards;
+
+  grid.append(condCard({
+    moon: moonSVG(n.moon_illumination_pct, n.moon_waxing, 24),
+    tag: "Lua",
+    value: c ? c.moon_label : n.moon_phase,
+    sub: `${Math.round(n.moon_illumination_pct)}% iluminada`,
+  }));
+
+  grid.append(condCard({
+    icon: iconSVG("cloud"), tag: "nuvens",
+    value: c ? c.clouds_label : "—",
+    spark: c ? sparkline(c.clouds_spark, true) : null,
+  }));
+
+  const dewWarn = c && /Prov|Poss/.test(c.dew_label);
+  grid.append(condCard({
+    icon: iconSVG("droplet", 20, dewWarn ? "icon warn" : "icon"), tag: "orvalho",
+    value: c ? c.dew_label : "—",
+    spark: c ? sparkline(c.dew_spark, false) : null,
+  }));
+
+  grid.append(condCard({
+    icon: iconSVG("thermo"), tag: "temperatura",
+    value: c ? c.temp_label : "—",
+    sub: [n.wind_kmh !== null ? `vento ${Math.round(n.wind_kmh)} km/h` : "",
+          `seeing ${n.seeing}`].filter(Boolean).join(" · "),
+  }));
+
+  return grid;
+}
+
+/* --- meteograma: horas em colunas, variáveis em linhas --- */
+
+function timeHeader(win) {
+  const row = el("div", "tgrid");
+  row.append(el("div"));
+  for (const h of win) row.append(el("div", "tgrid-head", hh(h.time)));
+  return row;
+}
+
+function meteoRow(label, win, kind, fmt) {
+  const row = el("div", "tgrid");
+  row.append(el("div", "tgrid-label", label));
+  for (const h of win) {
+    const v = kind === "cloud" ? h.cloud_total_pct
+      : kind === "jet" ? h.jet_stream_kmh
+      : kind === "moon" ? h.moon_altitude_deg
+      : kind === "spread" ? h.dew_spread_c
+      : h.temperature_c;
+    row.append(el("div", `cell ${cellClass(kind, v)}`, fmt(v)));
+  }
+  return row;
+}
+
+function buildMeteogram(win) {
+  const box = el("div");
+  box.append(timeHeader(win));
+  box.append(meteoRow("nuvens", win, "cloud", (v) => v === null ? "—" : `${Math.round(v)}%`));
+  box.append(meteoRow("seeing", win, "jet",
+    (v) => v === null ? "—" : v < 60 ? "bom" : v < 100 ? "médio" : "fraco"));
+  box.append(meteoRow("Lua", win, "moon",
+    (v) => v === null ? "—" : v <= 0 ? "posta" : `${Math.round(v)}°`));
+  box.append(meteoRow("spread", win, "spread", (v) => v === null ? "—" : `${v.toFixed(1)}°`));
+  box.append(meteoRow("temp", win, "temp", (v) => v === null ? "—" : `${Math.round(v)}°`));
   return box;
 }
 
-function buildFacts(n) {
-  const grid = el("div", "facts");
-  grid.append(fact("Lua", n.moon_phase,
-    [n.moonrise && `nasce ${hhmm(n.moonrise)}`,
-     n.moonset && `põe-se ${hhmm(n.moonset)}`].filter(Boolean).join(" · "),
-    "https://telescopius.com/solar-system/moon-calendar"));
-  grid.append(fact("Seeing", n.seeing, "estabilidade do ar"));
-  grid.append(fact("Orvalho", n.dew_risk,
-    n.dew_risk === "alto" ? "as ópticas vão embaciar"
-      : n.dew_risk === "moderado" ? "leva anti-orvalho" : "sem problema"));
-  if (n.temperature_c !== null) {
-    const hint = [
-      n.feels_like_c !== null && Math.abs(n.feels_like_c - n.temperature_c) >= 1
-        ? `sente-se ${n.feels_like_c}°C` : "",
-      n.wind_kmh !== null ? `vento ${Math.round(n.wind_kmh)} km/h` : "",
-    ].filter(Boolean).join(" · ");
-    grid.append(fact("Temperatura", `${n.temperature_c}°C`, hint));
+/* --- janelas dos objectos: uma barra por alvo --- */
+
+function objectRow(o) {
+  const row = el("div", "tgrid" + (o.washed_out ? " is-washed" : ""));
+  const label = el("div", "obj-label");
+  label.append(symbolSVG(o.symbol, 14));
+  const a = el("a", null, o.name);
+  a.href = o.url; a.target = "_blank"; a.rel = "noopener";
+  a.title = `${o.kind}${o.magnitude !== null ? ` · mag ${o.magnitude}` : ""}` +
+            ` · culmina a ${Math.round(o.max_altitude_deg)}°`;
+  label.append(a);
+  row.append(label);
+
+  for (const alt of o.altitudes) {
+    const cell = el("div", `bar ${barClass(alt)}`);
+    if (alt !== null) cell.title = `${Math.round(alt)}°`;
+    row.append(cell);
   }
-  return grid;
+  return row;
 }
+
+function buildObjects(n, win) {
+  const box = el("div");
+  box.append(timeHeader(win));
+
+  const shown = n.objects.slice(0, TOP_OBJECTS);
+  const rest = n.objects.slice(TOP_OBJECTS);
+  for (const o of shown) box.append(objectRow(o));
+
+  const legend = el("div", "legend");
+  const mk = (cls, txt) => {
+    const s = el("span");
+    const sw = el("span", "swatch");
+    sw.style.background = cls;
+    s.append(sw, document.createTextNode(txt));
+    return s;
+  };
+  legend.append(mk("var(--good)", "alto (≥35°)"), mk("var(--ok)", "utilizável"),
+                mk("var(--border)", "baixo ou abaixo do horizonte"));
+  box.append(legend);
+
+  if (rest.length) {
+    const more = el("button", "more", `ver os outros ${rest.length} →`);
+    more.type = "button";
+    more.addEventListener("click", () => {
+      more.remove();
+      for (const o of rest) box.insertBefore(objectRow(o), legend);
+    });
+    box.append(more);
+  }
+  return box;
+}
+
+/* --- eventos e dados crus --- */
 
 function buildEvents(n) {
   if (!n.meteor_shower && !n.milky_way) return null;
   const box = el("div", "events");
-
   const add = (icon, name, text, when) => {
     const row = el("div", "event");
     row.append(el("div", "event-icon", icon));
@@ -236,7 +445,6 @@ function buildEvents(n) {
     row.append(body);
     box.append(row);
   };
-
   if (n.meteor_shower) {
     const m = n.meteor_shower;
     add("☄️", m.name, m.summary,
@@ -246,62 +454,10 @@ function buildEvents(n) {
   if (n.milky_way) {
     const g = n.milky_way;
     add("🌌", "Via Láctea", g.summary,
-      g.transit_time
-        ? `mais alto às ${hhmm(g.transit_time)} (${Math.round(g.max_altitude_deg)}° máx.)`
-        : `${g.trend} · máximo possível ${Math.round(g.max_altitude_deg)}°`);
+      g.transit_time ? `mais alto às ${hhmm(g.transit_time)} (${Math.round(g.max_altitude_deg)}° máx.)`
+                     : `${g.trend} · máximo possível ${Math.round(g.max_altitude_deg)}°`);
   }
   return box;
-}
-
-function buildStrip(hours) {
-  const strip = el("div", "strip");
-  for (const h of hours) {
-    const col = el("div", "hour" + (h.in_window ? " in-window" : ""));
-    col.title = `${hhmm(h.time)} · qualidade ${(h.quality * 100).toFixed(0)}% · ${h.reason}`;
-    const wrap = el("div", "hour-bar-wrap");
-    const bar = el("div", `hour-bar ${qualityClass(h.quality)}`);
-    bar.style.height = `${Math.max(6, h.quality * 100)}%`;
-    wrap.append(bar);
-    col.append(wrap, el("div", "hour-time", hhmm(h.time)), el("div", "hour-why", h.reason));
-    strip.append(col);
-  }
-  return strip;
-}
-
-function buildObjects(objs) {
-  const list = el("div", "objects");
-  for (const o of objs) {
-    const row = el("div", "obj" + (o.washed_out ? " is-washed" : ""));
-
-    const name = el("a", "obj-name", o.name);
-    name.href = o.url;
-    name.target = "_blank";
-    name.rel = "noopener";
-    name.title = `Ver ${o.name} no Telescopius`;
-    const kind = el("span", "obj-kind",
-      o.magnitude !== null ? `${o.kind} · mag ${o.magnitude}` : o.kind);
-    const nameWrap = el("div");
-    nameWrap.append(name, kind);
-
-    const pos = el("div", "obj-pos",
-      `${Math.round(o.altitude_deg)}° ${o.direction}` +
-      (o.airmass !== null ? ` · airmass ${o.airmass.toFixed(2)}` : ""));
-    pos.title = "altura e direcção agora · airmass = atmosfera atravessada (1.0 no zénite)";
-
-    const when = el("div", "obj-when");
-    if (o.transit_time) {
-      when.append(document.createTextNode(`${o.trend} · mais alto às `));
-      when.append(el("b", null, hhmm(o.transit_time)));
-      when.append(document.createTextNode(` (${Math.round(o.max_altitude_deg)}°)`));
-    } else {
-      when.textContent = `${o.trend} · máximo possível ${Math.round(o.max_altitude_deg)}°`;
-    }
-    if (o.washed_out) when.textContent += " · apagado pelo luar";
-
-    row.append(nameWrap, pos, when);
-    list.append(row);
-  }
-  return list;
 }
 
 const RAW_COLUMNS = [
@@ -341,81 +497,70 @@ function buildRaw(hours) {
   return wrap;
 }
 
-function buildDetail(n) {
-  const detail = el("div", "detail");
-  detail.hidden = true;
+/* ------------------------------------------------- render */
 
-  detail.append(section("O que te limita", buildLimits(n)));
-  detail.append(section("Condições", buildFacts(n)));
+function renderStrip(data) {
+  stripEl.innerHTML = "";
+  for (const n of data.nights) {
+    const usable = n.window_start !== null;
+    const b = el("button", `night-btn ${stripClass(n.score, usable)}` +
+                           (n.date === selectedDate ? " is-selected" : ""));
+    b.type = "button";
+    b.append(el("span", "d", weekdayShort(n.date)),
+             el("span", "n", usable ? String(n.score) : "—"),
+             moonSVG(n.moon_illumination_pct, n.moon_waxing, 17));
+    b.title = `${weekdayLong(n.date)} — ${n.headline}`;
+    b.addEventListener("click", () => { selectedDate = n.date; render(); });
+    stripEl.append(b);
+  }
+}
+
+function renderDetail(n) {
+  detailEl.innerHTML = "";
+  const usable = n.window_start !== null;
+
+  const v = el("div", "verdict");
+  const ring = el("div", `verdict-score ${scoreClass(n.score, usable)}`,
+                  usable ? String(n.score) : "—");
+  const body = el("div");
+  body.append(el("div", "verdict-head", n.headline));
+  body.append(el("div", "verdict-sub", usable
+    ? `${weekdayLong(n.date)} · ${hhmm(n.window_start)}–${hhmm(n.window_end)} · ${n.conditions}`
+    : `${weekdayLong(n.date)} · ${n.conditions}`));
+  v.append(ring, body);
+  detailEl.append(v);
+
+  if (!n.hours.length) return;
+  const win = n.hours.filter((h) => h.in_window);
+  detailEl.style.setProperty("--cols", String(win.length));
+
+  const two = el("div", "grid-2");
+  two.append(panel("O que te limita", buildLimits(n)), panel("Condições", buildCards(n)));
+  detailEl.append(two);
+
+  detailEl.append(panel("A noite hora a hora", buildMeteogram(win)));
+  if (n.objects.length) detailEl.append(panel("Quando observar cada alvo", buildObjects(n, win)));
 
   const ev = buildEvents(n);
-  if (ev) detail.append(section("Esta noite", ev));
-
-  detail.append(section("Ao longo da noite", buildStrip(n.hours)));
-
-  if (n.objects.length) {
-    detail.append(section("O que observar, e quando", buildObjects(n.objects)));
-  }
+  if (ev) detailEl.append(panel("Esta noite", ev));
 
   const raw = buildRaw(n.hours);
   raw.hidden = true;
   const toggle = el("button", "raw-toggle", "Ver todos os dados ▾");
   toggle.type = "button";
-  toggle.addEventListener("click", (e) => {
-    e.stopPropagation();
+  toggle.addEventListener("click", () => {
     raw.hidden = !raw.hidden;
     toggle.textContent = raw.hidden ? "Ver todos os dados ▾" : "Esconder dados ▴";
   });
-  const rawSec = el("div", "sec");
-  rawSec.append(toggle, raw);
-  detail.append(rawSec);
-
-  return detail;
+  const rawPanel = el("section", "panel");
+  rawPanel.append(toggle, raw);
+  detailEl.append(rawPanel);
 }
 
-function buildNight(n, isBest) {
-  const usable = n.window_start !== null;
-  const card = el("article", "night" + (isBest ? " is-best" : ""));
-
-  const head = el("div", "night-head");
-
-  const score = el("div", `score ${scoreClass(n.score, usable)}`);
-  score.append(el("span", null, usable ? n.score : "—"));
-
-  const body = el("div");
-  const day = el("div", "night-day");
-  day.append(el("span", null, weekdayLabel(n.date)));
-  if (isBest) day.append(el("span", "night-tag", "melhor"));
-  body.append(day);
-
-  if (usable) {
-    body.append(el("div", "night-window",
-      `${n.verdict} · ${hhmm(n.window_start)}–${hhmm(n.window_end)} · ${n.window_hours}h`));
-  } else {
-    body.append(el("div", "night-window", n.verdict));
-  }
-  body.append(el("div", "night-cond", n.conditions));
-
-  head.append(score, body, el("div", "chevron", "▾"));
-  card.append(head);
-
-  if (n.hours.length) {
-    const detail = buildDetail(n);
-    card.append(detail);
-    head.addEventListener("click", () => {
-      detail.hidden = !detail.hidden;
-      card.classList.toggle("is-open", !detail.hidden);
-    });
-  } else {
-    head.style.cursor = "default";
-    head.querySelector(".chevron").hidden = true;
-  }
-  return card;
-}
-
-function render(data) {
+function render() {
+  const data = lastData;
+  if (!data) return;
   resultEl.hidden = false;
-  nightsEl.innerHTML = "";
 
   placeNameEl.textContent = current.label;
   const lp = data.light_pollution;
@@ -427,23 +572,15 @@ function render(data) {
     placeSkyEl.textContent = "poluição luminosa não aplicada — scores optimistas em zonas urbanas";
   }
 
-  const usable = data.nights.filter((n) => n.score > 0);
-  const best = usable.length
-    ? usable.reduce((a, b) => (b.score > a.score ? b : a)) : null;
-
-  verdictEl.innerHTML = "";
-  if (best) {
-    verdictEl.append(document.createTextNode("Das próximas noites, a melhor é "));
-    verdictEl.append(el("strong", null, weekdayLabel(best.date)));
-    verdictEl.append(document.createTextNode(
-      ` — ${best.window_hours}h de céu utilizável, das ${hhmm(best.window_start)} às ${hhmm(best.window_end)}.`));
-  } else {
-    verdictEl.textContent = "Nenhuma noite com condições utilizáveis nos próximos dias.";
+  if (!selectedDate || !data.nights.some((n) => n.date === selectedDate)) {
+    const usable = data.nights.filter((n) => n.score > 0);
+    selectedDate = (usable.length
+      ? usable.reduce((a, b) => (b.score > a.score ? b : a))
+      : data.nights[0]).date;
   }
 
-  for (const n of data.nights) {
-    nightsEl.append(buildNight(n, best !== null && n.date === best.date));
-  }
+  renderStrip(data);
+  renderDetail(data.nights.find((n) => n.date === selectedDate));
 }
 
 /* ------------------------------------------------- autocomplete */
@@ -483,7 +620,6 @@ function renderSuggestions(results) {
   highlighted = -1;
   suggestionsEl.innerHTML = "";
   if (!results.length) { closeSuggestions(); return; }
-
   results.forEach((r, i) => {
     const li = document.createElement("li");
     li.setAttribute("role", "option");
@@ -513,15 +649,10 @@ placeInput.addEventListener("input", () => {
 
 placeInput.addEventListener("keydown", (e) => {
   if (suggestionsEl.hidden) return;
-  if (e.key === "ArrowDown") {
-    e.preventDefault(); setHighlight((highlighted + 1) % suggestions.length);
-  } else if (e.key === "ArrowUp") {
-    e.preventDefault(); setHighlight((highlighted - 1 + suggestions.length) % suggestions.length);
-  } else if (e.key === "Enter" && highlighted >= 0) {
-    e.preventDefault(); chooseSuggestion(highlighted);
-  } else if (e.key === "Escape") {
-    closeSuggestions();
-  }
+  if (e.key === "ArrowDown") { e.preventDefault(); setHighlight((highlighted + 1) % suggestions.length); }
+  else if (e.key === "ArrowUp") { e.preventDefault(); setHighlight((highlighted - 1 + suggestions.length) % suggestions.length); }
+  else if (e.key === "Enter" && highlighted >= 0) { e.preventDefault(); chooseSuggestion(highlighted); }
+  else if (e.key === "Escape") closeSuggestions();
 });
 
 placeInput.addEventListener("blur", () => setTimeout(closeSuggestions, 120));
@@ -542,10 +673,7 @@ form.addEventListener("submit", async (e) => {
 });
 
 geoBtn.addEventListener("click", () => {
-  if (!navigator.geolocation) {
-    setStatus("⚠️ O browser não suporta geolocalização.");
-    return;
-  }
+  if (!navigator.geolocation) { setStatus("⚠️ O browser não suporta geolocalização."); return; }
   setStatus("A obter a tua localização…");
   navigator.geolocation.getCurrentPosition(
     (pos) => {
@@ -584,9 +712,7 @@ function renderSaved() {
     const del = el("button", "saved-del", "✕");
     del.type = "button";
     del.title = `Esquecer ${p.name}`;
-    del.addEventListener("click", () => {
-      storeSaved(loadSaved().filter((x) => x.name !== p.name));
-    });
+    del.addEventListener("click", () => storeSaved(loadSaved().filter((x) => x.name !== p.name)));
     chip.append(go, del);
     savedListEl.append(chip);
   }
@@ -615,16 +741,11 @@ saveName.addEventListener("keydown", (e) => {
 
 /* ------------------------------------------------- comparar */
 
-function compareClass(score) {
-  if (score >= 55) return "cmp-good";
-  if (score >= 35) return "cmp-ok";
-  return "cmp-poor";
-}
+const compareClass = (s) => (s >= 55 ? "cmp-good" : s >= 35 ? "cmp-ok" : "cmp-poor");
 
 async function openCompare() {
   const places = loadSaved();
   if (places.length < 2) return;
-
   compareModal.hidden = false;
   compareBody.innerHTML = "<p class='status'>A calcular…</p>";
 
@@ -679,8 +800,8 @@ async function openCompare() {
 
   const verdict = el("p", "cmp-verdict");
   verdict.append(document.createTextNode("Melhor combinação: "));
-  verdict.append(el("strong", null, `${best.place}, ${weekdayLabel(best.night.date)}`));
-  verdict.append(document.createTextNode(` — score ${best.score}. ${best.night.conditions}`));
+  verdict.append(el("strong", null, `${best.place}, ${weekdayLong(best.night.date)}`));
+  verdict.append(document.createTextNode(` — ${best.night.headline.toLowerCase()}, score ${best.score}.`));
 
   compareBody.innerHTML = "";
   compareBody.append(verdict, table);
@@ -694,20 +815,16 @@ compareModal.addEventListener("click", (e) => {
 
 /* ------------------------------------------------- mapa */
 
-let map = null;
-let marker = null;
-let picked = null;
+let map = null, marker = null, picked = null;
 
 function initMap() {
-  // O Leaflet só mede bem o contentor depois de visível, por isso o mapa
-  // nasce à primeira abertura do modal, não no arranque.
+  // O Leaflet só mede bem o contentor depois de visível.
   map = L.map("map").setView(current ? [current.lat, current.lon] : [39.6, -8.0],
                              current ? 10 : 6);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 18,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
   }).addTo(map);
-
   map.on("click", (e) => {
     picked = { lat: e.latlng.lat, lon: e.latlng.lng };
     if (marker) marker.setLatLng(e.latlng);
@@ -720,19 +837,15 @@ function initMap() {
 mapBtn.addEventListener("click", () => {
   mapModal.hidden = false;
   if (!map) initMap();
-  setTimeout(() => map.invalidateSize(), 50);   // contentor acabou de aparecer
+  setTimeout(() => map.invalidateSize(), 50);
   if (current) map.setView([current.lat, current.lon], 10);
 });
 mapClose.addEventListener("click", () => { mapModal.hidden = true; });
-mapModal.addEventListener("click", (e) => {
-  if (e.target === mapModal) mapModal.hidden = true;
-});
+mapModal.addEventListener("click", (e) => { if (e.target === mapModal) mapModal.hidden = true; });
 mapConfirm.addEventListener("click", () => {
   if (!picked) return;
-  current = {
-    lat: picked.lat, lon: picked.lon,
-    label: `${picked.lat.toFixed(4)}, ${picked.lon.toFixed(4)}`,
-  };
+  current = { lat: picked.lat, lon: picked.lon,
+              label: `${picked.lat.toFixed(4)}, ${picked.lon.toFixed(4)}` };
   placeInput.value = current.label;
   mapModal.hidden = true;
   loadForecast();
@@ -751,7 +864,7 @@ modeBtns.forEach((btn) => {
     if (btn.dataset.mode === mode) return;
     mode = btn.dataset.mode;
     modeBtns.forEach((b) => b.classList.toggle("is-active", b === btn));
-    loadForecast();
+    loadForecast(true);        // mantém a noite escolhida ao trocar de modo
   });
 });
 

@@ -13,8 +13,8 @@ from datetime import datetime, timedelta, timezone
 
 from app import astro, events, objects
 from app.models import (FactorImpact, ForecastResponse, HourDetail,
-                        LightPollution, MeteorShower, MilkyWay, NightScore,
-                        SkyObject)
+                        LightPollution, MeteorShower, MilkyWay, NightCards,
+                        NightScore, SkyObject)
 
 # Pesos por camada de nuvens: as baixas tapam tudo, os cirros altos deixam
 # passar bastante. Modeladas como obstruções independentes que se multiplicam.
@@ -350,6 +350,125 @@ def _hour_detail(part: dict, times, h, moon_alt, moon_illum,
     )
 
 
+# Uma hora conta como "boa" se estiver perto do melhor que a noite oferece.
+GOOD_HOUR_RATIO = 0.85
+
+
+def _best_run(qualities: list[float]) -> tuple[int, int]:
+    """Maior troço seguido de horas boas. É daqui que sai o veredicto."""
+    if not qualities:
+        return 0, -1
+    bar = max(qualities) * GOOD_HOUR_RATIO
+    melhor = (0, -1)
+    i = 0
+    while i < len(qualities):
+        if qualities[i] >= bar:
+            j = i
+            while j + 1 < len(qualities) and qualities[j + 1] >= bar:
+                j += 1
+            if j - i > melhor[1] - melhor[0]:
+                melhor = (i, j)
+            i = j + 1
+        else:
+            i += 1
+    return melhor
+
+
+def _headline(score: int, qualities: list[float], times, win_idx,
+              win_end) -> str:
+    """Responde à pergunta do site em vez de a descrever.
+
+    O site chama-se "vale a pena sair esta noite?" — a resposta devia ser uma
+    frase, não um número num círculo.
+    """
+    if score < 30:
+        return "Não vale a pena"
+    if not qualities:
+        return "Sem dados"
+
+    i, j = _best_run(qualities)
+    inicio = times[win_idx[i]]
+    fim = min(times[win_idx[j]] + timedelta(hours=1), win_end)
+    cobre_tudo = (i == 0 and j == len(qualities) - 1)
+
+    sim = "Sim" if score >= 55 else "Talvez"
+    if cobre_tudo:
+        return f"{sim} — a noite toda"
+    if i == 0:
+        return f"{sim} — até às {fim.strftime('%H:%M')}"
+    if j == len(qualities) - 1:
+        return f"{sim} — melhor depois das {inicio.strftime('%H:%M')}"
+    return f"{sim} — entre as {inicio.strftime('%H:%M')} e as {fim.strftime('%H:%M')}"
+
+
+def _first_change(values, times, ok, win_end):
+    """Hora a partir da qual a condição passa a estar boa (ou None)."""
+    estado = [v is not None and ok(v) for v in values]
+    if all(estado):
+        return "sempre"
+    if not any(estado):
+        return "nunca"
+    for k in range(1, len(estado)):
+        if estado[k] and not estado[k - 1]:
+            return times[k].strftime("%H:%M")
+    # Começou bom e estragou-se: devolve quando deixou de estar.
+    for k in range(1, len(estado)):
+        if not estado[k] and estado[k - 1]:
+            return "~" + times[k].strftime("%H:%M")
+    return "sempre"
+
+
+def _cards(h, times, win_idx, parts, win_end, moonset) -> dict:
+    """Cada variável com a estatística que interessa, não a média.
+
+    A média das nuvens é enganadora: 0% durante três horas e 100% na última dá
+    25%, que soa medíocre quando na verdade foram três horas óptimas.
+    """
+    nuvens = [h["cloud_cover"][i] for i in win_idx]
+    temps = [h["temperature_2m"][i] for i in win_idx]
+    spreads = [p["spread"] for p in parts]
+    horas = [times[i] for i in win_idx]
+
+    # Nuvens: quando é que o céu está utilizável, não a média.
+    quando = _first_change(nuvens, horas, lambda v: v < 25, win_end)
+    if quando == "sempre":
+        nuvens_txt = "Limpo toda a noite"
+    elif quando == "nunca":
+        nuvens_txt = "Encoberto"
+    elif quando.startswith("~"):
+        nuvens_txt = f"Fecha por volta das {quando[1:]}"
+    else:
+        nuvens_txt = f"Limpa às {quando}"
+
+    # Orvalho: o mínimo e quando — é aí que a óptica embacia.
+    validos = [(s, t) for s, t in zip(spreads, horas) if s is not None]
+    if not validos:
+        orvalho_txt = "Sem dados"
+    else:
+        pior, quando_pior = min(validos, key=lambda x: x[0])
+        if pior >= 4:
+            orvalho_txt = "Sem problema"
+        elif pior >= 2:
+            orvalho_txt = f"Possível às {quando_pior.strftime('%H:%M')}"
+        else:
+            orvalho_txt = f"Provável às {quando_pior.strftime('%H:%M')}"
+
+    # Temperatura: o mínimo, que é para isso que te vestes.
+    t_validas = [t for t in temps if t is not None]
+    temp_txt = (f"{round(max(t_validas))}° → {round(min(t_validas))}°"
+                if t_validas else "—")
+
+    return {
+        "clouds_label": nuvens_txt,
+        "clouds_spark": [None if v is None else round(float(v), 1) for v in nuvens],
+        "dew_label": orvalho_txt,
+        "dew_spark": [None if s is None else round(float(s), 1) for s in spreads],
+        "temp_label": temp_txt,
+        "moon_label": (f"Põe-se {moonset.strftime('%H:%M')}" if moonset
+                       else "Não se põe esta noite"),
+    }
+
+
 def _verdict(score: int) -> str:
     if score >= 75:
         return "Excelente"
@@ -416,12 +535,14 @@ def _build_night(d, window, times, h, moon_alt, moon_illum, profile,
             moon_phase="—", moonrise=None, moonset=None,
             seeing="desconhecido", dew_risk="desconhecido",
             temperature_c=None, feels_like_c=None, wind_kmh=None,
+            headline="Sem noite utilizável", cards=None,
             meteor_shower=None, milky_way=None,
             limiting=[], objects=[], hours=[],
             window_start=None, window_end=None, window_hours=None,
             night_start=None, night_end=None, night_hours=None,
             cloud_cover_pct=None, transparency="—",
-            moon_illumination_pct=0.0, moon_max_altitude_deg=None,
+            moon_illumination_pct=0.0, moon_waxing=True,
+            moon_max_altitude_deg=None,
             conditions="O Sol não desce o suficiente para haver escuridão.",
             details="O Sol não desce o suficiente nesta noite — sem escuridão utilizável.",
         )
@@ -433,6 +554,7 @@ def _build_night(d, window, times, h, moon_alt, moon_illum, profile,
             moon_phase="—", moonrise=None, moonset=None,
             seeing="desconhecido", dew_risk="desconhecido",
             temperature_c=None, feels_like_c=None, wind_kmh=None,
+            headline="Sem noite utilizável", cards=None,
             meteor_shower=None, milky_way=None,
             limiting=[], objects=[], hours=[],
             window_start=None, window_end=None, window_hours=None,
@@ -440,7 +562,8 @@ def _build_night(d, window, times, h, moon_alt, moon_illum, profile,
             night_end=night_end.isoformat(timespec="minutes"),
             night_hours=round((night_end - night_start).total_seconds() / 3600, 1),
             cloud_cover_pct=None, transparency="—",
-            moon_illumination_pct=0.0, moon_max_altitude_deg=None,
+            moon_illumination_pct=0.0, moon_waxing=True,
+            moon_max_altitude_deg=None,
             conditions="Sem previsão meteorológica para esta noite.",
             details="Sem previsão meteorológica para esta noite.",
         )
@@ -521,11 +644,12 @@ def _build_night(d, window, times, h, moon_alt, moon_illum, profile,
     hours = [_hour_detail(p, times, h, moon_alt, moon_illum, pos in window_positions)
              for pos, p in enumerate(parts)]
 
-    # O que se vê a meio da janela recomendada.
+    # O que se vê a meio da janela, e a altura de cada objecto hora a hora.
     mid = win_idx[len(win_idx) // 2]
     sky = objects.visible_objects(lat, lon, offset, times[mid],
                                   float(moon_illum[mid]), float(moon_alt[mid]),
-                                  window_start=win_start, window_end=win_end)
+                                  window_start=win_start, window_end=win_end,
+                                  window_times=[times[i] for i in win_idx])
     moonrise, moonset = astro.moon_rise_set(lat, lon, offset, d)
 
     moonlight = float(moon_illum[mid]) * max(0.0, float(moon_alt[mid]) / 90.0)
@@ -534,8 +658,13 @@ def _build_night(d, window, times, h, moon_alt, moon_illum, profile,
     galaxy = events.milky_way_core(lat, lon, offset, times[mid],
                                    win_start, win_end, moonlight)
 
+    win_qualities = [p["quality"] for p in parts[ext_i:ext_j + 1]]
+
     return NightScore(
         date=d.isoformat(), score=score, verdict=_verdict(score),
+        headline=_headline(score, win_qualities, times, win_idx, win_end),
+        cards=NightCards(**_cards(h, times, win_idx, parts[ext_i:ext_j + 1],
+                                  win_end, moonset)),
         moon_phase=moon_phrase,
         moonrise=moonrise.isoformat(timespec="minutes") if moonrise else None,
         moonset=moonset.isoformat(timespec="minutes") if moonset else None,
@@ -560,6 +689,7 @@ def _build_night(d, window, times, h, moon_alt, moon_illum, profile,
         cloud_cover_pct=None if cloud is None else round(cloud, 1),
         transparency=label,
         moon_illumination_pct=round(illum_pct, 1),
+        moon_waxing=astro.moon_is_waxing(offset, times[mid]),
         moon_max_altitude_deg=round(max_alt, 1),
         details=details,
     )
