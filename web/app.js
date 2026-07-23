@@ -33,9 +33,46 @@ const compareClose = $("compare-close");
 const compareBody = $("compare-body");
 
 const GEOCODE_URL = "https://geocoding-api.open-meteo.com/v1/search";
+const OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast";
 const SAVED_KEY = "astrowe.places";
 const COUNTRY_KEY = "astrowe.country";
 const TOP_OBJECTS = 6;
+
+// Tem de bater certo com HOURLY_VARS em app/openmeteo.py. O browser vai buscar
+// a meteorologia directamente (usa a quota do IP do utilizador, não a do IP
+// partilhado do Render, que o Open-Meteo esgota por dia).
+const HOURLY_VARS = [
+  "cloud_cover", "cloud_cover_low", "cloud_cover_mid", "cloud_cover_high",
+  "relative_humidity_2m", "dew_point_2m", "temperature_2m", "visibility",
+  "wind_speed_10m", "wind_gusts_10m", "wind_speed_250hPa", "precipitation_probability",
+];
+
+/** Previsão para um local: mete a meteorologia (obtida aqui no browser) no
+ *  backend, que faz o resto. Se a busca no browser falhar, recua para o
+ *  servidor a ir buscá-la (GET). */
+async function computeForecast(lat, lon, m) {
+  try {
+    const url = `${OPEN_METEO_URL}?latitude=${lat}&longitude=${lon}` +
+                `&hourly=${HOURLY_VARS.join(",")}&timezone=auto&forecast_days=7`;
+    const wr = await fetch(url);
+    if (wr.ok) {
+      const weather = await wr.json();
+      const res = await fetch("/api/forecast", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lat, lon, mode: m, weather }),
+      });
+      if (res.ok) return res.json();
+    }
+  } catch { /* cai para o recuo no servidor */ }
+
+  const res = await fetch(`/api/forecast?lat=${lat}&lon=${lon}&mode=${m}`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Erro ${res.status}`);
+  }
+  return res.json();
+}
 
 let current = null;
 let mode = "deepsky";
@@ -227,13 +264,7 @@ async function loadForecast(keepDate) {
   setStatus(`A calcular as noites para ${current.label}…`);
   resultEl.hidden = true;
   try {
-    const res = await fetch(
-      `/api/forecast?lat=${current.lat}&lon=${current.lon}&mode=${mode}`);
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.detail || `Erro ${res.status}`);
-    }
-    lastData = await res.json();
+    lastData = await computeForecast(current.lat, current.lon, mode);
     if (!keepDate) selectedDate = null;
     render();
     saveBtn.hidden = false;
@@ -848,9 +879,7 @@ async function openCompare() {
 
   const results = await Promise.all(places.map(async (p) => {
     try {
-      const res = await fetch(`/api/forecast?lat=${p.lat}&lon=${p.lon}&mode=${mode}`);
-      if (!res.ok) return { place: p, error: true };
-      return { place: p, data: await res.json() };
+      return { place: p, data: await computeForecast(p.lat, p.lon, mode) };
     } catch { return { place: p, error: true }; }
   }));
 

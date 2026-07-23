@@ -9,6 +9,7 @@ import httpx
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 
 from app import lightpollution, openmeteo, score
 
@@ -45,6 +46,33 @@ async def forecast(
                    "Tenta outra vez daqui a um minuto.",
         ) from exc
 
+    return await _score_with(data, lat, lon, mode)
+
+
+class ForecastRequest(BaseModel):
+    lat: float
+    lon: float
+    mode: Literal["deepsky", "planetary"] = "deepsky"
+    weather: dict          # o JSON do Open-Meteo, obtido pelo browser
+
+
+@app.post("/api/forecast")
+async def forecast_post(req: ForecastRequest):
+    """Como o GET, mas a meteorologia vem do *browser*.
+
+    Assim o pedido ao Open-Meteo sai do IP de casa do utilizador (com quota
+    própria) em vez do IP partilhado do Render, que esgota a quota diária do
+    Open-Meteo por ser usado por milhares de apps. O servidor continua a fazer
+    o Skyfield e a poluição luminosa.
+    """
+    if not isinstance(req.weather, dict) or "hourly" not in req.weather:
+        raise HTTPException(status_code=400, detail="Meteorologia inválida.")
+    if not (-90 <= req.lat <= 90 and -180 <= req.lon <= 180):
+        raise HTTPException(status_code=400, detail="Coordenadas inválidas.")
+    return await _score_with(req.weather, req.lat, req.lon, req.mode)
+
+
+async def _score_with(data: dict, lat: float, lon: float, mode: str):
     # Degradação graciosa: sem chave da API (ou se ela falhar) devolve None e a
     # previsão sai na mesma, apenas sem o fator de poluição luminosa.
     lp = await lightpollution.fetch(lat, lon)
@@ -57,26 +85,6 @@ async def health():
     return {
         "open_meteo": True,  # aberta, sem chave
         "light_pollution_key_configured": lightpollution.api_key_configured(),
-    }
-
-
-@app.get("/api/diag")
-async def diag():
-    """O que o *servidor* vê ao chamar o Open-Meteo — para saber porque falha
-    em produção mas não localmente (suspeita: IP partilhado do Render com
-    limite de pedidos por IP no Open-Meteo). Temporário.
-    """
-    url = "https://api.open-meteo.com/v1/forecast"
-    params = {"latitude": 38.2, "longitude": -7.5, "hourly": "cloud_cover",
-              "timezone": "auto"}
-    async with httpx.AsyncClient(timeout=20.0) as client:
-        resp = await client.get(url, params=params)
-    return {
-        "status": resp.status_code,
-        "body_head": resp.text[:300],
-        "retry_after": resp.headers.get("retry-after"),
-        "ratelimit": {k: v for k, v in resp.headers.items()
-                      if "ratelimit" in k.lower() or "x-ratelimit" in k.lower()},
     }
 
 
