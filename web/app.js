@@ -195,6 +195,107 @@ function symbolSVG(kind, size = 14, color = "var(--dim)") {
   return g;
 }
 
+// Gerador pseudo-aleatório com semente fixa, para o campo de estrelas
+// decorativo ser sempre o mesmo (não salta a cada render).
+function mulberry32(seed) {
+  return function () {
+    seed |= 0; seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/**
+ * Cúpula do céu: a vista de quem olha para cima. Zénite no centro, horizonte
+ * na borda, Norte em cima e Este à esquerda (é assim numa carta vista de baixo,
+ * não num mapa). A Lua, os planetas e os melhores objectos plotados nas
+ * posições reais (altura e azimute) à hora recomendada. É a peça que mostra o
+ * céu em vez de o listar.
+ */
+function buildSkyDome(n) {
+  const objs = n.objects.filter((o) => o.altitude_deg > 0);
+  const R = 150, cx = 160, cy = 160, S = 320;
+  const box = svg("svg", { viewBox: `0 0 ${S} ${S}`, class: "sky", "aria-hidden": "true" });
+
+  // disco do céu
+  box.append(svg("circle", { cx, cy, r: R, fill: "#08070c",
+                             stroke: "var(--border-lit)", "stroke-width": 1 }));
+  // anéis de altura (30°, 60°)
+  for (const alt of [30, 60]) {
+    box.append(svg("circle", { cx, cy, r: ((90 - alt) / 90 * R).toFixed(1), fill: "none",
+                               stroke: "var(--border)", "stroke-width": 0.6, "stroke-dasharray": "2 4" }));
+  }
+  // cruz cardinal ténue
+  box.append(svg("line", { x1: cx, y1: cy - R, x2: cx, y2: cy + R, stroke: "var(--border)", "stroke-width": 0.5 }),
+             svg("line", { x1: cx - R, y1: cy, x2: cx + R, y2: cy, stroke: "var(--border)", "stroke-width": 0.5 }));
+
+  // campo de estrelas decorativo (não são estrelas reais — textura de céu)
+  const rng = mulberry32(1337);
+  for (let i = 0; i < 130; i++) {
+    const ang = rng() * 2 * Math.PI, rr = Math.sqrt(rng()) * (R - 2);
+    box.append(svg("circle", {
+      cx: (cx + rr * Math.cos(ang)).toFixed(1), cy: (cy + rr * Math.sin(ang)).toFixed(1),
+      r: (rng() * 0.8 + 0.25).toFixed(2),
+      fill: `rgba(236,231,220,${(0.08 + rng() * 0.22).toFixed(2)})`,
+    }));
+  }
+
+  // altura+azimute -> ponto (N em cima, E à esquerda)
+  const pos = (alt, az) => {
+    const r = (90 - alt) / 90 * R, A = az * Math.PI / 180;
+    return [cx - r * Math.sin(A), cy - r * Math.cos(A)];
+  };
+
+  // objectos, do mais fraco para o mais forte (os brilhantes por cima)
+  const ordered = [...objs].sort((a, b) =>
+    (b.magnitude ?? -9) - (a.magnitude ?? -9));
+  let labelled = 0;
+  for (const o of ordered) {
+    const [x, y] = pos(o.altitude_deg, o.azimuth_deg);
+    const isMoon = o.kind === "satélite", isPlanet = o.kind === "planeta";
+    let dot;
+    if (isMoon) {
+      dot = svg("circle", { cx: x, cy: y, r: 6, fill: "#ece5d3",
+                            stroke: "rgba(60,48,28,0.4)", "stroke-width": 0.6 });
+    } else if (isPlanet) {
+      dot = svg("circle", { cx: x, cy: y, r: 3.4, fill: "var(--accent)" });
+    } else {
+      const r = o.magnitude !== null ? Math.max(1.4, 4 - o.magnitude * 0.4) : 2;
+      dot = svg("circle", { cx: x, cy: y, r: r.toFixed(1), fill: "var(--text)",
+                            opacity: o.washed_out ? 0.35 : 0.9 });
+    }
+    dot.append(svg("title", {}));
+    dot.querySelector("title").textContent =
+      `${o.name} · ${Math.round(o.altitude_deg)}° ${o.direction}`;
+    box.append(dot);
+
+    // rotular a Lua, os planetas e os 2 melhores de céu profundo
+    if (isMoon || isPlanet || (labelled < 2 && !o.washed_out)) {
+      if (!isMoon && !isPlanet) labelled++;
+      const lx = x + 7, anchor = lx > cx + R - 30 ? "end" : "start";
+      const label = svg("text", { x: anchor === "end" ? x - 7 : lx, y: y + 3,
+                                  "text-anchor": anchor, class: "sky-lbl" });
+      label.textContent = o.name;
+      box.append(label);
+    }
+  }
+
+  // rótulos cardeais
+  const card = (t, x, y, anchor, baseline) => {
+    const el2 = svg("text", { x, y, "text-anchor": anchor, class: "sky-card" });
+    if (baseline) el2.setAttribute("dominant-baseline", baseline);
+    el2.textContent = t;
+    box.append(el2);
+  };
+  card("N", cx, cy - R - 5, "middle", "auto");
+  card("S", cx, cy + R + 13, "middle", "auto");
+  card("E", cx - R - 6, cy, "end", "middle");
+  card("O", cx + R + 6, cy, "start", "middle");
+
+  return box;
+}
+
 /** Sparkline sem eixos nem números: só a forma, para se ver a tendência. */
 function sparkline(values, invert) {
   const vals = values.filter((v) => v !== null && v !== undefined);
@@ -856,6 +957,14 @@ function renderDetail(n) {
   detailEl.append(block("A noite hora a hora", meteo, toggle));
 
   if (n.objects.length) {
+    // Cúpula: o céu a meio da janela recomendada, visto de baixo.
+    const midT = new Date((Date.parse(n.window_start) + Date.parse(n.window_end)) / 2);
+    const midLbl = `${String(midT.getHours()).padStart(2, "0")}:${String(midT.getMinutes()).padStart(2, "0")}`;
+    const wrap = el("div", "sky-wrap");
+    wrap.append(buildSkyDome(n),
+                el("p", "sky-cap", `O céu por volta das ${midLbl}, olhando para cima. Passa o rato para ver cada objecto.`));
+    detailEl.append(block("O céu nesta noite", wrap));
+
     detailEl.append(block("O que observar, e quando", buildObjectsFilter(n, hrs)));
   }
 }
