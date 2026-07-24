@@ -111,6 +111,11 @@ function setStatus(msg) {
  * uma semi-elipse de raio horizontal R·|1−2k|. Achatada na meia-Lua, a
  * inchar para os quartos.
  */
+let moonSeq = 0;
+// Crateras (x, y, raio) no disco de 30 — só aparecem nas Luas grandes.
+const CRATERS = [[11, 10, 2.3], [19, 13, 1.6], [15, 19, 2.8], [9, 17, 1.3],
+                 [21, 20, 1.1], [13, 24, 1.5]];
+
 function moonSVG(illumPct, waxing, size = 26) {
   const k = Math.max(0, Math.min(1, illumPct / 100));
   const R = 13, cx = 15, cy = 15;
@@ -120,18 +125,37 @@ function moonSVG(illumPct, waxing, size = 26) {
   // Lua a 94% desenha-se como um sliver de 6%. (Área verificada com isPointInFill.)
   const outer = waxing ? 1 : 0;
   const inner = (k > 0.5) ? (waxing ? 1 : 0) : (waxing ? 0 : 1);
+  const litPath = `M ${cx} ${cy - R} A ${R} ${R} 0 0 ${outer} ${cx} ${cy + R}` +
+                  ` A ${rx} ${R} 0 0 ${inner} ${cx} ${cy - R} Z`;
+  const rich = size >= 40;   // esfera sombreada + crateras só nas grandes
 
   const g = svg("svg", { width: size, height: size, viewBox: "0 0 30 30", "aria-hidden": "true" });
-  // disco escuro com contorno, para a Lua se ver como círculo mesmo quando
-  // pouco iluminada
-  g.append(svg("circle", { cx, cy, r: R, fill: "var(--border-lit)",
-                           stroke: "var(--dim)", "stroke-width": 0.75 }));
-  if (k > 0.01) {
-    g.append(svg("path", {
-      d: `M ${cx} ${cy - R} A ${R} ${R} 0 0 ${outer} ${cx} ${cy + R}` +
-         ` A ${rx} ${R} 0 0 ${inner} ${cx} ${cy - R} Z`,
-      fill: "var(--text)",     // é o objecto mais brilhante do céu; que se veja
-    }));
+
+  if (rich && k > 0.01) {
+    // Parte iluminada sólida (cor de pergaminho) + crateras recortadas a ela,
+    // para dar textura sem depender de gradientes (que resolvem mal em SVG).
+    const id = "moon" + (moonSeq++);
+    const defs = svg("defs", {});
+    const clip = svg("clipPath", { id: id + "c" });
+    clip.append(svg("path", { d: litPath }));
+    defs.append(clip);
+    g.append(defs);
+    g.append(svg("circle", { cx, cy, r: R, fill: "#14120f",
+                             stroke: "var(--border-lit)", "stroke-width": 0.6 }));
+    g.append(svg("path", { d: litPath, fill: "#ece5d3" }));
+    const craters = svg("g", { "clip-path": `url(#${id}c)` });
+    for (const [x, y, r] of CRATERS) {
+      craters.append(svg("circle", { cx: x, cy: y, r, fill: "rgba(70,55,32,0.18)" }));
+    }
+    // leve escurecimento junto ao terminador, para dar volume
+    g.append(svg("path", { d: litPath, fill: "none",
+                           stroke: "rgba(60,48,28,0.22)", "stroke-width": 1.2 }));
+    g.append(craters);
+  } else {
+    // versão simples (tira, cartões): disco escuro + parte iluminada clara
+    g.append(svg("circle", { cx, cy, r: R, fill: "var(--border-lit)",
+                             stroke: "var(--dim)", "stroke-width": 0.75 }));
+    if (k > 0.01) g.append(svg("path", { d: litPath, fill: "var(--text)" }));
   }
   return g;
 }
@@ -621,6 +645,64 @@ function buildObjectsFilter(n, hours) {
 
 /* --- eventos e dados crus --- */
 
+/** Pill de condição em linguagem simples, como nos sites de meteorologia. */
+function conditionPill(n) {
+  const c = n.cloud_cover_pct;
+  let label = "sem dados", cls = "";
+  if (c !== null && c !== undefined) {
+    if (c < 15) { label = "céu limpo"; cls = "pill-good"; }
+    else if (c < 40) { label = "poucas nuvens"; cls = "pill-ok"; }
+    else { label = "muitas nuvens"; cls = "pill-poor"; }
+  }
+  const pill = el("span", "pill " + cls);
+  pill.append(iconSVG("cloud", 13), document.createTextNode(label));
+  return pill;
+}
+
+/**
+ * Banda de luz: do pôr ao nascer do Sol, com o crepúsculo a esbater nas pontas,
+ * a noite escura ao meio, a janela recomendada em destaque e o período com a
+ * Lua no céu marcado. Dá orientação e presença — como a barra do Telescopius.
+ */
+function buildDaylightBand(n) {
+  if (!n.sun_set || !n.sun_rise) return null;
+  const t = (iso) => new Date(iso).getTime();
+  const start = t(n.sun_set), end = t(n.sun_rise), span = end - start || 1;
+  const pct = (iso) => iso ? Math.max(0, Math.min(100, (t(iso) - start) / span * 100)) : null;
+
+  const box = el("div", "band");
+  const track = el("div", "band-track");
+  const duskP = pct(n.dusk) ?? 15, dawnP = pct(n.dawn) ?? 85;
+  track.style.background =
+    `linear-gradient(90deg, #3a2612 0%, #0a0908 ${duskP.toFixed(0)}%, ` +
+    `#0a0908 ${dawnP.toFixed(0)}%, #3a2612 100%)`;
+
+  // Lua no céu: fita fina no topo, de quando nasce (ou do início) até se pôr.
+  if (n.moonset || n.moonrise) {
+    const up = el("div", "band-moon");
+    const a = pct(n.moonrise) ?? 0, b = pct(n.moonset) ?? 100;
+    up.style.left = Math.min(a, b) + "%";
+    up.style.width = Math.max(2, Math.abs(b - a)) + "%";
+    track.append(up);
+  }
+
+  // Janela recomendada em destaque.
+  const wa = pct(n.window_start), wb = pct(n.window_end);
+  if (wa !== null && wb !== null) {
+    const win = el("div", "band-window");
+    win.style.left = wa + "%"; win.style.width = Math.max(2, wb - wa) + "%";
+    track.append(win);
+  }
+  box.append(track);
+
+  const labels = el("div", "band-labels");
+  labels.append(el("span", null, `☼ ${hhmm(n.sun_set)}`),
+                el("span", "band-mid", n.moonset ? `☾ põe-se ${hhmm(n.moonset)}` : ""),
+                el("span", null, `☼ ${hhmm(n.sun_rise)}`));
+  box.append(labels);
+  return box;
+}
+
 /** Faixa fina de destaques da noite, logo abaixo do veredicto — em vez de uma
  *  caixa perdida no fim. Só aparece quando há algo a assinalar. */
 function buildHighlights(n) {
@@ -718,7 +800,10 @@ function renderDetail(n) {
   const ring = el("div", `verdict-score ${scoreClass(n.score, usable)}`,
                   usable ? String(n.score) : "—");
   const body = el("div", "verdict-body");
-  body.append(el("div", "verdict-head", n.headline));
+  const headRow = el("div", "verdict-headrow");
+  headRow.append(el("span", "verdict-head", n.headline));
+  if (usable) headRow.append(conditionPill(n));
+  body.append(headRow);
   const reason = n.verdict_reason || n.conditions;
   body.append(el("div", "verdict-sub", usable
     ? `${weekdayLong(n.date)} · ${hhmm(n.window_start)}–${hhmm(n.window_end)} · ${reason}`
@@ -737,7 +822,16 @@ function renderDetail(n) {
     body.append(why, limits);
   }
   v.append(ring, body);
+  // A Lua grande à direita: a imagem do céu que dá presença ao herói.
+  const moonHero = el("div", "verdict-moon");
+  moonHero.append(moonSVG(n.moon_illumination_pct, n.moon_waxing, 66),
+                  el("span", "verdict-moon-lbl",
+                     `${Math.round(n.moon_illumination_pct)}%`));
+  v.append(moonHero);
   detailEl.append(v);
+
+  const band = buildDaylightBand(n);
+  if (band) detailEl.append(band);
 
   if (!n.hours.length) return;
   // A noite escura toda, não só a janela — a janela fica em destaque.

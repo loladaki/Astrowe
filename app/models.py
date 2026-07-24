@@ -124,6 +124,12 @@ class NightScore(BaseModel):
     night_end: str | None
     night_hours: float | None
 
+    # Para a banda de luz: pôr/nascer do Sol e crepúsculo astronómico (−18°).
+    sun_set: str | None = None
+    sun_rise: str | None = None
+    dusk: str | None = None       # fim do crepúsculo astronómico (céu escuro)
+    dawn: str | None = None       # início do amanhecer astronómico
+
     cloud_cover_pct: float | None        # nuvens médias durante a janela
     transparency: str                    # "boa" / "razoável" / "fraca"
     moon_illumination_pct: float         # fração iluminada da Lua (0–100)

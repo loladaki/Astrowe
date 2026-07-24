@@ -544,6 +544,10 @@ def build_forecast(data: dict, lat: float, lon: float,
     # Vista horária do pôr ao nascer do Sol (crepúsculo incluído), para se ver a
     # noite toda; o score continua a sair da janela escura recomendada.
     display = astro.compute_windows(lat, lon, offset, dates, astro.SUNSET_DEG)
+    # Crepúsculo astronómico (Sol a −18°), para a banda de luz saber onde começa
+    # e acaba a noite verdadeiramente escura, independente do modo.
+    twilight = astro.compute_windows(lat, lon, offset, dates,
+                                     astro.ASTRONOMICAL_TWILIGHT_DEG)
     moon_alt, moon_illum = astro.moon_series(lat, lon, offset, times)
 
     bortle = light_pollution.get("bortle") if light_pollution else None
@@ -556,8 +560,9 @@ def build_forecast(data: dict, lat: float, lon: float,
 
     nights = [
         _build_night(d, windows.get(d, (None, None)),
-                     display.get(d, (None, None)), times, h,
-                     moon_alt, moon_illum, profile, lat, lon, offset, lp_factor)
+                     display.get(d, (None, None)), twilight.get(d, (None, None)),
+                     times, h, moon_alt, moon_illum, profile,
+                     lat, lon, offset, lp_factor)
         for d in dates
     ]
 
@@ -571,10 +576,12 @@ def build_forecast(data: dict, lat: float, lon: float,
     )
 
 
-def _build_night(d, window, display_window, times, h, moon_alt, moon_illum,
-                 profile, lat: float, lon: float, offset: int,
-                 lp_factor: float = 1.0) -> NightScore:
+def _build_night(d, window, display_window, twilight_window, times, h,
+                 moon_alt, moon_illum, profile, lat: float, lon: float,
+                 offset: int, lp_factor: float = 1.0) -> NightScore:
     night_start, night_end = window
+    sun_set, sun_rise = display_window
+    dusk, dawn = twilight_window
 
     if night_start is None or night_end is None:
         return NightScore(
@@ -748,6 +755,10 @@ def _build_night(d, window, display_window, times, h, moon_alt, moon_illum,
         night_start=night_start.isoformat(timespec="minutes"),
         night_end=night_end.isoformat(timespec="minutes"),
         night_hours=round((night_end - night_start).total_seconds() / 3600, 1),
+        sun_set=sun_set.isoformat(timespec="minutes") if sun_set else None,
+        sun_rise=sun_rise.isoformat(timespec="minutes") if sun_rise else None,
+        dusk=dusk.isoformat(timespec="minutes") if dusk else None,
+        dawn=dawn.isoformat(timespec="minutes") if dawn else None,
         conditions=conditions,
         cloud_cover_pct=None if cloud is None else round(cloud, 1),
         transparency=label,

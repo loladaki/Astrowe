@@ -223,8 +223,48 @@ button { font-family: inherit; cursor: pointer; border-radius: var(--r2); }
 .s-ok   { color: var(--ok);   background: var(--bg-ok); }
 .s-poor { color: var(--poor); background: var(--bg-poor); }
 .s-none { color: var(--border-lit); }
+.verdict-headrow { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s3); }
 .verdict-head { font-size: 1.45rem; font-weight: 600; line-height: 1.2; }
 .verdict-sub { font-size: var(--t-md); color: var(--dim); margin-top: 2px; }
+
+/* Lua grande do herói, com um brilho subtil */
+.verdict-moon {
+  flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
+.verdict-moon svg { filter: drop-shadow(0 0 10px rgba(236, 231, 220, 0.12)); }
+.verdict-moon-lbl { font-size: var(--t-xs); color: var(--faint); font-variant-numeric: tabular-nums; }
+
+/* pill de condição */
+.pill {
+  display: inline-flex; align-items: center; gap: var(--s1);
+  padding: 2px var(--s3); border-radius: var(--pill);
+  font-size: var(--t-xs); border: 1px solid var(--border-lit); color: var(--dim);
+}
+.pill svg { width: 13px; height: 13px; }
+.pill-good { color: var(--good); border-color: rgba(139,174,127,0.4); }
+.pill-ok   { color: var(--ok);   border-color: rgba(214,169,95,0.4); }
+.pill-poor { color: var(--poor); border-color: rgba(207,115,89,0.4); }
+
+/* banda de luz (pôr-do-Sol → noite → nascer) */
+.band { margin-bottom: var(--s5); }
+.band-track {
+  position: relative; height: 22px; border-radius: var(--r1);
+  border: 1px solid var(--border); overflow: hidden;
+}
+.band-moon {
+  position: absolute; top: 0; height: 3px;
+  background: rgba(236, 231, 220, 0.5);
+}
+.band-window {
+  position: absolute; top: 0; bottom: 0;
+  border: 1.5px solid var(--accent); border-radius: 3px;
+  background: var(--accent-soft);
+}
+.band-labels {
+  display: flex; justify-content: space-between; margin-top: var(--s1);
+  font-size: var(--t-xs); color: var(--faint); font-variant-numeric: tabular-nums;
+}
+.band-mid { color: var(--dim); }
 
 /* factores limitantes, inline sob o veredicto */
 .limits { margin-top: var(--s3); display: flex; flex-direction: column; gap: var(--s2); }
