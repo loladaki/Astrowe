@@ -10,6 +10,7 @@ class LightPollution(BaseModel):
     sqm: float                           # mag/arcsec²
     artificial_mcd_m2: float             # brilho artificial bruto
     description: str                     # "céu rural, pouca luz"
+    cut_pct: int = 0                     # % do potencial que este céu corta
     source: str
 
 

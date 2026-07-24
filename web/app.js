@@ -334,7 +334,8 @@ function buildLimits(n, lp) {
     box.append(el("div", "limits-none", "Nada a limitar, condições no máximo."));
     return box;
   }
-  const worst = Math.max(...n.limiting.map((f) => f.cost_points));
+  const night = n.limiting.filter((f) => f.factor !== "poluicao");
+  const worst = Math.max(1, ...night.map((f) => f.cost_points));
 
   const barRow = (name, cost) => {
     const row = el("div", "limit");
@@ -349,13 +350,20 @@ function buildLimits(n, lp) {
     return row;
   };
 
-  const site = n.limiting.filter((f) => f.factor === "poluicao");
-  const night = n.limiting.filter((f) => f.factor !== "poluicao");
-
-  if (site.length) {
+  if (lp) {
+    // A poluição luminosa é constante: mostra-se a % que corta sempre, não um
+    // valor em pontos que engana por variar com a noite.
     box.append(el("div", "limit-group", "Este sítio"));
-    const name = lp ? `poluição luminosa · Bortle ${lp.bortle}` : "poluição luminosa";
-    box.append(barRow(name, site[0].cost_points));
+    const row = el("div", "limit");
+    row.append(el("span", "limit-name", `poluição luminosa · Bortle ${lp.bortle}`));
+    const track = el("div", "limit-track");
+    const fill = el("div", "limit-fill");
+    fill.style.width = `${Math.max(8, lp.cut_pct)}%`;
+    fill.style.background = lp.cut_pct >= 45 ? "var(--poor)"
+      : lp.cut_pct >= 20 ? "var(--ok)" : "var(--good)";
+    track.append(fill);
+    row.append(track, el("span", "limit-cost", `−${lp.cut_pct}%`));
+    box.append(row);
   }
   if (night.length) {
     box.append(el("div", "limit-group", "Esta noite"));
@@ -462,64 +470,83 @@ function scaledSpark(values, unit, invert, threshold) {
 
 /* --- meteograma: horas em colunas, variáveis em linhas --- */
 
-function timeHeader(win) {
+// As horas fora da janela recomendada aparecem esbatidas, para a janela se
+// destacar sem esconder o resto da noite.
+function timeHeader(hours) {
   const row = el("div", "tgrid");
   row.append(el("div"));
-  for (const h of win) row.append(el("div", "tgrid-head", hh(h.time)));
+  for (const h of hours) {
+    row.append(el("div", "tgrid-head" + (h.in_window ? " in-win" : ""), hh(h.time)));
+  }
   return row;
 }
 
-function meteoRow(label, win, kind, fmt) {
+function meteoRow(label, hours, kind, fmt) {
   const row = el("div", "tgrid heat");
   row.append(el("div", "tgrid-label", label));
-  win.forEach((h, i) => {
+  hours.forEach((h, i) => {
     const v = kind === "cloud" ? h.cloud_total_pct
       : kind === "jet" ? h.jet_stream_kmh
       : kind === "moon" ? h.moon_altitude_deg
       : kind === "spread" ? h.dew_spread_c
       : h.temperature_c;
-    const cell = el("div", `cell ${cellClass(kind, v)}`, fmt(v));
+    const cell = el("div", `cell ${cellClass(kind, v)}` + (h.in_window ? "" : " out"), fmt(v));
     if (i === 0) cell.classList.add("cell-first");
-    if (i === win.length - 1) cell.classList.add("cell-last");
+    if (i === hours.length - 1) cell.classList.add("cell-last");
     row.append(cell);
   });
   return row;
 }
 
-function buildMeteogram(win) {
-  // Bandas contínuas em vez de dezenas de caixinhas: as células tocam-se e
-  // cada variável lê-se como uma faixa de cor.
+function buildMeteogram(hours) {
+  // Bandas contínuas em vez de dezenas de caixinhas, sobre a noite escura toda.
   const box = el("div");
-  box.append(timeHeader(win));
-  box.append(meteoRow("nuvens", win, "cloud", (v) => v === null ? "—" : `${Math.round(v)}%`));
-  box.append(meteoRow("seeing", win, "jet",
+  box.append(timeHeader(hours));
+  box.append(meteoRow("nuvens", hours, "cloud", (v) => v === null ? "—" : `${Math.round(v)}%`));
+  box.append(meteoRow("seeing", hours, "jet",
     (v) => v === null ? "—" : v < 60 ? "bom" : v < 100 ? "médio" : "fraco"));
-  box.append(meteoRow("Lua", win, "moon",
+  box.append(meteoRow("Lua", hours, "moon",
     (v) => v === null ? "—" : v <= 0 ? "posta" : `${Math.round(v)}°`));
-  box.append(meteoRow("margem orvalho", win, "spread", (v) => v === null ? "—" : `${v.toFixed(1)}°`));
-  box.append(meteoRow("temp", win, "temp", (v) => v === null ? "—" : `${Math.round(v)}°`));
+  box.append(meteoRow("margem orvalho", hours, "spread", (v) => v === null ? "—" : `${v.toFixed(1)}°`));
+  box.append(meteoRow("temp", hours, "temp", (v) => v === null ? "—" : `${Math.round(v)}°`));
   return box;
 }
 
 /* --- janelas dos objectos: uma barra por alvo --- */
 
-function objectRow(o) {
-  const row = el("div", "tgrid" + (o.washed_out ? " is-washed" : ""));
-  const label = el("div", "obj-label");
-  label.append(symbolSVG(o.symbol, 14));
-  const a = el("a", null, o.name);
-  a.href = o.url; a.target = "_blank"; a.rel = "noopener";
-  a.title = `${o.kind}${o.magnitude !== null ? ` · mag ${o.magnitude}` : ""}` +
-            ` · culmina a ${Math.round(o.max_altitude_deg)}°`;
-  label.append(a);
-  row.append(label);
+// Cada alvo: uma linha de texto legível (o que é e quando está no seu melhor)
+// e, por baixo, a barra alinhada ao mesmo eixo horário do meteograma.
+function objectItem(o, hours) {
+  const item = el("div", "obj-item" + (o.washed_out ? " is-washed" : ""));
 
-  for (const alt of o.altitudes) {
-    const cell = el("div", `bar ${barClass(alt)}`);
-    if (alt !== null) cell.title = `${Math.round(alt)}°`;
-    row.append(cell);
-  }
-  return row;
+  const info = el("div", "obj-info");
+  info.append(symbolSVG(o.symbol, 15));
+  const a = el("a", "obj-name", o.name);
+  a.href = o.url; a.target = "_blank"; a.rel = "noopener";
+  a.title = `Ver ${o.name} no Telescopius`;
+  info.append(a);
+
+  const quando = o.transit_time
+    ? `mais alto às ${hhmm(o.transit_time)} (${Math.round(o.max_altitude_deg)}°)`
+    : `${o.trend}, até ${Math.round(o.max_altitude_deg)}°`;
+  const bits = [o.kind];
+  if (o.magnitude !== null) bits.push(`mag ${o.magnitude}`);
+  bits.push(quando);
+  if (o.airmass !== null) bits.push(`airmass ${o.airmass.toFixed(1)}`);
+  if (o.washed_out) bits.push("apagado pelo luar");
+  info.append(el("span", "obj-meta", bits.join(" · ")));
+  item.append(info);
+
+  const track = el("div", "tgrid");
+  track.append(el("div"));   // espaçador da largura do rótulo, para alinhar
+  o.altitudes.forEach((alt, i) => {
+    const inWin = hours[i] && hours[i].in_window;
+    const cell = el("div", `bar ${barClass(alt)}` + (inWin ? "" : " out"));
+    if (alt !== null) cell.title = `${hh(hours[i].time)} · ${Math.round(alt)}°`;
+    track.append(cell);
+  });
+  item.append(track);
+  return item;
 }
 
 // Grupos de filtro: rótulo → tipos de símbolo que abrange.
@@ -531,7 +558,7 @@ const OBJECT_GROUPS = [
   ["Planetas", ["planet", "moon", "double"]],
 ];
 
-function buildObjectsFilter(n, win) {
+function buildObjectsFilter(n, hours) {
   const box = el("div");
   const rows = el("div", "obj-rows");
   const legend = el("div", "legend");
@@ -550,10 +577,10 @@ function buildObjectsFilter(n, win) {
 
   function draw() {
     rows.innerHTML = "";
-    rows.append(timeHeader(win));
+    rows.append(timeHeader(hours));
     const matches = n.objects.filter((o) => !active || active.includes(o.symbol));
     const visible = expanded ? matches : matches.slice(0, TOP_OBJECTS);
-    for (const o of visible) rows.append(objectRow(o));
+    for (const o of visible) rows.append(objectItem(o, hours));
 
     if (!matches.length) {
       rows.append(el("div", "obj-empty", "Nenhum deste tipo acima do horizonte."));
@@ -689,35 +716,46 @@ function renderDetail(n) {
   body.append(el("div", "verdict-sub", usable
     ? `${weekdayLong(n.date)} · ${hhmm(n.window_start)}–${hhmm(n.window_end)} · ${reason}`
     : `${weekdayLong(n.date)} · ${n.conditions}`));
-  if (usable) body.append(buildLimits(n, lastData && lastData.light_pollution));
+
+  // A decisão está à vista; a razão só se a pessoa a quiser, atrás de um clique.
+  if (usable) {
+    const limits = buildLimits(n, lastData && lastData.light_pollution);
+    limits.hidden = true;
+    const why = el("button", "why-toggle", "o que baixa o score");
+    why.type = "button";
+    why.addEventListener("click", () => {
+      limits.hidden = !limits.hidden;
+      why.classList.toggle("is-open", !limits.hidden);
+    });
+    body.append(why, limits);
+  }
   v.append(ring, body);
   detailEl.append(v);
 
   if (!n.hours.length) return;
-  const win = n.hours.filter((h) => h.in_window);
-  detailEl.style.setProperty("--cols", String(win.length));
+  // A noite escura toda, não só a janela — a janela fica em destaque.
+  const hrs = n.hours;
+  detailEl.style.setProperty("--cols", String(hrs.length));
 
   const hl = buildHighlights(n);
   if (hl) detailEl.append(hl);
 
   detailEl.append(block("Condições", buildConds(n)));
 
-  // "dados completos" mora aqui, ao lado do rótulo do meteograma, não sozinho
-  // lá no fim a obrigar a scroll.
-  const raw = buildRaw(n.hours);
+  const raw = buildRaw(hrs);
   raw.hidden = true;
-  const toggle = el("button", "raw-toggle", "dados completos");
+  const toggle = el("button", "raw-toggle", "tabela completa");
   toggle.type = "button";
   toggle.addEventListener("click", () => {
     raw.hidden = !raw.hidden;
     toggle.classList.toggle("is-open", !raw.hidden);
   });
   const meteo = el("div");
-  meteo.append(buildMeteogram(win), raw);
-  detailEl.append(block("Hora a hora", meteo, toggle));
+  meteo.append(buildMeteogram(hrs), raw);
+  detailEl.append(block("A noite hora a hora", meteo, toggle));
 
   if (n.objects.length) {
-    detailEl.append(block("Alvos", buildObjectsFilter(n, win)));
+    detailEl.append(block("O que observar, e quando", buildObjectsFilter(n, hrs)));
   }
 }
 

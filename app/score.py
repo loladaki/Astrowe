@@ -541,13 +541,22 @@ def build_forecast(data: dict, lat: float, lon: float,
     dates = sorted({t.date() for t in times})
     windows = astro.compute_windows(lat, lon, offset, dates,
                                     profile["horizon_degrees"])
+    # Vista horária do pôr ao nascer do Sol (crepúsculo incluído), para se ver a
+    # noite toda; o score continua a sair da janela escura recomendada.
+    display = astro.compute_windows(lat, lon, offset, dates, astro.SUNSET_DEG)
     moon_alt, moon_illum = astro.moon_series(lat, lon, offset, times)
 
     bortle = light_pollution.get("bortle") if light_pollution else None
     lp_factor = light_pollution_factor(bortle)
+    if light_pollution is not None:
+        # A poluição luminosa é constante: corta sempre a mesma % do potencial.
+        # Mostrá-la em pontos por noite (−16, −23…) fazia parecer que variava
+        # com a noite, quando só varia com o Bortle do sítio.
+        light_pollution["cut_pct"] = round((1.0 - lp_factor) * 100)
 
     nights = [
-        _build_night(d, windows.get(d, (None, None)), times, h,
+        _build_night(d, windows.get(d, (None, None)),
+                     display.get(d, (None, None)), times, h,
                      moon_alt, moon_illum, profile, lat, lon, offset, lp_factor)
         for d in dates
     ]
@@ -562,8 +571,8 @@ def build_forecast(data: dict, lat: float, lon: float,
     )
 
 
-def _build_night(d, window, times, h, moon_alt, moon_illum, profile,
-                 lat: float, lon: float, offset: int,
+def _build_night(d, window, display_window, times, h, moon_alt, moon_illum,
+                 profile, lat: float, lon: float, offset: int,
                  lp_factor: float = 1.0) -> NightScore:
     night_start, night_end = window
 
@@ -612,8 +621,7 @@ def _build_night(d, window, times, h, moon_alt, moon_illum, profile,
     seeing_floor = profile["seeing_floor"]
     jet_series = h.get("wind_speed_250hPa")
 
-    parts = []
-    for i in idx:
+    def part_at(i):
         transmission = _cloud_transmission(
             h["cloud_cover_low"][i], h["cloud_cover_mid"][i],
             h["cloud_cover_high"][i], h["cloud_cover"][i])
@@ -622,9 +630,11 @@ def _build_night(d, window, times, h, moon_alt, moon_illum, profile,
         tf = _transparency_factor(spread, floor)
         mf = _moon_factor(float(moon_illum[i]), float(moon_alt[i]), weight)
         sf = _seeing_factor(jet, seeing_floor)
-        parts.append({"i": i, "transmission": transmission, "tf": tf, "mf": mf,
-                      "sf": sf, "spread": spread, "jet": jet,
-                      "quality": transmission * tf * mf * sf})
+        return {"i": i, "transmission": transmission, "tf": tf, "mf": mf,
+                "sf": sf, "spread": spread, "jet": jet,
+                "quality": transmission * tf * mf * sf}
+
+    parts = [part_at(i) for i in idx]   # janela escura — é daqui que sai o score
 
     qualities = [p["quality"] for p in parts]
     spreads = [p["spread"] for p in parts]
@@ -678,16 +688,23 @@ def _build_night(d, window, times, h, moon_alt, moon_illum, profile,
     details = (f"{win_hours:.1f}h das {win_start.strftime('%H:%M')} às "
                f"{win_end.strftime('%H:%M')} · " + ", ".join(phrases) + ".")
 
-    window_positions = set(range(ext_i, ext_j + 1))
-    hours = [_hour_detail(p, times, h, moon_alt, moon_illum, pos in window_positions)
-             for pos, p in enumerate(parts)]
+    # Horas de exibição: do pôr ao nascer do Sol (crepúsculo incluído), para se
+    # ver a noite toda. A janela recomendada marca-se com in_window.
+    disp_start, disp_end = display_window
+    if disp_start and disp_end:
+        disp_idx = [i for i, t in enumerate(times) if disp_start <= t <= disp_end]
+    if not disp_start or not disp_end or not disp_idx:
+        disp_idx = idx
+    hours = [_hour_detail(part_at(i), times, h, moon_alt, moon_illum,
+                          win_start <= times[i] < win_end)
+             for i in disp_idx]
 
-    # O que se vê a meio da janela, e a altura de cada objecto hora a hora.
+    # O que se vê ao longo da noite, e a altura de cada objecto hora a hora.
     mid = win_idx[len(win_idx) // 2]
     sky = objects.visible_objects(lat, lon, offset, times[mid],
                                   float(moon_illum[mid]), float(moon_alt[mid]),
                                   window_start=win_start, window_end=win_end,
-                                  window_times=[times[i] for i in win_idx])
+                                  window_times=[times[i] for i in disp_idx])
     moonrise, moonset = astro.moon_rise_set(lat, lon, offset, d)
 
     moonlight = float(moon_illum[mid]) * max(0.0, float(moon_alt[mid]) / 90.0)

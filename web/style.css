@@ -66,9 +66,9 @@ body::before {
 
 .shell {
   position: relative;
-  max-width: 1080px;
+  max-width: 1240px;
   margin: 0 auto;
-  padding: var(--s5) var(--s4) var(--s7);
+  padding: var(--s5) var(--s5) var(--s7);
 }
 
 a { color: var(--accent); }
@@ -226,6 +226,14 @@ button { font-family: inherit; cursor: pointer; border-radius: var(--r2); }
 .limits { margin-top: var(--s3); display: flex; flex-direction: column; gap: var(--s2); }
 .limit-group { font-size: var(--t-xs); color: var(--faint); margin-top: var(--s2); }
 .limit-group:first-child { margin-top: 0; }
+
+/* toggle "o que baixa o score" — a razão só aparece a pedido */
+.why-toggle {
+  margin-top: var(--s3); padding: 0;
+  background: none; border: none; color: var(--accent); font-size: var(--t-sm);
+}
+.why-toggle::after { content: " ▾"; }
+.why-toggle.is-open::after { content: " ▴"; }
 .limit { display: grid; grid-template-columns: 96px 1fr 34px; gap: var(--s3); align-items: center; }
 .limit-name { font-size: var(--t-sm); color: var(--dim); }
 .limit-track { height: 6px; border-radius: var(--pill); background: var(--border); overflow: hidden; }
@@ -291,10 +299,13 @@ button { font-family: inherit; cursor: pointer; border-radius: var(--r2); }
 }
 .tgrid + .tgrid { margin-top: 3px; }
 .tgrid-head { font-size: var(--t-xs); color: var(--faint); text-align: center; margin-bottom: var(--s1); }
+.tgrid-head.in-win { color: var(--dim); font-weight: 600; }
 .tgrid-label { font-size: var(--t-sm); color: var(--dim); align-self: center; padding-right: var(--s2); }
 
 /* heatmap contínuo: as células tocam-se, só as pontas arredondam */
 .heat .cell { border-left: 1px solid var(--bg); }
+/* horas fora da janela recomendada ficam esbatidas, sem desaparecer */
+.cell.out { opacity: 0.4; }
 .heat .cell.cell-first { border-left: none; border-radius: var(--r1) 0 0 var(--r1); }
 .heat .cell.cell-last { border-radius: 0 var(--r1) var(--r1) 0; }
 .cell { padding: var(--s2) 0; text-align: center; font-size: var(--t-xs); font-variant-numeric: tabular-nums; }
@@ -303,19 +314,22 @@ button { font-family: inherit; cursor: pointer; border-radius: var(--r2); }
 .c-poor { background: var(--bg-poor); color: var(--poor); }
 .c-flat { color: var(--dim); }
 
-/* janelas dos objectos */
-.obj-rows { display: flex; flex-direction: column; gap: 3px; }
+/* alvos: linha de texto legível + barra alinhada ao eixo horário */
+.obj-rows { display: flex; flex-direction: column; gap: var(--s3); }
 .obj-rows .tgrid + .tgrid { margin-top: 0; }
-.obj-label { display: flex; align-items: center; gap: var(--s2); min-width: 0; padding-right: var(--s2); }
-.obj-label a { font-size: var(--t-sm); font-weight: 600; text-decoration: none; white-space: nowrap; }
-.obj-label a:hover { text-decoration: underline; }
-.obj-sym { flex-shrink: 0; }
+.obj-item { display: flex; flex-direction: column; gap: 3px; }
+.obj-item.is-washed { opacity: 0.5; }
+.obj-info { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--s2); }
+.obj-sym { flex-shrink: 0; align-self: center; }
+.obj-name { font-size: var(--t-md); font-weight: 600; text-decoration: none; }
+.obj-name:hover { text-decoration: underline; }
+.obj-meta { font-size: var(--t-xs); color: var(--faint); }
 /* margem interna dá o intervalo visual sem mexer na largura da coluna */
-.bar { height: 15px; border-radius: 3px; margin: 0 1.5px; }
-.bar.b-good { background: var(--good); opacity: 0.85; }
-.bar.b-ok   { background: var(--ok);   opacity: 0.6; }
+.bar { height: 13px; border-radius: 3px; margin: 0 1.5px; }
+.bar.b-good { background: var(--good); opacity: 0.9; }
+.bar.b-ok   { background: var(--ok);   opacity: 0.65; }
 .bar.b-none { background: transparent; }
-.tgrid.is-washed { opacity: 0.45; }
+.bar.out { opacity: 0.35; }
 .obj-empty { font-size: var(--t-sm); color: var(--faint); padding: var(--s3) 0; }
 
 /* filtros por tipo */
