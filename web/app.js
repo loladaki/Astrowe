@@ -269,6 +269,11 @@ async function loadForecast(keepDate) {
   if (!current) return;
   setStatus(`A calcular as noites para ${current.label}…`);
   resultEl.hidden = true;
+  // O plano gratuito do Render adormece; a primeira resposta do dia demora a
+  // acordar. Avisar em vez de deixar a pessoa achar que travou.
+  const waking = setTimeout(
+    () => setStatus("A acordar o servidor… a primeira vez do dia pode levar até 1 min."),
+    4000);
   try {
     lastData = await computeForecast(current.lat, current.lon, mode);
     if (!keepDate) selectedDate = null;
@@ -277,6 +282,8 @@ async function loadForecast(keepDate) {
     setStatus("");
   } catch (e) {
     setStatus(`⚠️ ${e.message}`);
+  } finally {
+    clearTimeout(waking);
   }
 }
 

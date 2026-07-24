@@ -84,6 +84,14 @@ qualquer host que aceite contentores. Passa a chave como segredo do host.
 Em ambos os casos as efemérides são descarregadas durante a build, para não
 atrasarem o primeiro pedido.
 
+### Manter o Render acordado (UptimeRobot)
+
+O plano gratuito adormece ao fim de 15 min sem uso e demora ~30–50 s a acordar.
+Um monitor gratuito do [UptimeRobot](https://uptimerobot.com) que faça um pedido
+HTTP a `https://<a-tua-app>.onrender.com/api/health` de 5 em 5 minutos mantém-no
+acordado. Esse endpoint é propositadamente leve (não chama APIs externas) e uma
+única instância a 24/7 cabe nas 750 horas/mês do plano gratuito do Render.
+
 ## Licença
 
 Dados meteorológicos © Open-Meteo, poluição luminosa © lightpollutionmap.info,
