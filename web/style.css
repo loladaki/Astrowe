@@ -9,24 +9,28 @@
 
   --r1: 8px; --r2: 12px; --r3: 18px; --pill: 999px;
 
-  --bg: #070a12;
-  --surface: #0f1420;
-  --surface-2: #161d2c;
-  --border: #1f2839;
-  --border-lit: #2c3850;
+  /* Tema "observatório / carta celeste": preto quase puro, tinta cor de
+     pergaminho, um único acento âmbar (a luz que não estraga a visão
+     nocturna). Nada de azul-dashboard. */
+  --bg: #060607;
+  --surface: #101011;
+  --surface-2: #17171a;
+  --border: #262529;
+  --border-lit: #38363d;
 
-  --text: #e6ebf5;
-  --dim: #96a1b8;
-  --faint: #67718a;
+  --text: #ece7dc;   /* branco quente, tinta sobre céu escuro */
+  --dim: #a49b8c;
+  --faint: #6c665b;
 
-  --accent: #7aa2f7;
-  --good: #6ecb9f;   /* verde dessaturado ~15%: menos ruidoso em blocos grandes */
-  --ok: #f0c674;
-  --poor: #ef8080;
+  --accent: #e0985e;   /* âmbar */
+  --good: #8bae7f;     /* sálvia discreta */
+  --ok: #d6a95f;       /* ouro */
+  --poor: #cf7359;     /* tijolo */
 
-  --bg-good: rgba(110, 203, 159, 0.12);
-  --bg-ok:   rgba(240, 198, 116, 0.12);
-  --bg-poor: rgba(239, 128, 128, 0.12);
+  --bg-good: rgba(139, 174, 127, 0.12);
+  --bg-ok:   rgba(214, 169, 95, 0.12);
+  --bg-poor: rgba(207, 115, 89, 0.12);
+  --accent-soft: rgba(224, 152, 94, 0.14);
 
   --t-xs: 0.72rem;
   --t-sm: 0.8rem;
@@ -60,7 +64,7 @@ body::before {
   inset: 0 0 auto 0;
   height: 55vh;
   background: radial-gradient(ellipse 70% 100% at 50% 0%,
-              rgba(122, 162, 247, 0.09), transparent 70%);
+              rgba(224, 152, 94, 0.06), transparent 70%);
   pointer-events: none;
 }
 
@@ -99,14 +103,14 @@ a { color: var(--accent); }
 #place::placeholder, #save-name::placeholder { color: var(--faint); }
 #place:focus, #save-name:focus {
   outline: none; border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(122, 162, 247, 0.14);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 button { font-family: inherit; cursor: pointer; border-radius: var(--r2); }
 
 .btn-primary {
   padding: var(--s3) var(--s4); border: none;
-  background: var(--accent); color: #08101f;
+  background: var(--accent); color: #1a1206;
   font-weight: 620; font-size: var(--t-md); white-space: nowrap;
 }
 .btn-primary:hover { filter: brightness(1.08); }
@@ -376,7 +380,7 @@ button { font-family: inherit; cursor: pointer; border-radius: var(--r2); }
   max-height: 300px; overflow-y: auto;
 }
 .suggestions li { padding: var(--s2) var(--s3); border-radius: var(--r1); cursor: pointer; display: flex; flex-direction: column; }
-.suggestions li.active { background: rgba(122, 162, 247, 0.14); }
+.suggestions li.active { background: var(--accent-soft); }
 .sug-name { font-size: var(--t-md); }
 .sug-sub { font-size: var(--t-xs); color: var(--faint); }
 

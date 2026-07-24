@@ -453,7 +453,7 @@ function scaledSpark(values, unit, invert, threshold) {
       "vector-effect": "non-scaling-stroke" }));
   }
   box.append(svg("polyline", { points: `0,24 ${pts.join(" ")} 100,24`,
-    fill: "rgba(122,162,247,0.09)", stroke: "none" }));
+    fill: "rgba(224,152,94,0.08)", stroke: "none" }));
   box.append(svg("polyline", { points: pts.join(" "), fill: "none",
     stroke: "var(--dim)", "stroke-width": 1.5, "vector-effect": "non-scaling-stroke" }));
 
