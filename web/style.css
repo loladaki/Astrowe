@@ -20,13 +20,13 @@
   --faint: #67718a;
 
   --accent: #7aa2f7;
-  --good: #5fd39a;
+  --good: #6ecb9f;   /* verde dessaturado ~15%: menos ruidoso em blocos grandes */
   --ok: #f0c674;
   --poor: #ef8080;
 
-  --bg-good: rgba(95, 211, 154, 0.13);
-  --bg-ok:   rgba(240, 198, 116, 0.13);
-  --bg-poor: rgba(239, 128, 128, 0.13);
+  --bg-good: rgba(110, 203, 159, 0.12);
+  --bg-ok:   rgba(240, 198, 116, 0.12);
+  --bg-poor: rgba(239, 128, 128, 0.12);
 
   --t-xs: 0.72rem;
   --t-sm: 0.8rem;
@@ -224,6 +224,8 @@ button { font-family: inherit; cursor: pointer; border-radius: var(--r2); }
 
 /* factores limitantes, inline sob o veredicto */
 .limits { margin-top: var(--s3); display: flex; flex-direction: column; gap: var(--s2); }
+.limit-group { font-size: var(--t-xs); color: var(--faint); margin-top: var(--s2); }
+.limit-group:first-child { margin-top: 0; }
 .limit { display: grid; grid-template-columns: 96px 1fr 34px; gap: var(--s3); align-items: center; }
 .limit-name { font-size: var(--t-sm); color: var(--dim); }
 .limit-track { height: 6px; border-radius: var(--pill); background: var(--border); overflow: hidden; }
@@ -252,23 +254,29 @@ button { font-family: inherit; cursor: pointer; border-radius: var(--r2); }
 .hl-name { font-size: var(--t-sm); font-weight: 600; }
 .hl-text { font-size: var(--t-sm); color: var(--dim); }
 
-/* condições: sem caixas individuais, separadas por espaço */
-.conds { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s4); }
-.cond { display: flex; flex-direction: column; min-width: 0; }
+/* condições: quatro tiles leves (fundo subtil), com o conteúdo contido */
+.conds { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s2); }
+.cond {
+  display: flex; flex-direction: column; min-width: 0; overflow: hidden;
+  padding: var(--s3); background: var(--bg);
+  border: 1px solid var(--border); border-radius: var(--r2);
+}
 .cond-head { display: flex; align-items: center; gap: var(--s2); color: var(--dim); }
-.cond-tag { font-size: var(--t-xs); text-transform: lowercase; }
+.cond-tag { font-size: var(--t-xs); }
 .cond-value { font-size: var(--t-md); font-weight: 600; margin: var(--s1) 0; }
-.cond-note { font-size: var(--t-xs); color: var(--faint); }
-.icon { color: var(--dim); }
+.cond-note { font-size: var(--t-xs); color: var(--faint); margin-top: auto; }
+.icon { color: var(--dim); flex-shrink: 0; }
 .icon.warn { color: var(--ok); }
 
-/* sparkline com escala */
-.sspark { position: relative; margin-top: auto; padding-top: var(--s2); }
-.sspark-svg { display: block; width: 100%; height: 28px; }
-.sspark-peak {
-  position: absolute; top: 0; right: 0;
-  font-size: var(--t-xs); color: var(--faint); font-variant-numeric: tabular-nums;
+/* sparkline com escala, tudo em fluxo e confinado ao cartão */
+.sspark { margin-top: auto; padding-top: var(--s2); }
+.sspark-svg { display: block; width: 100%; height: 26px; }
+.sspark-scale {
+  display: flex; justify-content: space-between;
+  margin-top: 2px; font-size: 0.66rem; color: var(--faint);
+  font-variant-numeric: tabular-nums;
 }
+.sspark-scale span:only-child { margin: 0 auto; }
 
 /* ---------------------------------------------------- blocos temporais */
 

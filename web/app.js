@@ -115,11 +115,17 @@ function moonSVG(illumPct, waxing, size = 26) {
   const k = Math.max(0, Math.min(1, illumPct / 100));
   const R = 13, cx = 15, cy = 15;
   const rx = (R * Math.abs(1 - 2 * k)).toFixed(2);
+  // O limbo brilhante fica à direita quando crescente (hemisfério norte). O
+  // flag do terminador tem de inverter na passagem pela meia-Lua, senão uma
+  // Lua a 94% desenha-se como um sliver de 6%. (Área verificada com isPointInFill.)
   const outer = waxing ? 1 : 0;
-  const inner = (waxing === (k > 0.5)) ? 0 : 1;
+  const inner = (k > 0.5) ? (waxing ? 1 : 0) : (waxing ? 0 : 1);
 
   const g = svg("svg", { width: size, height: size, viewBox: "0 0 30 30", "aria-hidden": "true" });
-  g.append(svg("circle", { cx, cy, r: R, fill: "var(--border-lit)" }));
+  // disco escuro com contorno, para a Lua se ver como círculo mesmo quando
+  // pouco iluminada
+  g.append(svg("circle", { cx, cy, r: R, fill: "var(--border-lit)",
+                           stroke: "var(--dim)", "stroke-width": 0.75 }));
   if (k > 0.01) {
     g.append(svg("path", {
       d: `M ${cx} ${cy - R} A ${R} ${R} 0 0 ${outer} ${cx} ${cy + R}` +
@@ -290,9 +296,12 @@ function cellClass(kind, v) {
   return "c-flat";
 }
 
+// Limiares por airmass: verde só < 1.3 (acima de ~50°, o objecto no seu
+// melhor), âmbar até 2.0 (~30°), abaixo não vale a pena mostrar barra. É isto
+// que faz o verde significar "é agora" e o padrão em escada ser o plano.
 function barClass(alt) {
-  if (alt === null || alt < 15) return "b-none";
-  return alt >= 35 ? "b-good" : "b-ok";
+  if (alt === null || alt < 30) return "b-none";
+  return alt >= 50 ? "b-good" : "b-ok";
 }
 
 const weekdayShort = (d) =>
@@ -316,26 +325,41 @@ function block(label, node, aside) {
   return b;
 }
 
-/** Factores limitantes como uma barra por linha, compacta e a ocupar a largura
- *  toda — sem o painel meio vazio de antes. Vive por baixo do veredicto. */
-function buildLimits(n) {
+/** Factores limitantes, separados por natureza: a poluição luminosa é do
+ *  *sítio* (constante, nada a fazer hoje); a Lua/seeing/nuvens são desta
+ *  *noite*. Misturá-los sugeria que havia algo a mudar hoje quanto ao Bortle. */
+function buildLimits(n, lp) {
   const box = el("div", "limits");
   if (!n.limiting.length) {
     box.append(el("div", "limits-none", "Nada a limitar, condições no máximo."));
     return box;
   }
-  const worst = n.limiting[0].cost_points;
-  for (const f of n.limiting) {
+  const worst = Math.max(...n.limiting.map((f) => f.cost_points));
+
+  const barRow = (name, cost) => {
     const row = el("div", "limit");
-    row.append(el("span", "limit-name", f.label));
+    row.append(el("span", "limit-name", name));
     const track = el("div", "limit-track");
     const fill = el("div", "limit-fill");
-    fill.style.width = `${Math.max(8, (f.cost_points / worst) * 100)}%`;
-    fill.style.background = f.cost_points >= worst * 0.66 ? "var(--poor)"
-      : f.cost_points >= worst * 0.33 ? "var(--ok)" : "var(--good)";
+    fill.style.width = `${Math.max(8, (cost / worst) * 100)}%`;
+    fill.style.background = cost >= worst * 0.66 ? "var(--poor)"
+      : cost >= worst * 0.33 ? "var(--ok)" : "var(--good)";
     track.append(fill);
-    row.append(track, el("span", "limit-cost", `−${f.cost_points}`));
-    box.append(row);
+    row.append(track, el("span", "limit-cost", `−${cost}`));
+    return row;
+  };
+
+  const site = n.limiting.filter((f) => f.factor === "poluicao");
+  const night = n.limiting.filter((f) => f.factor !== "poluicao");
+
+  if (site.length) {
+    box.append(el("div", "limit-group", "Este sítio"));
+    const name = lp ? `poluição luminosa · Bortle ${lp.bortle}` : "poluição luminosa";
+    box.append(barRow(name, site[0].cost_points));
+  }
+  if (night.length) {
+    box.append(el("div", "limit-group", "Esta noite"));
+    for (const f of night) box.append(barRow(f.label, f.cost_points));
   }
   return box;
 }
@@ -386,41 +410,53 @@ function buildConds(n) {
 }
 
 /**
- * Sparkline com escala: área preenchida, marcas horárias por baixo, e o valor
- * de referência anotado (o pico das nuvens, o mínimo do orvalho). Uma linha
- * a subir e a descer não dizia nada; assim vê-se *quando* e *quanto*.
+ * Sparkline com escala. A área e a linha ficam confinadas ao viewBox com uma
+ * margem interna, e a escala (mín–máx) vai por baixo, em fluxo — não flutua
+ * por cima do SVG. Série constante (ex.: nuvens a 0% a noite toda) desenha uma
+ * linha centrada, não rasa no fundo, para não parecer um gráfico partido.
  */
+function fmtVal(v, unit) {
+  return `${Number.isInteger(v) ? v : v.toFixed(1)}${unit}`;
+}
+
 function scaledSpark(values, unit, invert, threshold) {
   const wrap = el("div", "sspark");
-  const vals = values.map((v) => (v === null || v === undefined ? null : v));
-  const real = vals.filter((v) => v !== null);
-  const svgBox = svg("svg", { class: "sspark-svg", viewBox: "0 0 100 30",
-                              preserveAspectRatio: "none", "aria-hidden": "true" });
-  if (real.length >= 2) {
-    const lo = Math.min(...real), hi = Math.max(...real);
-    const span = hi - lo || 1;
-    const y = (v) => { let t = (v - lo) / span; if (invert) t = 1 - t; return 26 - t * 22; };
-    const pts = vals.map((v, i) => v === null ? null
-      : `${((i / (vals.length - 1)) * 100).toFixed(1)},${y(v).toFixed(1)}`).filter(Boolean);
+  const real = values.filter((v) => v !== null && v !== undefined);
+  if (real.length < 2) return wrap;
 
-    // linha do limiar (céu limpo / risco de orvalho), para dar referência
-    if (threshold >= lo && threshold <= hi) {
-      const yt = y(threshold).toFixed(1);
-      svgBox.append(svg("line", { x1: 0, y1: yt, x2: 100, y2: yt,
-        stroke: "var(--border-lit)", "stroke-width": 0.7, "stroke-dasharray": "2 2",
-        "vector-effect": "non-scaling-stroke" }));
-    }
-    svgBox.append(svg("polyline", { points: `0,30 ${pts.join(" ")} 100,30`,
-      fill: "rgba(122,162,247,0.10)", stroke: "none" }));
-    svgBox.append(svg("polyline", { points: pts.join(" "), fill: "none",
-      stroke: "var(--dim)", "stroke-width": 1.5, "vector-effect": "non-scaling-stroke" }));
+  const lo = Math.min(...real), hi = Math.max(...real);
+  const constant = hi - lo < 1e-6;
+  const PAD = 4, TOP = PAD, BOT = 24 - PAD;   // viewBox 0..24 de altura
+  const y = (v) => {
+    if (constant) return 12;
+    let t = (v - lo) / (hi - lo);
+    if (invert) t = 1 - t;                     // menos é melhor → desce
+    return BOT - t * (BOT - TOP);
+  };
+  const pts = values.map((v, i) => v === null || v === undefined ? null
+    : `${((i / (values.length - 1)) * 100).toFixed(1)},${y(v).toFixed(1)}`).filter(Boolean);
 
-    // anota o extremo que interessa
-    const peak = invert ? hi : lo;   // nuvens: pico; orvalho: mínimo
-    const label = el("span", "sspark-peak", `${peak % 1 ? peak.toFixed(1) : peak}${unit}`);
-    wrap.append(label);
+  const box = svg("svg", { class: "sspark-svg", viewBox: "0 0 100 24",
+                           preserveAspectRatio: "none", "aria-hidden": "true" });
+  if (!constant && threshold >= lo && threshold <= hi) {
+    const yt = y(threshold).toFixed(1);
+    box.append(svg("line", { x1: 0, y1: yt, x2: 100, y2: yt,
+      stroke: "var(--border-lit)", "stroke-width": 0.7, "stroke-dasharray": "2 2",
+      "vector-effect": "non-scaling-stroke" }));
   }
-  wrap.append(svgBox);
+  box.append(svg("polyline", { points: `0,24 ${pts.join(" ")} 100,24`,
+    fill: "rgba(122,162,247,0.09)", stroke: "none" }));
+  box.append(svg("polyline", { points: pts.join(" "), fill: "none",
+    stroke: "var(--dim)", "stroke-width": 1.5, "vector-effect": "non-scaling-stroke" }));
+
+  const scale = el("div", "sspark-scale");
+  if (constant) {
+    scale.append(el("span", null, fmtVal(lo, unit)));
+  } else {
+    // ordem por magnitude, para se ler o intervalo da noite
+    scale.append(el("span", null, fmtVal(lo, unit)), el("span", null, fmtVal(hi, unit)));
+  }
+  wrap.append(box, scale);
   return wrap;
 }
 
@@ -460,7 +496,7 @@ function buildMeteogram(win) {
     (v) => v === null ? "—" : v < 60 ? "bom" : v < 100 ? "médio" : "fraco"));
   box.append(meteoRow("Lua", win, "moon",
     (v) => v === null ? "—" : v <= 0 ? "posta" : `${Math.round(v)}°`));
-  box.append(meteoRow("orvalho", win, "spread", (v) => v === null ? "—" : `${v.toFixed(1)}°`));
+  box.append(meteoRow("margem orvalho", win, "spread", (v) => v === null ? "—" : `${v.toFixed(1)}°`));
   box.append(meteoRow("temp", win, "temp", (v) => v === null ? "—" : `${Math.round(v)}°`));
   return box;
 }
@@ -506,8 +542,8 @@ function buildObjectsFilter(n, win) {
     s.append(sw, document.createTextNode(txt));
     return s;
   };
-  legend.append(mk("var(--good)", "alto"), mk("var(--ok)", "utilizável"),
-                mk("var(--border)", "baixo / abaixo do horizonte"));
+  legend.append(mk("var(--good)", "no melhor (>50°)"), mk("var(--ok)", "utilizável (30–50°)"),
+                mk("var(--border)", "baixo (<30°)"));
 
   let active = null;    // conjunto de símbolos, ou null = tudo
   let expanded = false;
@@ -631,7 +667,7 @@ function renderStrip(data) {
     const dt = new Date(n.date + "T12:00:00");
     b.append(el("span", "d", `${weekdayShort(n.date)} ${dt.getDate()}`),
              el("span", "n", usable ? String(n.score) : "—"),
-             moonSVG(n.moon_illumination_pct, n.moon_waxing, 17));
+             moonSVG(n.moon_illumination_pct, n.moon_waxing, 20));
     b.title = `${weekdayLong(n.date)}: ${n.headline}`;
     b.addEventListener("click", () => { selectedDate = n.date; render(); });
     stripEl.append(b);
@@ -653,7 +689,7 @@ function renderDetail(n) {
   body.append(el("div", "verdict-sub", usable
     ? `${weekdayLong(n.date)} · ${hhmm(n.window_start)}–${hhmm(n.window_end)} · ${reason}`
     : `${weekdayLong(n.date)} · ${n.conditions}`));
-  if (usable) body.append(buildLimits(n));
+  if (usable) body.append(buildLimits(n, lastData && lastData.light_pollution));
   v.append(ring, body);
   detailEl.append(v);
 

@@ -374,8 +374,14 @@ def _best_run(qualities: list[float]) -> tuple[int, int]:
     return melhor
 
 
-def _headline(score: int, qualities: list[float], times, win_idx,
-              win_end) -> str:
+def _round_hour(dt: datetime) -> datetime:
+    """Arredonda à hora mais próxima (03:55 → 04:00)."""
+    base = dt.replace(minute=0, second=0, microsecond=0)
+    return base + timedelta(hours=1) if dt.minute >= 30 else base
+
+
+def _headline(score: int, qualities: list[float], times, win_idx, win_end,
+              moonset=None, moon_leads=False) -> str:
     """Responde à pergunta do site em vez de a descrever.
 
     O site chama-se "vale a pena sair esta noite?" — a resposta devia ser uma
@@ -397,6 +403,11 @@ def _headline(score: int, qualities: list[float], times, win_idx,
     if i == 0:
         return f"{sim}, até às {fim.strftime('%H:%M')}"
     if j == len(qualities) - 1:
+        # Quando a Lua manda e se põe durante a janela, a inflexão real é o
+        # ocaso, não o passo horário do score. A Lua desce suavemente, por isso
+        # o corte por limiar cai cedo demais; ancorar ao ocaso é mais honesto.
+        if moon_leads and moonset and inicio <= moonset <= fim:
+            inicio = max(inicio, _round_hour(moonset))
         return f"{sim}, melhor depois das {inicio.strftime('%H:%M')}"
     return f"{sim}, entre as {inicio.strftime('%H:%M')} e as {fim.strftime('%H:%M')}"
 
@@ -687,9 +698,14 @@ def _build_night(d, window, times, h, moon_alt, moon_illum, profile,
 
     win_qualities = [p["quality"] for p in parts[ext_i:ext_j + 1]]
 
+    impacts = _factor_impacts(parts, lp_factor, score)
+    noite = [f for f in impacts if f.factor != "poluicao"]
+    moon_leads = bool(noite) and noite[0].factor == "lua"
+
     return NightScore(
         date=d.isoformat(), score=score, verdict=_verdict(score),
-        headline=_headline(score, win_qualities, times, win_idx, win_end),
+        headline=_headline(score, win_qualities, times, win_idx, win_end,
+                           moonset, moon_leads),
         verdict_reason=_verdict_reason(parts[ext_i:ext_j + 1],
                                        [times[i] for i in win_idx],
                                        moonset, illum_pct),
@@ -706,7 +722,7 @@ def _build_night(d, window, times, h, moon_alt, moon_illum, profile,
         wind_kmh=None if wind is None else round(wind, 1),
         meteor_shower=MeteorShower(**shower) if shower else None,
         milky_way=MilkyWay(**galaxy) if galaxy else None,
-        limiting=_factor_impacts(parts, lp_factor, score),
+        limiting=impacts,
         objects=[SkyObject(**o) for o in sky],
         hours=hours,
         window_start=win_start.isoformat(timespec="minutes"),
