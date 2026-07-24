@@ -268,10 +268,28 @@ button { font-family: inherit; cursor: pointer; border-radius: var(--r2); }
 
 /* cúpula do céu */
 .sky-wrap { display: flex; flex-direction: column; align-items: center; }
-.sky { width: min(340px, 100%); height: auto; }
-.sky-lbl { fill: var(--dim); font-size: 9px; font-family: inherit; }
-.sky-card { fill: var(--faint); font-size: 11px; font-weight: 600; font-family: inherit; }
+.sky-dome { position: relative; width: min(360px, 100%); }
+.sky { display: block; width: 100%; height: auto; overflow: visible; }
+.sky-hit { cursor: pointer; }
+.sky-lbl { fill: var(--dim); font-size: 9px; font-family: inherit; pointer-events: none; }
+.sky-card { fill: var(--faint); font-size: 11px; font-weight: 600; font-family: inherit; pointer-events: none; }
 .sky-cap { margin: var(--s3) 0 0; font-size: var(--t-xs); color: var(--faint); text-align: center; }
+
+/* popup de objecto na cúpula */
+.sky-pop {
+  position: absolute; z-index: 30; width: max-content; max-width: 210px;
+  transform: translate(-50%, calc(-100% - 12px));
+  padding: var(--s2) var(--s3);
+  background: var(--surface-2); border: 1px solid var(--border-lit);
+  border-radius: var(--r2); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+  pointer-events: auto;
+}
+.sky-pop.below { transform: translate(-50%, 14px); }
+.sky-pop-name { font-size: var(--t-md); font-weight: 600; color: var(--accent); text-decoration: none; }
+.sky-pop-name:hover { text-decoration: underline; }
+.sky-pop-kind { font-size: var(--t-xs); color: var(--faint); margin-top: 1px; }
+.sky-pop-line { font-size: var(--t-xs); color: var(--dim); margin-top: 2px; }
+.sky-pop-warn { font-size: var(--t-xs); color: var(--ok); margin-top: 2px; }
 
 /* factores limitantes, inline sob o veredicto */
 .limits { margin-top: var(--s3); display: flex; flex-direction: column; gap: var(--s2); }

@@ -216,7 +216,44 @@ function mulberry32(seed) {
 function buildSkyDome(n) {
   const objs = n.objects.filter((o) => o.altitude_deg > 0);
   const R = 150, cx = 160, cy = 160, S = 320;
-  const box = svg("svg", { viewBox: `0 0 ${S} ${S}`, class: "sky", "aria-hidden": "true" });
+  const wrap = el("div", "sky-dome");
+  const box = svg("svg", { viewBox: `0 0 ${S} ${S}`, class: "sky" });
+
+  // popup com os dados do objecto ao passar o rato / tocar
+  const pop = el("div", "sky-pop");
+  pop.hidden = true;
+  const showPop = (o, x, y) => {
+    pop.innerHTML = "";
+    const a = el("a", "sky-pop-name", o.name);
+    a.href = o.url; a.target = "_blank"; a.rel = "noopener";
+    pop.append(a);
+    const bits = [o.kind];
+    if (o.magnitude !== null) bits.push(`mag ${o.magnitude}`);
+    pop.append(el("div", "sky-pop-kind", bits.join(" · ")));
+    const alt = `${Math.round(o.altitude_deg)}° acima do horizonte, a ${o.direction}`;
+    pop.append(el("div", "sky-pop-line", alt));
+    if (o.airmass !== null) {
+      pop.append(el("div", "sky-pop-line", `airmass ${o.airmass.toFixed(1)}`));
+    }
+    if (o.transit_time) {
+      pop.append(el("div", "sky-pop-line",
+        `mais alto às ${hhmm(o.transit_time)} (${Math.round(o.max_altitude_deg)}°)`));
+    }
+    if (o.washed_out) pop.append(el("div", "sky-pop-warn", "apagado pelo luar"));
+    // posição em % do quadrado; limitada para o popup não sair da cúpula (e
+    // não criar scroll no telemóvel). Acima do ponto, ou abaixo se no topo.
+    pop.style.left = Math.max(20, Math.min(80, x / S * 100)).toFixed(1) + "%";
+    pop.style.top = (y / S * 100).toFixed(1) + "%";
+    pop.classList.toggle("below", y < S * 0.32);
+    pop.hidden = false;
+  };
+  // pequeno atraso ao esconder, para se conseguir chegar ao popup (e ao link)
+  let hideTimer;
+  const hidePop = () => { hideTimer = setTimeout(() => { pop.hidden = true; }, 140); };
+  const keepPop = () => clearTimeout(hideTimer);
+  pop.addEventListener("mouseenter", keepPop);
+  pop.addEventListener("mouseleave", () => { pop.hidden = true; });
+  box.addEventListener("click", () => { pop.hidden = true; });   // tocar no fundo fecha
 
   // disco do céu
   box.append(svg("circle", { cx, cy, r: R, fill: "#08070c",
@@ -265,9 +302,6 @@ function buildSkyDome(n) {
       dot = svg("circle", { cx: x, cy: y, r: r.toFixed(1), fill: "var(--text)",
                             opacity: o.washed_out ? 0.35 : 0.9 });
     }
-    dot.append(svg("title", {}));
-    dot.querySelector("title").textContent =
-      `${o.name} · ${Math.round(o.altitude_deg)}° ${o.direction}`;
     box.append(dot);
 
     // rotular a Lua, os planetas e os 2 melhores de céu profundo
@@ -279,6 +313,13 @@ function buildSkyDome(n) {
       label.textContent = o.name;
       box.append(label);
     }
+
+    // área de toque maior e invisível, para os pontos pequenos serem fáceis
+    const hit = svg("circle", { cx: x, cy: y, r: 11, fill: "transparent", class: "sky-hit" });
+    hit.addEventListener("mouseenter", () => { keepPop(); showPop(o, x, y); });
+    hit.addEventListener("mouseleave", hidePop);
+    hit.addEventListener("click", (e) => { e.stopPropagation(); showPop(o, x, y); });
+    box.append(hit);
   }
 
   // rótulos cardeais
@@ -293,7 +334,8 @@ function buildSkyDome(n) {
   card("E", cx - R - 6, cy, "end", "middle");
   card("O", cx + R + 6, cy, "start", "middle");
 
-  return box;
+  wrap.append(box, pop);
+  return wrap;
 }
 
 /** Sparkline sem eixos nem números: só a forma, para se ver a tendência. */
