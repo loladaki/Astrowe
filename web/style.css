@@ -603,7 +603,69 @@ button { font-family: inherit; cursor: pointer; border-radius: var(--r2); }
 .cmp-poor { color: var(--poor); background: var(--bg-poor); }
 .cmp-best { outline: 1.5px solid var(--accent); outline-offset: -2px; }
 
-footer { margin-top: var(--s7); text-align: center; color: var(--faint); font-size: var(--t-xs); }
+/* ---------------------------------------------------- menu do header */
+.menu-wrap { position: relative; flex: 0 0 auto; }
+.menu-toggle {
+  padding: 8px 14px; border: 1px solid var(--border); border-radius: var(--pill);
+  background: var(--surface); color: var(--dim);
+  font-size: var(--t-sm); font-weight: 600; white-space: nowrap;
+}
+.menu-toggle:hover { border-color: var(--border-lit); color: var(--text); }
+.menu-panel {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 950;
+  min-width: 180px; padding: var(--s1);
+  background: var(--surface-2); border: 1px solid var(--border-lit);
+  border-radius: var(--r2); box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+  display: flex; flex-direction: column;
+}
+.menu-item {
+  text-align: left; padding: var(--s2) var(--s3); border: none;
+  background: transparent; color: var(--text); font-size: var(--t-md);
+  border-radius: var(--r1);
+}
+.menu-item:hover { background: var(--surface); color: var(--accent); }
+
+/* ---------------------------------------------------- footer legal */
+.site-footer {
+  margin-top: var(--s7); padding-top: var(--s5);
+  border-top: 1px solid var(--border); text-align: center;
+}
+.footer-links {
+  display: flex; flex-wrap: wrap; justify-content: center;
+  gap: var(--s2) var(--s3); margin-bottom: var(--s4);
+}
+.link-btn {
+  border: none; background: transparent; color: var(--accent);
+  font-size: var(--t-sm); font-family: inherit; padding: 2px 0; cursor: pointer;
+}
+.link-btn:hover { text-decoration: underline; }
+.footer-legal { margin: var(--s1) 0; font-size: var(--t-xs); color: var(--faint); }
+.footer-muted { color: var(--faint); opacity: 0.8; }
+
+/* ---------------------------------------------------- páginas de conteúdo */
+.page-box { max-width: 640px; }
+.page-body {
+  padding: var(--s4) var(--s5) var(--s5); overflow-y: auto;
+  color: var(--text); font-size: var(--t-md); line-height: 1.6;
+}
+.page-body h3 { margin: var(--s4) 0 var(--s2); font-size: var(--t-lg); }
+.page-body ul { padding-left: var(--s4); }
+.page-body li { margin: var(--s1) 0; }
+.page-body a { color: var(--accent); }
+.status-ok { color: var(--good); }
+.status-bad { color: var(--poor); }
+
+/* ---------------------------------------------------- banner de cookies */
+.cookie-banner {
+  position: fixed; left: 50%; bottom: var(--s4); transform: translateX(-50%);
+  z-index: 1100; width: min(680px, calc(100vw - var(--s5)));
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--s3);
+  padding: var(--s3) var(--s4);
+  background: var(--surface-2); border: 1px solid var(--border-lit);
+  border-radius: var(--r2); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+}
+.cookie-text { margin: 0; flex: 1 1 260px; font-size: var(--t-sm); color: var(--dim); }
+.cookie-actions { display: flex; gap: var(--s2); margin-left: auto; }
 
 /* ---------------------------------------------------- estreito */
 

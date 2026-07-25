@@ -1520,6 +1520,9 @@ document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
   if (!mapModal.hidden) mapModal.hidden = true;
   if (!compareModal.hidden) compareModal.hidden = true;
+  const pm = $("page-modal");
+  if (pm && !pm.hidden) pm.hidden = true;
+  closeMenu();
 });
 
 /* ------------------------------------------------- modos */
@@ -1556,3 +1559,117 @@ redBtn.addEventListener("click", () => {
 });
 
 try { applyRedMode(localStorage.getItem(RED_KEY) === "1"); } catch { /* ignorar */ }
+
+/* ------------------------------------------------- menu, páginas e cookies */
+
+// Conteúdo das páginas. As "a preencher" ficam para depois; algumas já vão
+// completas. Os textos legais (cookies/privacidade/termos) tens de ser TU a
+// escrevê-los — deixo o esqueleto.
+const PAGES = {
+  howto: { title: "Como usar", html:
+    `<p>Secção a preencher: um guia rápido de como ler o score, a janela e a cúpula.</p>` },
+  faq: { title: "Perguntas frequentes", html:
+    `<p>Secção a preencher com as perguntas mais comuns.</p>` },
+  links: { title: "Ligações úteis", html:
+    `<p>Secção a preencher com recursos de astronomia úteis.</p>` },
+  contact: { title: "Contactar", html:
+    `<p>Para dúvidas ou sugestões: <a href="mailto:preencher@exemplo.pt">preencher@exemplo.pt</a> <em>(a preencher)</em>.</p>` },
+  bugs: { title: "Reportar erros", html:
+    `<p>Encontraste um erro ou tens uma ideia?</p>
+     <p><a href="https://github.com/loladaki/Astrowe/issues" target="_blank" rel="noopener">Abre um issue no GitHub</a>, ou usa o <button type="button" class="link-btn" data-page="contact">contacto</button>.</p>` },
+  status: { title: "Estado do serviço", html:
+    `<p>Estado atual: <strong id="status-live">a verificar…</strong></p>
+     <p class="footer-muted">O site corre no Render (plano gratuito): a primeira visita do dia pode demorar ~30–50 s a acordar.</p>` },
+  ack: { title: "Agradecimentos", html:
+    `<p>O Astrowe assenta em dados e ferramentas abertas:</p>
+     <ul>
+       <li><a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> — meteorologia</li>
+       <li><a href="https://rhodesmill.org/skyfield/" target="_blank" rel="noopener">Skyfield</a> — efemérides (Sol, Lua, planetas)</li>
+       <li><a href="https://www.lightpollutionmap.info" target="_blank" rel="noopener">lightpollutionmap.info</a> — poluição luminosa</li>
+       <li><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> + <a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a> — mapa</li>
+       <li>Catálogo Messier validado contra o SIMBAD</li>
+     </ul>
+     <p class="footer-muted">Respeita os termos de cada fonte.</p>` },
+  cookies: { title: "Política de cookies", html:
+    `<p><em>A preencher.</em> Vai descrever que armazenamento/cookies o site usa
+     (por agora, só armazenamento local para as tuas preferências e locais
+     guardados; no futuro, cookies de anúncios após consentimento).</p>` },
+  privacy: { title: "Política de privacidade", html:
+    `<p><em>A preencher.</em> Vai explicar que dados se tratam e como.</p>` },
+  terms: { title: "Termos e condições", html:
+    `<p><em>A preencher.</em> Vai definir os termos de utilização do site.</p>` },
+};
+
+const menuBtn = $("menu-btn"), menuPanel = $("menu-panel");
+const pageModal = $("page-modal"), pageTitle = $("page-title"), pageBody = $("page-body");
+
+function closeMenu() {
+  if (!menuPanel) return;
+  menuPanel.hidden = true;
+  menuBtn.setAttribute("aria-expanded", "false");
+}
+
+async function checkStatus() {
+  const el = $("status-live");
+  if (!el) return;
+  try {
+    const r = await fetch("/api/health", { cache: "no-store" });
+    el.textContent = r.ok ? "operacional ✓" : "com problemas";
+    el.className = r.ok ? "status-ok" : "status-bad";
+  } catch {
+    el.textContent = "inacessível"; el.className = "status-bad";
+  }
+}
+
+function openPage(key) {
+  closeMenu();
+  if (key === "home") { pageModal.hidden = true; return; }
+  const p = PAGES[key];
+  if (!p) return;
+  pageTitle.textContent = p.title;
+  pageBody.innerHTML = p.html;
+  pageModal.hidden = false;
+  pageBody.scrollTop = 0;
+  if (key === "status") checkStatus();
+}
+
+// Delegação: apanha todos os botões [data-page] — do menu, do footer, do banner
+// e os que aparecem dentro das próprias páginas.
+document.addEventListener("click", (e) => {
+  const t = e.target.closest("[data-page]");
+  if (t) { e.preventDefault(); openPage(t.dataset.page); }
+});
+
+if (menuBtn && menuPanel) {
+  menuBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const willOpen = menuPanel.hidden;
+    menuPanel.hidden = !willOpen;
+    menuBtn.setAttribute("aria-expanded", willOpen ? "true" : "false");
+  });
+  document.addEventListener("click", (e) => {
+    if (!menuPanel.hidden && !menuPanel.contains(e.target) && e.target !== menuBtn) closeMenu();
+  });
+}
+
+if (pageModal) {
+  $("page-close").addEventListener("click", () => { pageModal.hidden = true; });
+  pageModal.addEventListener("click", (e) => { if (e.target === pageModal) pageModal.hidden = true; });
+}
+
+/* Consentimento de cookies: guarda a escolha; é aqui que, no futuro, se decide
+   carregar (ou não) os anúncios/analítica. */
+const CONSENT_KEY = "astrowe.consent";
+const cookieBanner = $("cookie-banner");
+function setConsent(value) {
+  try { localStorage.setItem(CONSENT_KEY, value); } catch { /* ignorar */ }
+  if (cookieBanner) cookieBanner.hidden = true;
+  // No futuro: if (value === "all") carregar anúncios/analítica.
+}
+if (cookieBanner) {
+  $("cookie-accept").addEventListener("click", () => setConsent("all"));
+  $("cookie-reject").addEventListener("click", () => setConsent("essential"));
+  try {
+    if (!localStorage.getItem(CONSENT_KEY)) cookieBanner.hidden = false;
+  } catch { /* sem localStorage: não mostrar */ }
+}

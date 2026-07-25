@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#060607" />
   <title>Astrowe — vale a pena sair esta noite?</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="/style.css?v=9" />
+  <link rel="stylesheet" href="/style.css?v=10" />
 </head>
 <body>
   <div class="shell">
@@ -26,6 +26,19 @@
           <button type="button" id="map-btn" class="btn-icon" title="Escolher no mapa">🗺</button>
           <button type="submit" class="btn-primary">Ver noites</button>
         </form>
+
+        <div class="menu-wrap">
+          <button type="button" id="menu-btn" class="menu-toggle" aria-haspopup="true"
+                  aria-expanded="false" aria-controls="menu-panel">☰ Menu</button>
+          <nav id="menu-panel" class="menu-panel" hidden>
+            <button type="button" class="menu-item" data-page="home">Início</button>
+            <button type="button" class="menu-item" data-page="howto">Como usar</button>
+            <button type="button" class="menu-item" data-page="faq">FAQ</button>
+            <button type="button" class="menu-item" data-page="status">Estado</button>
+            <button type="button" class="menu-item" data-page="links">Ligações úteis</button>
+            <button type="button" class="menu-item" data-page="contact">Contactar</button>
+          </nav>
+        </div>
 
         <button type="button" id="red-btn" class="red-toggle" aria-pressed="false"
                 title="Modo visão nocturna — recolore o site a vermelho para não estragar a adaptação ao escuro">
@@ -65,10 +78,20 @@
       <div id="detail" class="detail"></div>
     </section>
 
-    <footer>
-      <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> ·
-      <a href="https://rhodesmill.org/skyfield/" target="_blank" rel="noopener">Skyfield</a> ·
-      <a href="https://www.lightpollutionmap.info" target="_blank" rel="noopener">lightpollutionmap</a>
+    <footer class="site-footer">
+      <nav class="footer-links" aria-label="Ligações legais e de apoio">
+        <button type="button" class="link-btn" data-page="howto">Como usar</button>
+        <button type="button" class="link-btn" data-page="faq">FAQ</button>
+        <button type="button" class="link-btn" data-page="cookies">Política de cookies</button>
+        <button type="button" class="link-btn" data-page="privacy">Política de privacidade</button>
+        <button type="button" class="link-btn" data-page="terms">Termos e condições</button>
+        <button type="button" class="link-btn" data-page="ack">Agradecimentos</button>
+        <button type="button" class="link-btn" data-page="bugs">Reportar erros</button>
+        <button type="button" class="link-btn" data-page="contact">Contactar</button>
+      </nav>
+      <p class="footer-legal">© 2026 Astrowe · Todos os direitos reservados</p>
+      <!-- Preenche com os TEUS dados legais (ou remove se não fores entidade registada). -->
+      <p class="footer-legal footer-muted">Entidade / morada registada: a preencher</p>
     </footer>
   </div>
 
@@ -111,7 +134,32 @@
     </div>
   </div>
 
+  <!-- Páginas de conteúdo (FAQ, Como usar, legais…): abrem aqui por cima. O
+       conteúdo vive em PAGES, no app.js — é aí que se preenche cada uma. -->
+  <div id="page-modal" class="modal" hidden>
+    <div class="modal-box page-box">
+      <div class="modal-head">
+        <strong id="page-title"></strong>
+        <button type="button" id="page-close" class="btn-icon" title="Fechar">✕</button>
+      </div>
+      <div id="page-body" class="page-body"></div>
+    </div>
+  </div>
+
+  <!-- Banner de consentimento de cookies. Aparece na 1ª visita; a escolha fica
+       guardada. É aqui que, no futuro, se decide carregar (ou não) anúncios. -->
+  <div id="cookie-banner" class="cookie-banner" hidden>
+    <p class="cookie-text">
+      Usamos armazenamento local para o site funcionar e, no futuro, cookies de
+      anúncios. <button type="button" class="link-btn" data-page="cookies">Saber mais</button>
+    </p>
+    <div class="cookie-actions">
+      <button type="button" id="cookie-reject" class="btn-ghost">Só essenciais</button>
+      <button type="button" id="cookie-accept" class="btn-primary">Aceitar</button>
+    </div>
+  </div>
+
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/app.js?v=8"></script>
+  <script src="/app.js?v=10"></script>
 </body>
 </html>
