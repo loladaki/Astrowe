@@ -642,3 +642,28 @@ footer { margin-top: var(--s7); text-align: center; color: var(--faint); font-si
   .cell, .tgrid-head { font-size: 0.62rem; }
   .obj-label a { font-size: var(--t-xs); }
 }
+
+/* ---------------------------------------------------- anúncios laterais
+   Ocupam os vãos que sobram dos lados do conteúdo (que trava nos 1240px). Só
+   aparecem quando há mesmo espaço (>=1600px de largura e altura suficiente),
+   fixos a 16px do conteúdo, sem nunca o tapar. Abaixo disso, somem. */
+.ad-rail { display: none; }
+.ad-ph {
+  font-size: var(--t-xs); color: var(--faint);
+  letter-spacing: 0.08em; text-transform: uppercase;
+}
+@media (min-width: 1600px) and (min-height: 680px) {
+  .ad-rail {
+    display: flex; align-items: center; justify-content: center;
+    position: fixed; top: 0; height: 100vh; width: 160px; z-index: 5;
+    pointer-events: none;   /* o vão vazio não intercepta cliques */
+  }
+  .ad-left  { left:  calc((100vw - 1240px) / 2 - 176px); }
+  .ad-right { right: calc((100vw - 1240px) / 2 - 176px); }
+  .ad-slot {
+    pointer-events: auto; width: 160px; height: 600px;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px dashed var(--border); border-radius: var(--r2);
+    background: var(--surface);
+  }
+}
