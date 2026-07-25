@@ -543,16 +543,32 @@ def build_forecast(data: dict, lat: float, lon: float,
     tzname = data.get("timezone", "UTC")
 
     dates = sorted({t.date() for t in times})
-    windows = astro.compute_windows(lat, lon, offset, dates,
+    # Uma noite é indexada pela tarde em que começa. Os dados horários começam à
+    # meia-noite de hoje, mas depois da meia-noite ainda estamos NA noite que
+    # começou ontem — por isso incluímos a data de ontem nas janelas, para poder
+    # mostrar as horas que faltam dessa noite (senão o site "salta" para o dia
+    # seguinte a meio da noite, que não faz sentido num site de observação).
+    prev = dates[0] - timedelta(days=1)
+    win_dates = [prev] + dates
+    windows = astro.compute_windows(lat, lon, offset, win_dates,
                                     profile["horizon_degrees"])
     # Vista horária do pôr ao nascer do Sol (crepúsculo incluído), para se ver a
     # noite toda; o score continua a sair da janela escura recomendada.
-    display = astro.compute_windows(lat, lon, offset, dates, astro.SUNSET_DEG)
+    display = astro.compute_windows(lat, lon, offset, win_dates, astro.SUNSET_DEG)
     # Crepúsculo astronómico (Sol a −18°), para a banda de luz saber onde começa
     # e acaba a noite verdadeiramente escura, independente do modo.
-    twilight = astro.compute_windows(lat, lon, offset, dates,
+    twilight = astro.compute_windows(lat, lon, offset, win_dates,
                                      astro.ASTRONOMICAL_TWILIGHT_DEG)
     moon_alt, moon_illum = astro.moon_series(lat, lon, offset, times)
+
+    # A noite de ontem só entra (à cabeça) se ainda não acabou — ou seja, se
+    # ainda estamos antes do fim da escuridão dessa noite.
+    now_local = (datetime.now(timezone.utc)
+                 + timedelta(seconds=offset)).replace(tzinfo=None)
+    prev_end = windows.get(prev, (None, None))[1]
+    build_dates = list(dates)
+    if prev_end is not None and now_local < prev_end:
+        build_dates = [prev, *build_dates]
 
     bortle = light_pollution.get("bortle") if light_pollution else None
     lp_factor = light_pollution_factor(bortle)
@@ -566,8 +582,9 @@ def build_forecast(data: dict, lat: float, lon: float,
         _build_night(d, windows.get(d, (None, None)),
                      display.get(d, (None, None)), twilight.get(d, (None, None)),
                      times, h, moon_alt, moon_illum, profile,
-                     lat, lon, offset, lp_factor)
-        for d in dates
+                     lat, lon, offset, lp_factor,
+                     since=now_local if d == prev else None)
+        for d in build_dates
     ]
 
     return ForecastResponse(
@@ -582,14 +599,21 @@ def build_forecast(data: dict, lat: float, lon: float,
 
 def _build_night(d, window, display_window, twilight_window, times, h,
                  moon_alt, moon_illum, profile, lat: float, lon: float,
-                 offset: int, lp_factor: float = 1.0) -> NightScore:
+                 offset: int, lp_factor: float = 1.0,
+                 since: datetime | None = None) -> NightScore:
     night_start, night_end = window
     sun_set, sun_rise = display_window
     dusk, dawn = twilight_window
 
+    # Noite a decorrer: `since` corta as horas já passadas, ficando só as que
+    # faltam (arredondado à hora, para incluir a hora em que estamos).
+    in_progress = since is not None
+    since_floor = since.replace(minute=0, second=0, microsecond=0) if since else None
+    remaining = lambda t: since_floor is None or t >= since_floor
+
     if night_start is None or night_end is None:
         return NightScore(
-            date=d.isoformat(), score=0, verdict="Sem noite escura",
+            date=d.isoformat(), in_progress=in_progress, score=0, verdict="Sem noite escura",
             moon_phase="—", moonrise=None, moonset=None,
             seeing="desconhecido", dew_risk="desconhecido",
             temperature_c=None, feels_like_c=None, wind_kmh=None,
@@ -605,10 +629,10 @@ def _build_night(d, window, display_window, twilight_window, times, h,
             details="O Sol não desce o suficiente nesta noite — sem escuridão utilizável.",
         )
 
-    idx = [i for i, t in enumerate(times) if night_start <= t <= night_end]
+    idx = [i for i, t in enumerate(times) if night_start <= t <= night_end and remaining(t)]
     if not idx:
         return NightScore(
-            date=d.isoformat(), score=0, verdict="Sem dados",
+            date=d.isoformat(), in_progress=in_progress, score=0, verdict="Sem dados",
             moon_phase="—", moonrise=None, moonset=None,
             seeing="desconhecido", dew_risk="desconhecido",
             temperature_c=None, feels_like_c=None, wind_kmh=None,
@@ -703,7 +727,8 @@ def _build_night(d, window, display_window, twilight_window, times, h,
     # ver a noite toda. A janela recomendada marca-se com in_window.
     disp_start, disp_end = display_window
     if disp_start and disp_end:
-        disp_idx = [i for i, t in enumerate(times) if disp_start <= t <= disp_end]
+        disp_idx = [i for i, t in enumerate(times)
+                    if disp_start <= t <= disp_end and remaining(t)]
     if not disp_start or not disp_end or not disp_idx:
         disp_idx = idx
     hours = [_hour_detail(part_at(i), times, h, moon_alt, moon_illum,
@@ -732,7 +757,7 @@ def _build_night(d, window, display_window, twilight_window, times, h,
     moon_leads = bool(noite) and noite[0].factor == "lua"
 
     return NightScore(
-        date=d.isoformat(), score=score, verdict=_verdict(score),
+        date=d.isoformat(), in_progress=in_progress, score=score, verdict=_verdict(score),
         headline=_headline(score, win_qualities, times, win_idx, win_end,
                            moonset, moon_leads),
         verdict_reason=_verdict_reason(parts[ext_i:ext_j + 1],

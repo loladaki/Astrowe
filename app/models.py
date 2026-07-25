@@ -108,6 +108,7 @@ class FactorImpact(BaseModel):
 
 class NightScore(BaseModel):
     date: str                            # dia local em que a noite começa
+    in_progress: bool = False            # noite a decorrer agora (só as horas que faltam)
     score: int                           # 0–100
     verdict: str                         # "Excelente" / "Boa" / "Razoável" / "Fraca"
     headline: str                        # "Sim — melhor depois das 02:00"

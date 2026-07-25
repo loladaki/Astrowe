@@ -1127,10 +1127,10 @@ function renderStrip(data) {
                            (n.date === selectedDate ? " is-selected" : ""));
     b.type = "button";
     const dt = new Date(n.date + "T12:00:00");
-    b.append(el("span", "d", `${weekdayShort(n.date)} ${dt.getDate()}`),
+    b.append(el("span", "d", n.in_progress ? "Agora" : `${weekdayShort(n.date)} ${dt.getDate()}`),
              el("span", "n", usable ? String(n.score) : "—"),
              moonSVG(n.moon_illumination_pct, n.moon_waxing, 20));
-    b.title = `${weekdayLong(n.date)}: ${n.headline}`;
+    b.title = `${n.in_progress ? "Esta noite" : weekdayLong(n.date)}: ${n.headline}`;
     b.addEventListener("click", () => { selectedDate = n.date; render(); });
     stripEl.append(b);
   }
@@ -1150,9 +1150,10 @@ function renderDetail(n) {
   headRow.append(el("span", "verdict-head", n.headline));
   if (usable) headRow.append(conditionPill(n));
   body.append(headRow);
+  const dayLabel = n.in_progress ? "Esta noite" : weekdayLong(n.date);
   body.append(el("div", "verdict-sub", usable
-    ? `${weekdayLong(n.date)} · ${hhmm(n.window_start)}–${hhmm(n.window_end)}`
-    : `${weekdayLong(n.date)} · ${n.conditions}`));
+    ? `${dayLabel} · ${hhmm(n.window_start)}–${hhmm(n.window_end)}`
+    : `${dayLabel} · ${n.conditions}`));
 
   // A decisão está à vista; a razão só se a pessoa a quiser, atrás de um clique.
   if (usable) {
@@ -1227,10 +1228,13 @@ function render() {
   }
 
   if (!selectedDate || !data.nights.some((n) => n.date === selectedDate)) {
+    // Se há uma noite a decorrer agora, é essa que se mostra — é para isso que
+    // se abre o site à noite. Senão, a melhor noite que aí vem.
+    const live = data.nights.find((n) => n.in_progress);
     const usable = data.nights.filter((n) => n.score > 0);
-    selectedDate = (usable.length
+    selectedDate = (live || (usable.length
       ? usable.reduce((a, b) => (b.score > a.score ? b : a))
-      : data.nights[0]).date;
+      : data.nights[0])).date;
   }
 
   renderStrip(data);
