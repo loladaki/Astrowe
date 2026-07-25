@@ -397,41 +397,47 @@ function buildSkyDome(n, lat, lon, tz) {
       const op = Math.max(0.25, 0.95 - mag * 0.16);
       layer.append(svg("circle", { cx: x.toFixed(1), cy: y.toFixed(1), r: r.toFixed(2),
                                    fill: "var(--star)", opacity: op.toFixed(2) }));
-      // nomear só as mais brilhantes e bem acima do horizonte, para orientar
-      if (mag < 1.4 && alt > 12) {
+      // nomear só as mais brilhantes, para orientar sem competir com os alvos
+      if (mag < 1.0 && alt > 12) {
         const t = svg("text", { x: (x + 4).toFixed(1), y: (y - 3).toFixed(1), class: "sky-star-lbl" });
         t.textContent = name; layer.append(t);
       }
     }
 
-    // objectos recomendados, nas posições ao vivo
-    let labelled = 0;
+    // Objectos recomendados. A cor diz quão alto está — o mesmo código das
+    // barras de "O que observar": verde no melhor (>50°), âmbar utilizável
+    // (30–50°), apagado quando está baixo demais (<30°) para valer a pena. E
+    // todos levam nome, para se identificarem sem passar o rato.
     for (const o of ordered) {
       const [alt, az] = altAz(o.ra_h, o.dec_deg, lst, lat);
       if (alt <= 0) continue;   // pôs-se: desaparece da cúpula
       const [x, y] = pos(alt, az);
       const isMoon = o.kind === "satélite", isPlanet = o.kind === "planeta";
+      const low = alt < 30;
+      const tier = alt >= 50 ? "var(--good)" : alt >= 30 ? "var(--ok)" : "var(--faint)";
       let dot;
       if (isMoon) {
+        // A Lua não segue os níveis (alta é má em céu profundo): fica ela mesma.
         dot = svg("circle", { cx: x, cy: y, r: 6, fill: "var(--moon)",
                               stroke: "rgba(60,48,28,0.4)", "stroke-width": 0.6 });
-      } else if (isPlanet) {
-        dot = svg("circle", { cx: x, cy: y, r: 3.4, fill: "var(--accent)" });
       } else {
-        const rr = o.magnitude !== null ? Math.max(1.4, 4 - o.magnitude * 0.4) : 2;
-        dot = svg("circle", { cx: x, cy: y, r: rr.toFixed(1), fill: "var(--text)",
-                              opacity: o.washed_out ? 0.35 : 0.9 });
+        const base = isPlanet ? 3.6
+                   : o.magnitude !== null ? Math.max(1.6, 4 - o.magnitude * 0.4) : 2.2;
+        const r = low ? Math.max(1.4, base - 1) : base;
+        const attrs = { cx: x, cy: y, r: (+r).toFixed(1), fill: tier,
+                        opacity: (o.washed_out || low) ? 0.5 : 0.95 };
+        if (isPlanet) { attrs.stroke = "var(--bg)"; attrs["stroke-width"] = 0.7; }
+        dot = svg("circle", attrs);
       }
       layer.append(dot);
 
-      // rotular a Lua, os planetas e os 2 melhores de céu profundo
-      if (isMoon || isPlanet || (labelled < 2 && !o.washed_out)) {
-        if (!isMoon && !isPlanet) labelled++;
-        const lx = x + 7, anchor = lx > cx + R - 30 ? "end" : "start";
-        const label = svg("text", { x: anchor === "end" ? x - 7 : lx, y: y + 3,
-                                    "text-anchor": anchor, class: "sky-lbl" });
-        label.textContent = o.name; layer.append(label);
-      }
+      // rótulo na cor do nível (a Lua e os "baixos" num tom neutro legível)
+      const lblColor = isMoon ? "var(--moon)" : low ? "var(--dim)" : tier;
+      const lx = x + 7, anchor = lx > cx + R - 30 ? "end" : "start";
+      const label = svg("text", { x: anchor === "end" ? x - 7 : lx, y: y + 3,
+                                  "text-anchor": anchor, class: "sky-lbl",
+                                  style: `fill:${lblColor};opacity:${o.washed_out ? 0.6 : 1}` });
+      label.textContent = o.name; layer.append(label);
 
       // área de toque maior e invisível, para os pontos pequenos serem fáceis
       const cur = { x, y, alt, az };
@@ -445,6 +451,18 @@ function buildSkyDome(n, lat, lon, tz) {
 
   wrap.append(box, pop);
 
+  // legenda das cores dos alvos — igual à de "O que observar"
+  const legend = el("div", "sky-legend");
+  const swatch = (color, txt) => {
+    const s = el("span", "sky-leg");
+    const d = el("span", "sky-leg-dot"); d.style.background = color;
+    s.append(d, document.createTextNode(txt));
+    return s;
+  };
+  legend.append(swatch("var(--good)", "no melhor (>50°)"),
+                swatch("var(--ok)", "utilizável (30–50°)"),
+                swatch("var(--faint)", "baixo (<30°)"));
+
   // ---- slider de tempo: varre a noite observável ----
   const t0 = localWallToUTC(n.night_start || n.window_start, tz).getTime();
   const t1 = localWallToUTC(n.night_end || n.window_end, tz).getTime();
@@ -454,6 +472,7 @@ function buildSkyDome(n, lat, lon, tz) {
   // Sem noite válida (caso raro): desenha só o instante médio, sem slider.
   if (!isFinite(t0) || !isFinite(t1) || t1 <= t0) {
     draw(new Date(isFinite(tMid) ? tMid : t0));
+    wrap.append(legend);
     return wrap;
   }
 
@@ -479,6 +498,7 @@ function buildSkyDome(n, lat, lon, tz) {
   wrap.append(control);
 
   update();   // primeira pintura, à hora recomendada
+  wrap.append(legend);
   return wrap;
 }
 
