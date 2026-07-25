@@ -1571,7 +1571,13 @@ const PAGES = {
   faq: { title: "Perguntas frequentes", html:
     `<p>Secção a preencher com as perguntas mais comuns.</p>` },
   links: { title: "Ligações úteis", html:
-    `<p>Secção a preencher com recursos de astronomia úteis.</p>` },
+    `<p>Recursos que ajudam a planear e a tirar mais partido das noites:</p>
+     <ul>
+       <li><a href="https://astronomy.tools/" target="_blank" rel="noopener">astronomy.tools</a>
+           — calculadoras de campo de visão, comparadores de ocular e telescópio</li>
+       <li><a href="https://telescopius.com/" target="_blank" rel="noopener">Telescopius</a>
+           — fichas de objetos, mapas do céu e planeamento de sessões</li>
+     </ul>` },
   contact: { title: "Contactar", html:
     `<p>Para dúvidas ou sugestões: <a href="mailto:preencher@exemplo.pt">preencher@exemplo.pt</a> <em>(a preencher)</em>.</p>` },
   bugs: { title: "Reportar erros", html:
