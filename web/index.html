@@ -6,33 +6,34 @@
   <meta name="theme-color" content="#060607" />
   <title>Astrowe — vale a pena sair esta noite?</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="/style.css?v=4" />
+  <link rel="stylesheet" href="/style.css?v=5" />
 </head>
 <body>
   <div class="shell">
 
-    <header class="brand">
-      <h1>Astrowe</h1>
-      <button type="button" id="red-btn" class="red-toggle" aria-pressed="false"
-              title="Modo visão nocturna — recolore o site a vermelho para não estragar a adaptação ao escuro">
-        <span class="red-dot" aria-hidden="true"></span>Modo vermelho
-      </button>
-    </header>
+    <header class="site-header">
+      <div class="header-bar">
+        <h1 class="site-name">Astrowe</h1>
 
-    <section class="controls">
-      <form id="search-form" autocomplete="off">
-        <div class="search-wrap">
-          <input id="place" type="text" placeholder="Onde vais observar?"
-                 role="combobox" aria-expanded="false" aria-autocomplete="list"
-                 aria-controls="suggestions" />
-          <ul id="suggestions" class="suggestions" role="listbox" hidden></ul>
-        </div>
-        <button type="button" id="geo-btn" class="btn-icon" title="Usar a minha localização">📍</button>
-        <button type="button" id="map-btn" class="btn-icon" title="Escolher no mapa">🗺</button>
-        <button type="submit" class="btn-primary">Ver noites</button>
-      </form>
+        <form id="search-form" class="header-search" autocomplete="off">
+          <div class="search-wrap">
+            <input id="place" type="text" placeholder="Onde vais observar?"
+                   role="combobox" aria-expanded="false" aria-autocomplete="list"
+                   aria-controls="suggestions" />
+            <ul id="suggestions" class="suggestions" role="listbox" hidden></ul>
+          </div>
+          <button type="button" id="geo-btn" class="btn-icon" title="Usar a minha localização">📍</button>
+          <button type="button" id="map-btn" class="btn-icon" title="Escolher no mapa">🗺</button>
+          <button type="submit" class="btn-primary">Ver noites</button>
+        </form>
 
-      <div class="controls-row">
+        <button type="button" id="red-btn" class="red-toggle" aria-pressed="false"
+                title="Modo visão nocturna — recolore o site a vermelho para não estragar a adaptação ao escuro">
+          <span class="red-dot" aria-hidden="true"></span>Modo vermelho
+        </button>
+      </div>
+
+      <div class="header-filters">
         <div class="segmented" role="group" aria-label="Tipo de observação">
           <button type="button" class="mode-btn is-active" data-mode="deepsky">Céu profundo</button>
           <button type="button" class="mode-btn" data-mode="planetary">Planetas e Lua</button>
@@ -49,7 +50,7 @@
         <button type="button" id="save-confirm" class="btn-primary">Guardar</button>
         <button type="button" id="save-cancel" class="btn-ghost">Cancelar</button>
       </div>
-    </section>
+    </header>
 
     <p id="status" class="status" hidden></p>
 
@@ -96,6 +97,6 @@
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/app.js?v=4"></script>
+  <script src="/app.js?v=5"></script>
 </body>
 </html>

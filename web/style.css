@@ -117,18 +117,30 @@ a { color: var(--accent); }
 
 /* ---------------------------------------------------- cabeçalho */
 
-.brand { text-align: center; margin-bottom: var(--s5); }
-.brand h1 { margin: 0; font-size: 1.9rem; font-weight: 650; letter-spacing: -0.02em; }
-.tagline { margin: var(--s1) 0 0; color: var(--dim); font-size: var(--t-md); }
+.site-header {
+  margin-bottom: var(--s6);
+  padding-bottom: var(--s4);
+  border-bottom: 1px solid var(--border);
+}
 
-/* Interruptor de visão nocturna, alinhado ao topo direito com o título */
+.header-bar { display: flex; align-items: center; gap: var(--s3) var(--s4); flex-wrap: wrap; }
+.site-name {
+  margin: 0; font-size: 1.6rem; font-weight: 650; letter-spacing: -0.02em;
+  white-space: nowrap; flex: 0 0 auto;
+}
+
+.header-search { display: flex; gap: var(--s2); flex: 1 1 380px; min-width: 0; }
+.search-wrap { position: relative; flex: 1; min-width: 0; }
+
+/* Interruptor de visão nocturna, encostado à direita do cabeçalho (a pesquisa
+   cresce e empurra-o para a direita; em ecrãs estreitos é a margem que o faz) */
 .red-toggle {
-  position: absolute; top: var(--s4); right: 0;
+  flex: 0 0 auto;
   display: inline-flex; align-items: center; gap: var(--s2);
-  padding: 7px 14px 7px 12px;
+  padding: 8px 14px 8px 12px;
   border: 1px solid var(--border); border-radius: var(--pill);
   background: var(--surface); color: var(--dim);
-  font-size: var(--t-sm); font-weight: 600; line-height: 1;
+  font-size: var(--t-sm); font-weight: 600; line-height: 1; white-space: nowrap;
   transition: color .15s, border-color .15s, background .15s;
 }
 .red-toggle:hover { border-color: var(--border-lit); color: var(--text); }
@@ -144,17 +156,14 @@ a { color: var(--accent); }
 .red-toggle[aria-pressed="true"] .red-dot {
   background: var(--accent); box-shadow: 0 0 10px var(--accent);
 }
-/* Em ecrãs estreitos sai da linha do título e centra-se por baixo */
-@media (max-width: 640px) {
-  .red-toggle { position: static; margin: var(--s3) auto 0; }
+
+/* Filtros por baixo da barra: tipo de observação + locais guardados */
+.header-filters {
+  display: flex; flex-wrap: wrap; gap: var(--s3);
+  align-items: center; justify-content: space-between; margin-top: var(--s4);
 }
 
 /* ---------------------------------------------------- controlos */
-
-.controls { max-width: 720px; margin: 0 auto var(--s5); }
-
-#search-form { display: flex; gap: var(--s2); }
-.search-wrap { position: relative; flex: 1; }
 
 #place, #save-name {
   width: 100%;
@@ -195,11 +204,6 @@ button { font-family: inherit; cursor: pointer; border-radius: var(--r2); }
   color: var(--dim); font-size: var(--t-sm);
 }
 .btn-ghost:hover { border-color: var(--border-lit); color: var(--text); }
-
-.controls-row {
-  display: flex; flex-wrap: wrap; gap: var(--s3);
-  align-items: center; justify-content: space-between; margin-top: var(--s3);
-}
 
 .segmented {
   display: inline-flex; padding: 3px; gap: 2px;
@@ -604,15 +608,22 @@ footer { margin-top: var(--s7); text-align: center; color: var(--faint); font-si
   .conds { grid-template-columns: 1fr 1fr; gap: var(--s3); }
 }
 
+/* Mal a barra de pesquisa deixe de caber ao lado do nome e do modo vermelho,
+   passa para a sua própria linha, por baixo deles. */
+@media (max-width: 760px) {
+  .header-search { order: 3; flex-basis: 100%; }
+  .red-toggle { margin-left: auto; }
+}
+
 @media (max-width: 560px) {
   .shell { padding: var(--s4) var(--s3) var(--s6); }
-  .brand h1 { font-size: 1.6rem; }
+  .site-name { font-size: 1.4rem; }
   :root { --label-w: 58px; }
 
   #search-form { flex-wrap: wrap; }
   .search-wrap { flex: 1 1 100%; }
   #search-form .btn-primary { flex: 1; }
-  .controls-row { flex-direction: column; align-items: stretch; }
+  .header-filters { flex-direction: column; align-items: stretch; }
   .segmented { justify-content: center; }
   .places { justify-content: center; }
 
