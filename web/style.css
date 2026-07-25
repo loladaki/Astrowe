@@ -365,6 +365,8 @@ button { font-family: inherit; cursor: pointer; border-radius: var(--r2); }
 .sky-time-lbl::before {
   content: "🕐 "; font-size: var(--t-sm); opacity: 0.7;
 }
+.sky-time-hint { align-self: center; margin-top: 2px; font-size: var(--t-xs);
+                 color: var(--faint); text-align: center; }
 .sky-slider {
   width: 100%; -webkit-appearance: none; appearance: none;
   height: 6px; border-radius: var(--pill); background: var(--border-lit);

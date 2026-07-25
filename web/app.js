@@ -463,11 +463,16 @@ function buildSkyDome(n, lat, lon, tz) {
                 swatch("var(--ok)", "utilizável (30–50°)"),
                 swatch("var(--faint)", "baixo (<30°)"));
 
-  // ---- slider de tempo: varre a noite observável ----
-  const t0 = localWallToUTC(n.night_start || n.window_start, tz).getTime();
-  const t1 = localWallToUTC(n.night_end || n.window_end, tz).getTime();
-  const tMid = (localWallToUTC(n.window_start, tz).getTime()
-              + localWallToUTC(n.window_end, tz).getTime()) / 2;
+  // ---- slider de tempo ----
+  // Varre a MESMA janela horária das barras de "O que observar" e do meteograma
+  // (do início ao fim da noite mostrada), para os três baterem certo. Antes ia
+  // só até ao fim da escuridão astronómica e parecia curto ao lado das barras,
+  // que seguem os objectos pelo crepúsculo adentro.
+  const wall = (iso) => localWallToUTC(iso, tz).getTime();
+  const hrsArr = n.hours || [];
+  const t0 = wall(hrsArr.length ? hrsArr[0].time : (n.night_start || n.window_start));
+  const t1 = wall(hrsArr.length ? hrsArr[hrsArr.length - 1].time : (n.night_end || n.window_end));
+  const tMid = (wall(n.window_start) + wall(n.window_end)) / 2;
 
   // Sem noite válida (caso raro): desenha só o instante médio, sem slider.
   if (!isFinite(t0) || !isFinite(t1) || t1 <= t0) {
@@ -488,6 +493,24 @@ function buildSkyDome(n, lat, lon, tz) {
   slider.value = String(Math.round(Math.min(Math.max(tMid, t0), t1)));
   slider.setAttribute("aria-label", "Hora da noite");
 
+  // Marca no fundo do slider a escuridão astronómica (dusk→dawn): fora dela, nas
+  // pontas, o Sol ainda clareia o céu (crepúsculo). É a resposta visual ao
+  // "porque é que as barras vão mais longe que o slider?": vão para o crepúsculo.
+  let darkHint = "";
+  if (n.dusk && n.dawn) {
+    const span = t1 - t0;
+    const p0 = Math.max(0, Math.min(100, (wall(n.dusk) - t0) / span * 100));
+    const p1 = Math.max(0, Math.min(100, (wall(n.dawn) - t0) / span * 100));
+    if (p1 - p0 > 1 && (p0 > 1 || p1 < 99)) {
+      slider.style.background =
+        `linear-gradient(90deg, var(--border-lit) ${p0.toFixed(1)}%,` +
+        ` rgba(224,152,94,0.45) ${p0.toFixed(1)}%, rgba(224,152,94,0.45) ${p1.toFixed(1)}%,` +
+        ` var(--border-lit) ${p1.toFixed(1)}%)`;
+      darkHint = `céu totalmente escuro das ${fmt.format(new Date(wall(n.dusk)))}`
+               + ` às ${fmt.format(new Date(wall(n.dawn)))} · fora daí, crepúsculo`;
+    }
+  }
+
   const update = () => {
     const d = new Date(Number(slider.value));
     label.textContent = fmt.format(d);
@@ -495,6 +518,7 @@ function buildSkyDome(n, lat, lon, tz) {
   };
   slider.addEventListener("input", update);
   control.append(label, slider);
+  if (darkHint) control.append(el("div", "sky-time-hint", darkHint));
   wrap.append(control);
 
   update();   // primeira pintura, à hora recomendada
