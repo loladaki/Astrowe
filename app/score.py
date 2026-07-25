@@ -58,6 +58,8 @@ PROFILES = {
         "moon_weight": 0.70,
         "transparency_floor": 0.70,
         "seeing_floor": 0.88,
+        # A lista de objectos lidera pelo céu profundo; planetas e Lua a seguir.
+        "planets_lead": False,
     },
     "planetary": {
         "label": "planetas e Lua",
@@ -67,6 +69,8 @@ PROFILES = {
         "moon_weight": 0.05,
         "transparency_floor": 0.85,
         "seeing_floor": 0.45,
+        # A lista lidera pelos planetas e Lua; o céu profundo a seguir, como bónus.
+        "planets_lead": True,
     },
 }
 DEFAULT_MODE = "deepsky"
@@ -711,7 +715,8 @@ def _build_night(d, window, display_window, twilight_window, times, h,
     sky = objects.visible_objects(lat, lon, offset, times[mid],
                                   float(moon_illum[mid]), float(moon_alt[mid]),
                                   window_start=win_start, window_end=win_end,
-                                  window_times=[times[i] for i in disp_idx])
+                                  window_times=[times[i] for i in disp_idx],
+                                  planets_lead=profile["planets_lead"])
     moonrise, moonset = astro.moon_rise_set(lat, lon, offset, d)
 
     moonlight = float(moon_illum[mid]) * max(0.0, float(moon_alt[mid]) / 90.0)

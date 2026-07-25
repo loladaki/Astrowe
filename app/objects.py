@@ -42,6 +42,10 @@ PLANETS = [
 COMPASS = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
            "S", "SSO", "SO", "OSO", "O", "ONO", "NO", "NNO"]
 
+# Os alvos "brilhantes" — a Lua e os planetas. Entram sempre na lista (são
+# poucos e sempre relevantes) e lideram-na, ou não, conforme o modo.
+BRIGHT_KINDS = ("satélite", "planeta")
+
 # Símbolos convencionais dos atlas celestes. O frontend desenha-os em SVG —
 # são a notação que qualquer observador reconhece sem legenda.
 SYMBOLS = {
@@ -185,11 +189,16 @@ def visible_objects(lat: float, lon: float, offset_seconds: int,
                     moon_alt: float, limit: int = 12,
                     window_start: datetime | None = None,
                     window_end: datetime | None = None,
-                    window_times: list[datetime] | None = None) -> list[dict]:
+                    window_times: list[datetime] | None = None,
+                    planets_lead: bool = False) -> list[dict]:
     """O que está observável neste instante, do mais fácil ao mais difícil.
 
     `moon_illum` (0–1) e `moon_alt` servem para avisar quando o luar apaga os
     objectos ténues — não os escondemos, marcamo-los.
+
+    `planets_lead` (do perfil do modo) decide quem lidera a lista: os planetas e
+    a Lua (modo planetas), ou o céu profundo (modo céu profundo). Nunca esconde
+    nada — só muda a ordem.
     """
     ts, eph = _ensure_loaded()
     observer = eph["earth"] + wgs84.latlon(lat, lon)
@@ -285,13 +294,25 @@ def visible_objects(lat: float, lon: float, offset_seconds: int,
             **timing(float(ras_d[i]), float(decs_d[i])),
         })
 
-    # Lua e planetas primeiro, depois o mais brilhante e o mais alto.
-    order = {"satélite": 0, "planeta": 1}
-    found.sort(key=lambda o: (order.get(o["kind"], 2),
-                              o["washed_out"],
-                              o["magnitude"] if o["magnitude"] is not None else -5,
-                              -o["altitude_deg"]))
-    found = found[:limit]
+    # Qualidade de um alvo: primeiro os não apagados pelo luar, depois o mais
+    # brilhante e o mais alto (planetas/Lua não têm magnitude → tratam-se como
+    # brilhantes e ordenam-se pela altura).
+    def _quality(o):
+        return (o["washed_out"],
+                o["magnitude"] if o["magnitude"] is not None else -5,
+                -o["altitude_deg"])
+
+    # Selecção: a Lua e os planetas entram sempre — não são cortados pelo limite,
+    # porque vale sempre a pena saber que estão no céu. O céu profundo entra por
+    # qualidade até preencher o resto.
+    bright = [o for o in found if o["kind"] in BRIGHT_KINDS]
+    deep = sorted((o for o in found if o["kind"] not in BRIGHT_KINDS), key=_quality)
+    found = bright + deep[: max(0, limit - len(bright))]
+
+    # Ordem de apresentação: lidera o que o modo escolheu (ver `planets_lead`).
+    def _lead(o):
+        return 0 if (o["kind"] in BRIGHT_KINDS) == planets_lead else 1
+    found.sort(key=lambda o: (_lead(o), *_quality(o)))
 
     for o in found:
         o["symbol"] = SYMBOLS.get(o["kind"], "nebula")
