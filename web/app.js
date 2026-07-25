@@ -451,23 +451,9 @@ function buildSkyDome(n, lat, lon, tz) {
 
   wrap.append(box, pop);
 
-  // legenda das cores dos alvos — igual à de "O que observar"
-  const legend = el("div", "sky-legend");
-  const swatch = (color, txt) => {
-    const s = el("span", "sky-leg");
-    const d = el("span", "sky-leg-dot"); d.style.background = color;
-    s.append(d, document.createTextNode(txt));
-    return s;
-  };
-  legend.append(swatch("var(--good)", "no melhor (>50°)"),
-                swatch("var(--ok)", "utilizável (30–50°)"),
-                swatch("var(--faint)", "baixo (<30°)"));
-
   // ---- slider de tempo ----
   // Varre a MESMA janela horária das barras de "O que observar" e do meteograma
-  // (do início ao fim da noite mostrada), para os três baterem certo. Antes ia
-  // só até ao fim da escuridão astronómica e parecia curto ao lado das barras,
-  // que seguem os objectos pelo crepúsculo adentro.
+  // (do início ao fim da noite mostrada), para os três baterem certo.
   const wall = (iso) => localWallToUTC(iso, tz).getTime();
   const hrsArr = n.hours || [];
   const t0 = wall(hrsArr.length ? hrsArr[0].time : (n.night_start || n.window_start));
@@ -477,7 +463,6 @@ function buildSkyDome(n, lat, lon, tz) {
   // Sem noite válida (caso raro): desenha só o instante médio, sem slider.
   if (!isFinite(t0) || !isFinite(t1) || t1 <= t0) {
     draw(new Date(isFinite(tMid) ? tMid : t0));
-    wrap.append(legend);
     return wrap;
   }
 
@@ -493,21 +478,25 @@ function buildSkyDome(n, lat, lon, tz) {
   slider.value = String(Math.round(Math.min(Math.max(tMid, t0), t1)));
   slider.setAttribute("aria-label", "Hora da noite");
 
-  // Marca no fundo do slider a escuridão astronómica (dusk→dawn): fora dela, nas
-  // pontas, o Sol ainda clareia o céu (crepúsculo). É a resposta visual ao
-  // "porque é que as barras vão mais longe que o slider?": vão para o crepúsculo.
-  let darkHint = "";
+  // Faixa da escuridão total (dusk→dawn) destacada no fundo do slider, com a
+  // hora marcada em cada aresta — fora dela, o Sol ainda clareia o céu.
+  const span = t1 - t0;
+  const markPct = (iso) => Math.max(0, Math.min(100, (wall(iso) - t0) / span * 100));
+  let darkMarks = null;
   if (n.dusk && n.dawn) {
-    const span = t1 - t0;
-    const p0 = Math.max(0, Math.min(100, (wall(n.dusk) - t0) / span * 100));
-    const p1 = Math.max(0, Math.min(100, (wall(n.dawn) - t0) / span * 100));
+    const p0 = markPct(n.dusk), p1 = markPct(n.dawn);
     if (p1 - p0 > 1 && (p0 > 1 || p1 < 99)) {
       slider.style.background =
         `linear-gradient(90deg, var(--border-lit) ${p0.toFixed(1)}%,` +
         ` rgba(224,152,94,0.45) ${p0.toFixed(1)}%, rgba(224,152,94,0.45) ${p1.toFixed(1)}%,` +
         ` var(--border-lit) ${p1.toFixed(1)}%)`;
-      darkHint = `céu totalmente escuro das ${fmt.format(new Date(wall(n.dusk)))}`
-               + ` às ${fmt.format(new Date(wall(n.dawn)))} · fora daí, crepúsculo`;
+      darkMarks = el("div", "sky-marks");
+      const put = (iso) => {
+        const m = el("span", "sky-mark", fmt.format(new Date(wall(iso))));
+        m.style.left = markPct(iso).toFixed(1) + "%";
+        darkMarks.append(m);
+      };
+      put(n.dusk); put(n.dawn);
     }
   }
 
@@ -518,11 +507,10 @@ function buildSkyDome(n, lat, lon, tz) {
   };
   slider.addEventListener("input", update);
   control.append(label, slider);
-  if (darkHint) control.append(el("div", "sky-time-hint", darkHint));
+  if (darkMarks) control.append(darkMarks);
   wrap.append(control);
 
   update();   // primeira pintura, à hora recomendada
-  wrap.append(legend);
   return wrap;
 }
 
@@ -666,10 +654,11 @@ function barClass(alt) {
   return alt >= 50 ? "b-good" : "b-ok";
 }
 
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 const weekdayShort = (d) =>
-  new Date(d + "T12:00:00").toLocaleDateString("pt-PT", { weekday: "short" }).replace(".", "");
+  cap(new Date(d + "T12:00:00").toLocaleDateString("pt-PT", { weekday: "short" }).replace(".", ""));
 const weekdayLong = (d) =>
-  new Date(d + "T12:00:00").toLocaleDateString("pt-PT", { weekday: "long", day: "numeric", month: "short" });
+  cap(new Date(d + "T12:00:00").toLocaleDateString("pt-PT", { weekday: "long", day: "numeric", month: "short" }));
 
 /* ------------------------------------------------- painéis */
 
@@ -751,25 +740,25 @@ function buildConds(n) {
   grid.append(condItem({
     moon: moonSVG(n.moon_illumination_pct, n.moon_waxing, 22),
     tag: "Lua",
-    value: c ? c.moon_label : n.moon_phase,
+    value: n.moon_phase,
     spark: el("div", "cond-note", `${Math.round(n.moon_illumination_pct)}% iluminada`),
   }));
 
   grid.append(condItem({
-    icon: iconSVG("cloud"), tag: "nuvens",
+    icon: iconSVG("cloud"), tag: "Nuvens",
     value: c ? c.clouds_label : "—",
     spark: c ? scaledSpark(c.clouds_spark, "%", true, 25) : null,
   }));
 
   const dewWarn = c && /Prov|Poss/.test(c.dew_label);
   grid.append(condItem({
-    icon: iconSVG("droplet", 20, dewWarn ? "icon warn" : "icon"), tag: "orvalho",
+    icon: iconSVG("droplet", 20, dewWarn ? "icon warn" : "icon"), tag: "Orvalho",
     value: c ? c.dew_label : "—",
     spark: c ? scaledSpark(c.dew_spark, "°", false, 3) : null,
   }));
 
   grid.append(condItem({
-    icon: iconSVG("thermo"), tag: "temperatura",
+    icon: iconSVG("thermo"), tag: "Temperatura",
     value: c ? c.temp_label : "—",
     spark: el("div", "cond-note",
       [n.wind_kmh !== null ? `vento ${Math.round(n.wind_kmh)} km/h` : "",
@@ -931,8 +920,8 @@ function buildObjectsFilter(n, hours) {
     s.append(sw, document.createTextNode(txt));
     return s;
   };
-  legend.append(mk("var(--good)", "no melhor (>50°)"), mk("var(--ok)", "utilizável (30–50°)"),
-                mk("var(--border)", "baixo (<30°)"));
+  legend.append(mk("var(--good)", "No melhor (>50°)"), mk("var(--ok)", "Utilizável (30–50°)"),
+                mk("var(--faint)", "Baixo (<30°)"));
 
   let active = null;    // conjunto de símbolos, ou null = tudo
   let expanded = false;
@@ -947,7 +936,7 @@ function buildObjectsFilter(n, hours) {
     if (!matches.length) {
       rows.append(el("div", "obj-empty", "Nenhum deste tipo acima do horizonte."));
     } else if (matches.length > TOP_OBJECTS && !expanded) {
-      const more = el("button", "more", `ver os outros ${matches.length - TOP_OBJECTS}`);
+      const more = el("button", "more", `Ver os outros ${matches.length - TOP_OBJECTS}`);
       more.type = "button";
       more.addEventListener("click", () => { expanded = true; draw(); });
       rows.append(more);
@@ -1002,35 +991,61 @@ function buildDaylightBand(n) {
   const pct = (iso) => iso ? Math.max(0, Math.min(100, (t(iso) - start) / span * 100)) : null;
 
   const box = el("div", "band");
+
+  // Linha de cima: a Lua, quando se põe (fica sozinha, não colide com a janela).
+  const above = el("div", "band-above");
+  const msP = pct(n.moonset);
+  if (msP !== null) {
+    const m = el("span", "band-mark band-mark-moon band-mark-mid", `☾ ${hhmm(n.moonset)}`);
+    m.style.left = msP + "%";
+    above.append(m);
+  }
+
   const track = el("div", "band-track");
   const duskP = pct(n.dusk) ?? 15, dawnP = pct(n.dawn) ?? 85;
   track.style.background =
     `linear-gradient(90deg, #3a2612 0%, #0a0908 ${duskP.toFixed(0)}%, ` +
     `#0a0908 ${dawnP.toFixed(0)}%, #3a2612 100%)`;
 
-  // Lua no céu: fita fina no topo, de quando nasce (ou do início) até se pôr.
+  // Lua no céu: região visível de quando nasce (ou do início) até se pôr; a
+  // aresta direita, na cor da Lua, é o instante em que se põe.
   if (n.moonset || n.moonrise) {
     const up = el("div", "band-moon");
-    const a = pct(n.moonrise) ?? 0, b = pct(n.moonset) ?? 100;
+    const a = pct(n.moonrise) ?? 0, b = msP ?? 100;
     up.style.left = Math.min(a, b) + "%";
-    up.style.width = Math.max(2, Math.abs(b - a)) + "%";
+    up.style.width = Math.max(1, Math.abs(b - a)) + "%";
     track.append(up);
   }
 
-  // Janela recomendada em destaque.
+  // Janela óptima em destaque, com as arestas (início/fim) marcadas.
   const wa = pct(n.window_start), wb = pct(n.window_end);
   if (wa !== null && wb !== null) {
     const win = el("div", "band-window");
-    win.style.left = wa + "%"; win.style.width = Math.max(2, wb - wa) + "%";
+    win.style.left = wa + "%"; win.style.width = Math.max(1.5, wb - wa) + "%";
     track.append(win);
   }
-  box.append(track);
+  box.append(above, track);
 
-  const labels = el("div", "band-labels");
-  labels.append(el("span", null, `☼ ${hhmm(n.sun_set)}`),
-                el("span", "band-mid", n.moonset ? `☾ põe-se ${hhmm(n.moonset)}` : ""),
-                el("span", null, `☼ ${hhmm(n.sun_rise)}`));
-  box.append(labels);
+  // Linha de baixo: pôr e nascer do Sol nas pontas, e as horas da janela óptima
+  // nos seus lugares (a cheio, em destaque).
+  const below = el("div", "band-below");
+  const endMark = (side, text) => {
+    const m = el("span", "band-mark band-mark-sun", text);
+    m.style[side] = "0";
+    below.append(m);
+  };
+  endMark("left", `☀ ${hhmm(n.sun_set)}`);
+  const winMark = (posPct, iso) => {
+    if (posPct === null) return;
+    const m = el("span", "band-mark band-mark-win band-mark-mid", hhmm(iso));
+    m.style.left = posPct + "%";
+    below.append(m);
+  };
+  winMark(wa, n.window_start);
+  winMark(wb, n.window_end);
+  endMark("right", `☀ ${hhmm(n.sun_rise)}`);
+  box.append(below);
+
   return box;
 }
 
@@ -1135,16 +1150,15 @@ function renderDetail(n) {
   headRow.append(el("span", "verdict-head", n.headline));
   if (usable) headRow.append(conditionPill(n));
   body.append(headRow);
-  const reason = n.verdict_reason || n.conditions;
   body.append(el("div", "verdict-sub", usable
-    ? `${weekdayLong(n.date)} · ${hhmm(n.window_start)}–${hhmm(n.window_end)} · ${reason}`
+    ? `${weekdayLong(n.date)} · ${hhmm(n.window_start)}–${hhmm(n.window_end)}`
     : `${weekdayLong(n.date)} · ${n.conditions}`));
 
   // A decisão está à vista; a razão só se a pessoa a quiser, atrás de um clique.
   if (usable) {
     const limits = buildLimits(n, lastData && lastData.light_pollution);
     limits.hidden = true;
-    const why = el("button", "why-toggle", "o que baixa o score");
+    const why = el("button", "why-toggle", "O que baixa o score");
     why.type = "button";
     why.addEventListener("click", () => {
       limits.hidden = !limits.hidden;
@@ -1176,7 +1190,7 @@ function renderDetail(n) {
 
   const raw = buildRaw(hrs);
   raw.hidden = true;
-  const toggle = el("button", "raw-toggle", "tabela completa");
+  const toggle = el("button", "raw-toggle", "Tabela completa");
   toggle.type = "button";
   toggle.addEventListener("click", () => {
     raw.hidden = !raw.hidden;
@@ -1190,7 +1204,7 @@ function renderDetail(n) {
     // Cúpula: o céu visto de baixo, com slider para varrer a noite.
     const wrap = el("div", "sky-wrap");
     wrap.append(buildSkyDome(n, lastData.latitude, lastData.longitude, lastData.timezone),
-                el("p", "sky-cap", "Olhando para cima. Arrasta o slider para ver o céu mover-se ao longo da noite; passa o rato por um objecto para os detalhes."));
+                el("p", "sky-cap", "Arrasta para ver o céu ao longo da noite."));
     detailEl.append(block("O céu nesta noite", wrap));
 
     detailEl.append(block("O que observar, e quando", buildObjectsFilter(n, hrs)));

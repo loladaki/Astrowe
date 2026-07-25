@@ -317,24 +317,31 @@ button { font-family: inherit; cursor: pointer; border-radius: var(--r2); }
 
 /* banda de luz (pôr-do-Sol → noite → nascer) */
 .band { margin-bottom: var(--s5); }
+.band-above, .band-below { position: relative; height: 16px; }
 .band-track {
-  position: relative; height: 22px; border-radius: var(--r1);
+  position: relative; height: 20px; border-radius: var(--r1);
   border: 1px solid var(--border); overflow: hidden;
 }
+/* Lua no céu: região com brilho e a aresta direita (na cor da Lua) = quando se põe */
 .band-moon {
-  position: absolute; top: 0; height: 3px;
-  background: rgba(236, 231, 220, 0.5);
+  position: absolute; top: 0; bottom: 0;
+  background: rgba(236, 231, 220, 0.2);
+  border-right: 2px solid var(--moon);
+  box-shadow: inset -6px 0 8px -4px rgba(236, 231, 220, 0.35);
 }
+/* janela óptima: preenchida e com as arestas (início/fim) em destaque */
 .band-window {
   position: absolute; top: 0; bottom: 0;
-  border: 1.5px solid var(--accent); border-radius: 3px;
   background: var(--accent-soft);
+  border-left: 2px solid var(--accent); border-right: 2px solid var(--accent);
 }
-.band-labels {
-  display: flex; justify-content: space-between; margin-top: var(--s1);
-  font-size: var(--t-xs); color: var(--faint); font-variant-numeric: tabular-nums;
+.band-mark {
+  position: absolute; top: 0; font-size: var(--t-xs);
+  color: var(--faint); font-variant-numeric: tabular-nums; white-space: nowrap;
 }
-.band-mid { color: var(--dim); }
+.band-mark-mid { transform: translateX(-50%); }
+.band-mark-win { color: var(--accent); font-weight: 620; }
+.band-mark-moon { color: var(--moon); font-weight: 620; }
 
 /* cúpula do céu */
 .sky-wrap { display: flex; flex-direction: column; align-items: center; }
@@ -345,15 +352,6 @@ button { font-family: inherit; cursor: pointer; border-radius: var(--r2); }
 .sky-star-lbl { fill: var(--faint); font-size: 8px; font-family: inherit; pointer-events: none; opacity: 0.8; }
 .sky-card { fill: var(--faint); font-size: 11px; font-weight: 600; font-family: inherit; pointer-events: none; }
 .sky-cap { margin: var(--s3) 0 0; font-size: var(--t-xs); color: var(--faint); text-align: center; }
-
-/* legenda das cores dos alvos, por baixo da cúpula */
-.sky-legend {
-  display: flex; flex-wrap: wrap; justify-content: center;
-  gap: var(--s2) var(--s4); margin-top: var(--s3); width: 100%;
-}
-.sky-leg { display: inline-flex; align-items: center; gap: 6px;
-           font-size: var(--t-xs); color: var(--faint); }
-.sky-leg-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
 
 /* slider de tempo por baixo da cúpula */
 .sky-time {
@@ -369,8 +367,13 @@ button { font-family: inherit; cursor: pointer; border-radius: var(--r2); }
 .sky-time-lbl::before {
   content: "🕐 "; font-size: var(--t-sm); opacity: 0.7;
 }
-.sky-time-hint { align-self: center; margin-top: 2px; font-size: var(--t-xs);
-                 color: var(--faint); text-align: center; }
+/* marcadores do início/fim da escuridão total, nas arestas da faixa do slider */
+.sky-marks { position: relative; width: 100%; height: 14px; }
+.sky-mark {
+  position: absolute; top: 0; transform: translateX(-50%);
+  font-size: var(--t-xs); color: var(--accent);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
 .sky-slider {
   width: 100%; -webkit-appearance: none; appearance: none;
   height: 6px; border-radius: var(--pill); background: var(--border-lit);
