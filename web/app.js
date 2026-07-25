@@ -599,7 +599,12 @@ function placeLabel(r) {
 }
 
 async function geocode(name) {
-  const results = await geocodeMany(name, 1);
+  let results = await geocodeMany(name, 1);
+  // O rótulo completo (com distrito e país) não é geocodificável; recua para
+  // só o nome, antes da primeira vírgula.
+  if (!results.length && name.includes(",")) {
+    results = await geocodeMany(name.split(",")[0].trim(), 1);
+  }
   if (!results.length) throw new Error(`Localidade "${name}" não encontrada`);
   const r = results[0];
   rememberCountry(r.country_code);
@@ -1321,6 +1326,10 @@ form.addEventListener("submit", async (e) => {
   const name = placeInput.value.trim();
   if (!name) return;
   closeSuggestions();
+  // Se o texto é o rótulo do local já escolhido, reutiliza-o — o rótulo completo
+  // ("Fundão, Distrito…, PT") não é geocodificável, e re-procurar era o que dava
+  // o "não encontrada". Assim "Ver noites" volta a correr o local escolhido.
+  if (current && name === current.label) { loadForecast(); return; }
   setStatus("A procurar localidade…");
   try {
     current = await geocode(name);
