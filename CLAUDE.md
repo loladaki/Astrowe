@@ -1,6 +1,6 @@
 # Astrowe
 
-Dashboard de observação astronómica. O utilizador introduz uma localização e vê,
+Site de observação astronómica. O utilizador introduz uma localização e vê,
 para as próximas ~7 noites, um **score de observação** por noite — combinando
 nuvens, fase/posição da Lua e a janela de escuridão astronómica.
 

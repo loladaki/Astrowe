@@ -142,7 +142,7 @@ function moonSVG(illumPct, waxing, size = 26) {
     g.append(defs);
     g.append(svg("circle", { cx, cy, r: R, fill: "#14120f",
                              stroke: "var(--border-lit)", "stroke-width": 0.6 }));
-    g.append(svg("path", { d: litPath, fill: "#ece5d3" }));
+    g.append(svg("path", { d: litPath, fill: "var(--moon)" }));
     const craters = svg("g", { "clip-path": `url(#${id}c)` });
     for (const [x, y, r] of CRATERS) {
       craters.append(svg("circle", { cx: x, cy: y, r, fill: "rgba(70,55,32,0.18)" }));
@@ -195,46 +195,165 @@ function symbolSVG(kind, size = 14, color = "var(--dim)") {
   return g;
 }
 
-// Gerador pseudo-aleatório com semente fixa, para o campo de estrelas
-// decorativo ser sempre o mesmo (não salta a cada render).
-function mulberry32(seed) {
-  return function () {
-    seed |= 0; seed = (seed + 0x6d2b79f5) | 0;
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
+/* ---- Astronomia no cliente: posições ao vivo para a cúpula e o slider.
+   Recalcula altura/azimute de objectos e estrelas a qualquer hora da noite,
+   a partir de RA/Dec (as mesmas coordenadas que o backend envia) e da
+   localização. É isto que transforma a cúpula de um instantâneo num céu que
+   roda quando se arrasta o slider. */
+
+// Offset (segundos) de um fuso IANA num instante — trata do horário de verão.
+function tzOffsetSeconds(tz, date) {
+  const dtf = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz, hour12: false, year: "numeric", month: "2-digit",
+    day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit",
+  });
+  const p = {};
+  for (const part of dtf.formatToParts(date)) p[part.type] = part.value;
+  const asUTC = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second);
+  return (asUTC - date.getTime()) / 1000;
 }
 
+// Hora local "naïve" (ISO sem fuso, como vem do Open-Meteo) -> instante UTC.
+function localWallToUTC(wallIso, tz) {
+  const approx = new Date(wallIso + "Z");      // lê a parede como se fosse UTC
+  const off = tzOffsetSeconds(tz, approx);     // offset ~nesse instante
+  return new Date(approx.getTime() - off * 1000);
+}
+
+// Tempo sideral local, em graus (longitude a Este positiva).
+function localSiderealDeg(utcDate, lonDeg) {
+  const JD = utcDate.getTime() / 86400000 + 2440587.5;
+  const D = JD - 2451545.0;
+  const gmst = 280.46061837 + 360.98564736629 * D;
+  return (((gmst + lonDeg) % 360) + 360) % 360;
+}
+
+// (RA horas, Dec graus) + TSL + latitude -> [altura, azimute] (N=0, E=90).
+function altAz(raH, decDeg, lstDeg, latDeg) {
+  const d2r = Math.PI / 180;
+  const H = (lstDeg - raH * 15) * d2r;
+  const dec = decDeg * d2r, lat = latDeg * d2r;
+  const sinAlt = Math.sin(lat) * Math.sin(dec)
+               + Math.cos(lat) * Math.cos(dec) * Math.cos(H);
+  const alt = Math.asin(Math.max(-1, Math.min(1, sinAlt))) / d2r;
+  let az = Math.atan2(Math.sin(H),
+                      Math.cos(H) * Math.sin(lat) - Math.tan(dec) * Math.cos(lat)) / d2r;
+  az = ((az + 180) % 360 + 360) % 360;         // de "a partir do Sul" para N=0, E=90
+  return [alt, az];
+}
+
+const SKY_COMPASS = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
+                     "S", "SSO", "SO", "OSO", "O", "ONO", "NO", "NNO"];
+const skyCompass = (az) => SKY_COMPASS[Math.round((((az % 360) + 360) % 360) / 22.5) % 16];
+// Kasten-Young, como no backend: 1.0 no zénite, 2.0 a ~30°.
+const skyAirmass = (alt) =>
+  alt <= 0 ? null : 1 / (Math.sin(alt * Math.PI / 180)
+                         + 0.50572 * Math.pow(alt + 6.07995, -1.6364));
+
+// As ~90 estrelas mais brilhantes (mag ≲ 3), coordenadas J2000 [RA h, Dec °,
+// magnitude, nome]. Chega para se reconhecerem as constelações principais na
+// cúpula; as ténues ficam de fora de propósito, para não virar sopa de pontos.
+const BRIGHT_STARS = [
+  [6.7525, -16.716, -1.46, "Sirius"], [6.3992, -52.696, -0.74, "Canopus"],
+  [14.6600, -60.833, -0.27, "Rigil Kent."], [14.2610, 19.182, -0.05, "Arcturus"],
+  [18.6156, 38.784, 0.03, "Vega"], [5.2782, 45.998, 0.08, "Capella"],
+  [5.2423, -8.202, 0.13, "Rigel"], [7.6550, 5.225, 0.34, "Procyon"],
+  [1.6286, -57.237, 0.46, "Achernar"], [5.9195, 7.407, 0.50, "Betelgeuse"],
+  [14.0637, -60.373, 0.61, "Hadar"], [19.8464, 8.868, 0.77, "Altair"],
+  [12.4433, -63.099, 0.77, "Acrux"], [4.5987, 16.509, 0.85, "Aldebaran"],
+  [13.4199, -11.161, 1.04, "Spica"], [16.4901, -26.432, 1.09, "Antares"],
+  [7.7553, 28.026, 1.14, "Pollux"], [22.9608, -29.622, 1.16, "Fomalhaut"],
+  [20.6905, 45.280, 1.25, "Deneb"], [12.7953, -59.689, 1.25, "Mimosa"],
+  [10.1395, 11.967, 1.35, "Regulus"], [6.9770, -28.972, 1.50, "Adhara"],
+  [7.5767, 31.888, 1.58, "Castor"], [17.5601, -37.104, 1.62, "Shaula"],
+  [12.5194, -57.113, 1.63, "Gacrux"], [5.4189, 6.350, 1.64, "Bellatrix"],
+  [5.4382, 28.608, 1.65, "Elnath"], [9.2200, -69.717, 1.68, "Miaplacidus"],
+  [5.6036, -1.202, 1.69, "Alnilam"], [5.6793, -1.943, 1.74, "Alnitak"],
+  [22.1372, -46.961, 1.74, "Alnair"], [12.9004, 55.960, 1.77, "Alioth"],
+  [11.0621, 61.751, 1.79, "Dubhe"], [3.4054, 49.861, 1.79, "Mirfak"],
+  [7.1399, -26.393, 1.83, "Wezen"], [18.4029, -34.385, 1.85, "Kaus Aus."],
+  [8.3752, -59.510, 1.86, "Avior"], [13.7923, 49.313, 1.86, "Alkaid"],
+  [17.6220, -42.998, 1.87, "Sargas"], [5.9922, 44.947, 1.90, "Menkalinan"],
+  [16.8110, -69.028, 1.91, "Atria"], [6.6285, 16.399, 1.93, "Alhena"],
+  [20.4275, -56.735, 1.94, "Peacock"], [6.3783, -17.956, 1.98, "Mirzam"],
+  [9.4597, -8.659, 1.98, "Alphard"], [2.5303, 89.264, 1.98, "Polaris"],
+  [2.1195, 23.462, 2.00, "Hamal"], [10.3328, 19.842, 2.01, "Algieba"],
+  [0.7265, -17.987, 2.04, "Diphda"], [5.7958, -9.670, 2.06, "Saiph"],
+  [18.9211, -26.297, 2.05, "Nunki"], [0.1398, 29.091, 2.06, "Alpheratz"],
+  [1.1622, 35.621, 2.07, "Mirach"], [17.5822, 12.560, 2.08, "Rasalhague"],
+  [14.8451, 74.156, 2.08, "Kochab"], [3.1361, 40.956, 2.09, "Algol"],
+  [2.0650, 42.330, 2.10, "Almach"], [11.8177, 14.572, 2.11, "Denebola"],
+  [8.0597, -40.003, 2.21, "Naos"], [13.3987, 54.925, 2.23, "Mizar"],
+  [5.5334, -0.299, 2.23, "Mintaka"], [20.3705, 40.257, 2.23, "Sadr"],
+  [0.6751, 56.537, 2.24, "Schedar"], [0.1529, 59.150, 2.28, "Caph"],
+  [21.7364, 9.875, 2.40, "Enif"], [11.0307, 56.383, 2.37, "Merak"],
+  [0.9451, 60.717, 2.15, "Gamma Cas"], [23.0629, 28.083, 2.44, "Scheat"],
+  [23.0793, 15.205, 2.49, "Markab"], [11.8972, 53.695, 2.44, "Phecda"],
+  [1.4303, 60.235, 2.68, "Ruchbah"], [19.5121, 27.960, 3.05, "Albireo"],
+  [3.7914, 24.105, 2.87, "Alcyone"], [2.1191, 34.987, 2.64, "Sheratan"],
+  [16.0056, -22.622, 2.56, "Dschubba"], [17.7204, -37.104, 2.29, "Lesath"],
+];
+
 /**
- * Cúpula do céu: a vista de quem olha para cima. Zénite no centro, horizonte
- * na borda, Norte em cima e Este à esquerda (é assim numa carta vista de baixo,
- * não num mapa). A Lua, os planetas e os melhores objectos plotados nas
- * posições reais (altura e azimute) à hora recomendada. É a peça que mostra o
- * céu em vez de o listar.
+ * Cúpula do céu: a vista de quem olha para cima, e que RODA com a noite.
+ * Zénite no centro, horizonte na borda, Norte em cima e Este à esquerda (é
+ * assim numa carta vista de baixo, não num mapa). As estrelas brilhantes, a
+ * Lua, os planetas e os melhores objectos são plotados nas posições reais
+ * (altura e azimute). O slider por baixo varre a noite: arrasta e vê o céu
+ * mover-se, os alvos subirem e porem-se. É a peça que mostra o céu em vez de
+ * o listar.
+ *
+ * As posições recalculam-se no cliente a partir de RA/Dec (as mesmas
+ * coordenadas que o backend envia) — ver altAz(). A meio da janela recomendada
+ * batem com o resto da página, a menos de uns décimos de grau da precessão,
+ * invisíveis na cúpula. A Lua é tratada como estrela fixa nas coordenadas do
+ * instante médio, por isso deriva alguns graus ao longo da noite.
  */
-function buildSkyDome(n) {
-  const objs = n.objects.filter((o) => o.altitude_deg > 0);
+function buildSkyDome(n, lat, lon, tz) {
   const R = 150, cx = 160, cy = 160, S = 320;
   const wrap = el("div", "sky-dome");
   const box = svg("svg", { viewBox: `0 0 ${S} ${S}`, class: "sky" });
 
-  // popup com os dados do objecto ao passar o rato / tocar
+  // ---- moldura estática (desenhada uma vez) ----
+  box.append(svg("circle", { cx, cy, r: R, fill: "#08070c",
+                             stroke: "var(--border-lit)", "stroke-width": 1 }));
+  for (const a of [30, 60]) {   // anéis de altura
+    box.append(svg("circle", { cx, cy, r: ((90 - a) / 90 * R).toFixed(1), fill: "none",
+                               stroke: "var(--border)", "stroke-width": 0.6, "stroke-dasharray": "2 4" }));
+  }
+  box.append(svg("line", { x1: cx, y1: cy - R, x2: cx, y2: cy + R, stroke: "var(--border)", "stroke-width": 0.5 }),
+             svg("line", { x1: cx - R, y1: cy, x2: cx + R, y2: cy, stroke: "var(--border)", "stroke-width": 0.5 }));
+
+  // camada dinâmica: tudo o que se move quando se arrasta o slider
+  const layer = svg("g", { class: "sky-dynamic" });
+  box.append(layer);
+
+  // rótulos cardeais (estáticos, por cima da camada dinâmica)
+  const card = (t, x, y, anchor, baseline) => {
+    const e = svg("text", { x, y, "text-anchor": anchor, class: "sky-card" });
+    if (baseline) e.setAttribute("dominant-baseline", baseline);
+    e.textContent = t; box.append(e);
+  };
+  card("N", cx, cy - R - 5, "middle", "auto");
+  card("S", cx, cy + R + 13, "middle", "auto");
+  card("E", cx - R - 6, cy, "end", "middle");
+  card("O", cx + R + 6, cy, "start", "middle");
+
+  // ---- popup: dados ao vivo, recalculados à hora do slider ----
   const pop = el("div", "sky-pop");
   pop.hidden = true;
-  const showPop = (o, x, y) => {
+  const showPop = (o, cur) => {
     pop.innerHTML = "";
     const a = el("a", "sky-pop-name", o.name);
     a.href = o.url; a.target = "_blank"; a.rel = "noopener";
     pop.append(a);
     const bits = [o.kind];
-    if (o.magnitude !== null) bits.push(`mag ${o.magnitude}`);
+    if (o.magnitude !== null && o.magnitude !== undefined) bits.push(`mag ${o.magnitude}`);
     pop.append(el("div", "sky-pop-kind", bits.join(" · ")));
-    const alt = `${Math.round(o.altitude_deg)}° acima do horizonte, a ${o.direction}`;
-    pop.append(el("div", "sky-pop-line", alt));
-    if (o.airmass !== null) {
-      pop.append(el("div", "sky-pop-line", `airmass ${o.airmass.toFixed(1)}`));
-    }
+    pop.append(el("div", "sky-pop-line",
+      `${Math.round(cur.alt)}° acima do horizonte, a ${skyCompass(cur.az)}`));
+    const am = skyAirmass(cur.alt);
+    if (am !== null) pop.append(el("div", "sky-pop-line", `airmass ${am.toFixed(1)}`));
     if (o.transit_time) {
       pop.append(el("div", "sky-pop-line",
         `mais alto às ${hhmm(o.transit_time)} (${Math.round(o.max_altitude_deg)}°)`));
@@ -242,12 +361,11 @@ function buildSkyDome(n) {
     if (o.washed_out) pop.append(el("div", "sky-pop-warn", "apagado pelo luar"));
     // posição em % do quadrado; limitada para o popup não sair da cúpula (e
     // não criar scroll no telemóvel). Acima do ponto, ou abaixo se no topo.
-    pop.style.left = Math.max(20, Math.min(80, x / S * 100)).toFixed(1) + "%";
-    pop.style.top = (y / S * 100).toFixed(1) + "%";
-    pop.classList.toggle("below", y < S * 0.32);
+    pop.style.left = Math.max(20, Math.min(80, cur.x / S * 100)).toFixed(1) + "%";
+    pop.style.top = (cur.y / S * 100).toFixed(1) + "%";
+    pop.classList.toggle("below", cur.y < S * 0.32);
     pop.hidden = false;
   };
-  // pequeno atraso ao esconder, para se conseguir chegar ao popup (e ao link)
   let hideTimer;
   const hidePop = () => { hideTimer = setTimeout(() => { pop.hidden = true; }, 140); };
   const keepPop = () => clearTimeout(hideTimer);
@@ -255,86 +373,112 @@ function buildSkyDome(n) {
   pop.addEventListener("mouseleave", () => { pop.hidden = true; });
   box.addEventListener("click", () => { pop.hidden = true; });   // tocar no fundo fecha
 
-  // disco do céu
-  box.append(svg("circle", { cx, cy, r: R, fill: "#08070c",
-                             stroke: "var(--border-lit)", "stroke-width": 1 }));
-  // anéis de altura (30°, 60°)
-  for (const alt of [30, 60]) {
-    box.append(svg("circle", { cx, cy, r: ((90 - alt) / 90 * R).toFixed(1), fill: "none",
-                               stroke: "var(--border)", "stroke-width": 0.6, "stroke-dasharray": "2 4" }));
-  }
-  // cruz cardinal ténue
-  box.append(svg("line", { x1: cx, y1: cy - R, x2: cx, y2: cy + R, stroke: "var(--border)", "stroke-width": 0.5 }),
-             svg("line", { x1: cx - R, y1: cy, x2: cx + R, y2: cy, stroke: "var(--border)", "stroke-width": 0.5 }));
-
-  // campo de estrelas decorativo (não são estrelas reais — textura de céu)
-  const rng = mulberry32(1337);
-  for (let i = 0; i < 130; i++) {
-    const ang = rng() * 2 * Math.PI, rr = Math.sqrt(rng()) * (R - 2);
-    box.append(svg("circle", {
-      cx: (cx + rr * Math.cos(ang)).toFixed(1), cy: (cy + rr * Math.sin(ang)).toFixed(1),
-      r: (rng() * 0.8 + 0.25).toFixed(2),
-      fill: `rgba(236,231,220,${(0.08 + rng() * 0.22).toFixed(2)})`,
-    }));
-  }
-
-  // altura+azimute -> ponto (N em cima, E à esquerda)
+  // altura+azimute -> ponto no disco (N em cima, E à esquerda)
   const pos = (alt, az) => {
     const r = (90 - alt) / 90 * R, A = az * Math.PI / 180;
     return [cx - r * Math.sin(A), cy - r * Math.cos(A)];
   };
 
-  // objectos, do mais fraco para o mais forte (os brilhantes por cima)
-  const ordered = [...objs].sort((a, b) =>
-    (b.magnitude ?? -9) - (a.magnitude ?? -9));
-  let labelled = 0;
-  for (const o of ordered) {
-    const [x, y] = pos(o.altitude_deg, o.azimuth_deg);
-    const isMoon = o.kind === "satélite", isPlanet = o.kind === "planeta";
-    let dot;
-    if (isMoon) {
-      dot = svg("circle", { cx: x, cy: y, r: 6, fill: "#ece5d3",
-                            stroke: "rgba(60,48,28,0.4)", "stroke-width": 0.6 });
-    } else if (isPlanet) {
-      dot = svg("circle", { cx: x, cy: y, r: 3.4, fill: "var(--accent)" });
-    } else {
-      const r = o.magnitude !== null ? Math.max(1.4, 4 - o.magnitude * 0.4) : 2;
-      dot = svg("circle", { cx: x, cy: y, r: r.toFixed(1), fill: "var(--text)",
-                            opacity: o.washed_out ? 0.35 : 0.9 });
-    }
-    box.append(dot);
+  // objectos ordenados do mais fraco para o mais forte (os brilhantes por cima)
+  const ordered = [...n.objects].sort((a, b) => (b.magnitude ?? -9) - (a.magnitude ?? -9));
 
-    // rotular a Lua, os planetas e os 2 melhores de céu profundo
-    if (isMoon || isPlanet || (labelled < 2 && !o.washed_out)) {
-      if (!isMoon && !isPlanet) labelled++;
-      const lx = x + 7, anchor = lx > cx + R - 30 ? "end" : "start";
-      const label = svg("text", { x: anchor === "end" ? x - 7 : lx, y: y + 3,
-                                  "text-anchor": anchor, class: "sky-lbl" });
-      label.textContent = o.name;
-      box.append(label);
+  // ---- desenhar o céu a um instante (UTC) ----
+  function draw(utcDate) {
+    while (layer.firstChild) layer.removeChild(layer.firstChild);
+    pop.hidden = true;
+    const lst = localSiderealDeg(utcDate, lon);
+
+    // estrelas reais de fundo (só as acima do horizonte)
+    for (const [raH, decDeg, mag, name] of BRIGHT_STARS) {
+      const [alt, az] = altAz(raH, decDeg, lst, lat);
+      if (alt <= 0) continue;
+      const [x, y] = pos(alt, az);
+      const r = Math.max(0.5, 1.9 - mag * 0.42);
+      const op = Math.max(0.25, 0.95 - mag * 0.16);
+      layer.append(svg("circle", { cx: x.toFixed(1), cy: y.toFixed(1), r: r.toFixed(2),
+                                   fill: "var(--star)", opacity: op.toFixed(2) }));
+      // nomear só as mais brilhantes e bem acima do horizonte, para orientar
+      if (mag < 1.4 && alt > 12) {
+        const t = svg("text", { x: (x + 4).toFixed(1), y: (y - 3).toFixed(1), class: "sky-star-lbl" });
+        t.textContent = name; layer.append(t);
+      }
     }
 
-    // área de toque maior e invisível, para os pontos pequenos serem fáceis
-    const hit = svg("circle", { cx: x, cy: y, r: 11, fill: "transparent", class: "sky-hit" });
-    hit.addEventListener("mouseenter", () => { keepPop(); showPop(o, x, y); });
-    hit.addEventListener("mouseleave", hidePop);
-    hit.addEventListener("click", (e) => { e.stopPropagation(); showPop(o, x, y); });
-    box.append(hit);
+    // objectos recomendados, nas posições ao vivo
+    let labelled = 0;
+    for (const o of ordered) {
+      const [alt, az] = altAz(o.ra_h, o.dec_deg, lst, lat);
+      if (alt <= 0) continue;   // pôs-se: desaparece da cúpula
+      const [x, y] = pos(alt, az);
+      const isMoon = o.kind === "satélite", isPlanet = o.kind === "planeta";
+      let dot;
+      if (isMoon) {
+        dot = svg("circle", { cx: x, cy: y, r: 6, fill: "var(--moon)",
+                              stroke: "rgba(60,48,28,0.4)", "stroke-width": 0.6 });
+      } else if (isPlanet) {
+        dot = svg("circle", { cx: x, cy: y, r: 3.4, fill: "var(--accent)" });
+      } else {
+        const rr = o.magnitude !== null ? Math.max(1.4, 4 - o.magnitude * 0.4) : 2;
+        dot = svg("circle", { cx: x, cy: y, r: rr.toFixed(1), fill: "var(--text)",
+                              opacity: o.washed_out ? 0.35 : 0.9 });
+      }
+      layer.append(dot);
+
+      // rotular a Lua, os planetas e os 2 melhores de céu profundo
+      if (isMoon || isPlanet || (labelled < 2 && !o.washed_out)) {
+        if (!isMoon && !isPlanet) labelled++;
+        const lx = x + 7, anchor = lx > cx + R - 30 ? "end" : "start";
+        const label = svg("text", { x: anchor === "end" ? x - 7 : lx, y: y + 3,
+                                    "text-anchor": anchor, class: "sky-lbl" });
+        label.textContent = o.name; layer.append(label);
+      }
+
+      // área de toque maior e invisível, para os pontos pequenos serem fáceis
+      const cur = { x, y, alt, az };
+      const hit = svg("circle", { cx: x, cy: y, r: 11, fill: "transparent", class: "sky-hit" });
+      hit.addEventListener("mouseenter", () => { keepPop(); showPop(o, cur); });
+      hit.addEventListener("mouseleave", hidePop);
+      hit.addEventListener("click", (e) => { e.stopPropagation(); showPop(o, cur); });
+      layer.append(hit);
+    }
   }
 
-  // rótulos cardeais
-  const card = (t, x, y, anchor, baseline) => {
-    const el2 = svg("text", { x, y, "text-anchor": anchor, class: "sky-card" });
-    if (baseline) el2.setAttribute("dominant-baseline", baseline);
-    el2.textContent = t;
-    box.append(el2);
-  };
-  card("N", cx, cy - R - 5, "middle", "auto");
-  card("S", cx, cy + R + 13, "middle", "auto");
-  card("E", cx - R - 6, cy, "end", "middle");
-  card("O", cx + R + 6, cy, "start", "middle");
-
   wrap.append(box, pop);
+
+  // ---- slider de tempo: varre a noite observável ----
+  const t0 = localWallToUTC(n.night_start || n.window_start, tz).getTime();
+  const t1 = localWallToUTC(n.night_end || n.window_end, tz).getTime();
+  const tMid = (localWallToUTC(n.window_start, tz).getTime()
+              + localWallToUTC(n.window_end, tz).getTime()) / 2;
+
+  // Sem noite válida (caso raro): desenha só o instante médio, sem slider.
+  if (!isFinite(t0) || !isFinite(t1) || t1 <= t0) {
+    draw(new Date(isFinite(tMid) ? tMid : t0));
+    return wrap;
+  }
+
+  const control = el("div", "sky-time");
+  const label = el("div", "sky-time-lbl");
+  const fmt = new Intl.DateTimeFormat("pt-PT",
+    { timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false });
+  const slider = el("input", "sky-slider");
+  slider.type = "range";
+  slider.min = String(Math.round(t0));
+  slider.max = String(Math.round(t1));
+  slider.step = String(5 * 60 * 1000);   // passos de 5 minutos
+  slider.value = String(Math.round(Math.min(Math.max(tMid, t0), t1)));
+  slider.setAttribute("aria-label", "Hora da noite");
+
+  const update = () => {
+    const d = new Date(Number(slider.value));
+    label.textContent = fmt.format(d);
+    draw(d);
+  };
+  slider.addEventListener("input", update);
+  control.append(label, slider);
+  wrap.append(control);
+
+  update();   // primeira pintura, à hora recomendada
   return wrap;
 }
 
@@ -999,12 +1143,10 @@ function renderDetail(n) {
   detailEl.append(block("A noite hora a hora", meteo, toggle));
 
   if (n.objects.length) {
-    // Cúpula: o céu a meio da janela recomendada, visto de baixo.
-    const midT = new Date((Date.parse(n.window_start) + Date.parse(n.window_end)) / 2);
-    const midLbl = `${String(midT.getHours()).padStart(2, "0")}:${String(midT.getMinutes()).padStart(2, "0")}`;
+    // Cúpula: o céu visto de baixo, com slider para varrer a noite.
     const wrap = el("div", "sky-wrap");
-    wrap.append(buildSkyDome(n),
-                el("p", "sky-cap", `O céu por volta das ${midLbl}, olhando para cima. Passa o rato para ver cada objecto.`));
+    wrap.append(buildSkyDome(n, lastData.latitude, lastData.longitude, lastData.timezone),
+                el("p", "sky-cap", "Olhando para cima. Arrasta o slider para ver o céu mover-se ao longo da noite; passa o rato por um objecto para os detalhes."));
     detailEl.append(block("O céu nesta noite", wrap));
 
     detailEl.append(block("O que observar, e quando", buildObjectsFilter(n, hrs)));
@@ -1321,3 +1463,25 @@ modeBtns.forEach((btn) => {
 });
 
 renderSaved();
+
+/* ------------------------------------------------- modo vermelho (visão nocturna)
+   O vermelho preserva a adaptação ao escuro dos olhos — é o que se usa no
+   terreno. Recolore o site inteiro e fica guardado entre visitas. */
+
+const RED_KEY = "astrowe.redmode";
+const redBtn = $("red-btn");
+
+function applyRedMode(on) {
+  document.documentElement.classList.toggle("red", on);
+  redBtn.setAttribute("aria-pressed", on ? "true" : "false");
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute("content", on ? "#070000" : "#060607");
+}
+
+redBtn.addEventListener("click", () => {
+  const on = !document.documentElement.classList.contains("red");
+  applyRedMode(on);
+  try { localStorage.setItem(RED_KEY, on ? "1" : "0"); } catch { /* ignorar */ }
+});
+
+try { applyRedMode(localStorage.getItem(RED_KEY) === "1"); } catch { /* ignorar */ }

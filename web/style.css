@@ -32,6 +32,9 @@
   --bg-poor: rgba(207, 115, 89, 0.12);
   --accent-soft: rgba(224, 152, 94, 0.14);
 
+  --star: #f4efe4;   /* estrelas reais na cúpula */
+  --moon: #ece5d3;   /* disco iluminado da Lua */
+
   --t-xs: 0.72rem;
   --t-sm: 0.8rem;
   --t-md: 0.9rem;
@@ -42,6 +45,41 @@
   --label-w: 88px;
   --cols: 6;
 }
+
+/* Modo visão nocturna: o site inteiro em tons de vermelho, que não estraga a
+   adaptação ao escuro. Só se recoloreiam variáveis — sem filtros na vista
+   principal, para o slider da cúpula continuar fluido. */
+html.red {
+  --bg: #070000;
+  --surface: #150202;
+  --surface-2: #200404;
+  --border: #3a0e0e;
+  --border-lit: #571818;
+
+  --text: #ff6152;
+  --dim: #cc4f42;
+  --faint: #7f2f28;
+
+  --accent: #ff3d29;
+  --good: #ff7256;
+  --ok: #ff5540;
+  --poor: #ff2f1c;
+
+  --bg-good: rgba(255, 90, 70, 0.12);
+  --bg-ok:   rgba(255, 80, 60, 0.12);
+  --bg-poor: rgba(255, 60, 45, 0.12);
+  --accent-soft: rgba(255, 60, 40, 0.16);
+
+  --star: #ff7a66;
+  --moon: #ff8a72;
+}
+html.red body::before {
+  background: radial-gradient(ellipse 70% 100% at 50% 0%,
+              rgba(255, 60, 40, 0.05), transparent 70%);
+}
+/* Os tiles do mapa são raster e não seguem as variáveis — filtram-se para
+   vermelho (o mapa só se abre por instantes ao escolher um local). */
+html.red #map { filter: grayscale(1) brightness(0.55) sepia(1) saturate(4) hue-rotate(-35deg); }
 
 * { box-sizing: border-box; }
 
@@ -82,6 +120,31 @@ a { color: var(--accent); }
 .brand { text-align: center; margin-bottom: var(--s5); }
 .brand h1 { margin: 0; font-size: 1.9rem; font-weight: 650; letter-spacing: -0.02em; }
 .tagline { margin: var(--s1) 0 0; color: var(--dim); font-size: var(--t-md); }
+
+/* Interruptor de visão nocturna, canto superior direito */
+.red-toggle {
+  position: absolute; top: var(--s5); right: var(--s5);
+  display: inline-flex; align-items: center; gap: var(--s2);
+  padding: var(--s2) var(--s3);
+  border: 1px solid var(--border); border-radius: var(--pill);
+  background: var(--surface); color: var(--dim);
+  font-size: var(--t-xs); font-weight: 600;
+}
+.red-toggle:hover { border-color: var(--border-lit); color: var(--text); }
+.red-dot {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: #b23; box-shadow: 0 0 0 2px rgba(200, 40, 30, 0.18);
+}
+.red-toggle[aria-pressed="true"] {
+  border-color: var(--accent); color: var(--text);
+  background: var(--accent-soft);
+}
+.red-toggle[aria-pressed="true"] .red-dot {
+  background: var(--accent); box-shadow: 0 0 8px var(--accent);
+}
+@media (max-width: 560px) {
+  .red-toggle { position: static; margin: var(--s3) auto 0; }
+}
 
 /* ---------------------------------------------------- controlos */
 
@@ -272,8 +335,31 @@ button { font-family: inherit; cursor: pointer; border-radius: var(--r2); }
 .sky { display: block; width: 100%; height: auto; overflow: visible; }
 .sky-hit { cursor: pointer; }
 .sky-lbl { fill: var(--dim); font-size: 9px; font-family: inherit; pointer-events: none; }
+.sky-star-lbl { fill: var(--faint); font-size: 8px; font-family: inherit; pointer-events: none; opacity: 0.8; }
 .sky-card { fill: var(--faint); font-size: 11px; font-weight: 600; font-family: inherit; pointer-events: none; }
 .sky-cap { margin: var(--s3) 0 0; font-size: var(--t-xs); color: var(--faint); text-align: center; }
+
+/* slider de tempo por baixo da cúpula */
+.sky-time { width: 100%; margin-top: var(--s3); display: flex; flex-direction: column;
+            align-items: center; gap: var(--s2); }
+.sky-time-lbl {
+  font-variant-numeric: tabular-nums; font-size: var(--t-md);
+  font-weight: 650; color: var(--text); letter-spacing: 0.02em;
+}
+.sky-slider {
+  width: 100%; -webkit-appearance: none; appearance: none;
+  height: 4px; border-radius: var(--pill); background: var(--border-lit); outline: none;
+}
+.sky-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; width: 16px; height: 16px;
+  border: none; border-radius: 50%; background: var(--accent); cursor: pointer;
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+.sky-slider::-moz-range-thumb {
+  width: 16px; height: 16px; border: none; border-radius: 50%;
+  background: var(--accent); cursor: pointer;
+}
+.sky-slider:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 4px var(--accent-soft), 0 0 0 6px var(--accent); }
 
 /* popup de objecto na cúpula */
 .sky-pop {
