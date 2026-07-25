@@ -1567,9 +1567,79 @@ try { applyRedMode(localStorage.getItem(RED_KEY) === "1"); } catch { /* ignorar 
 // escrevê-los — deixo o esqueleto.
 const PAGES = {
   howto: { title: "Como usar", html:
-    `<p>Secção a preencher: um guia rápido de como ler o score, a janela e a cúpula.</p>` },
+    `<p>O Astrowe responde a uma pergunta: <strong>das próximas noites, qual vale a
+        pena?</strong> Em três passos:</p>
+     <h3>1. Escolhe onde e o que</h3>
+     <p>Escreve a localização (ou usa o 📍 para a tua, ou o 🗺 para escolher no
+        mapa). Depois escolhe o tipo de observação: <strong>Céu profundo</strong>
+        (galáxias, nebulosas — exige escuridão) ou <strong>Planetas e Lua</strong>
+        (basta o Sol posto; manda o seeing).</p>
+     <h3>2. Lê a tira de noites</h3>
+     <p>Cada noite tem um score de 0 a 100 e a fase da Lua. A melhor fica
+        destacada. Clica numa para ver o detalhe. Depois da meia-noite, a noite a
+        decorrer aparece como <strong>Agora</strong>, só com as horas que faltam.</p>
+     <h3>3. Vê o detalhe</h3>
+     <ul>
+       <li><strong>Veredicto</strong> — a resposta em frase, e "o que baixa o score".</li>
+       <li><strong>Banda</strong> — a noite de relance: a janela óptima destacada e
+           quando a Lua se põe.</li>
+       <li><strong>Condições</strong> — nuvens, orvalho, temperatura, Lua, hora a hora.</li>
+       <li><strong>A cúpula</strong> — o céu visto de baixo; arrasta o slider para o
+           ver mover-se ao longo da noite.</li>
+       <li><strong>O que observar</strong> — os alvos, quando estão no seu melhor,
+           com a cor a dizer quão alto estão (verde/amarelo/apagado).</li>
+     </ul>
+     <p>Podes <strong>guardar locais</strong> e <strong>compará-los</strong> noite a
+        noite. E o <strong>modo vermelho</strong> recolore o site para não estragar
+        a tua visão nocturna no terreno.</p>` },
   faq: { title: "Perguntas frequentes", html:
-    `<p>Secção a preencher com as perguntas mais comuns.</p>` },
+    `<h3>O que é o score e como é calculado?</h3>
+     <p>Um número de 0 a 100 por noite. Combina, hora a hora, as nuvens por camada,
+        a fase e altura da Lua, a transparência (secura do ar), o seeing (turbulência
+        alta) e a poluição luminosa do local. Não faz a média da noite — procura a
+        melhor janela contígua de horas. Os números crus estão na "Tabela completa".</p>
+     <h3>Porque tem a mesma noite scores diferentes em "Céu profundo" e "Planetas e Lua"?</h3>
+     <p>Usam pesos e janelas diferentes. Céu profundo exige escuridão astronómica e a
+        Lua penaliza muito. Planetas veem-se logo no crepúsculo e a Lua quase não
+        conta — aí o que decide é o seeing.</p>
+     <h3>O que é a janela óptima?</h3>
+     <p>O troço de horas com melhor qualidade seguida — a melhor altura para observar
+        nessa noite. Aparece destacada na banda e nas horas.</p>
+     <h3>Porque muda o score de um dia para o outro?</h3>
+     <p>A previsão meteorológica atualiza-se. A mesma noite, vista com mais dias de
+        antecedência, é menos fiável.</p>
+     <h3>Preciso de telescópio?</h3>
+     <p>Não necessariamente. O score é sobre as condições do céu — serve para olho nu,
+        binóculos ou telescópio. A Lua, os planetas e os chuveiros de meteoros veem-se
+        sem qualquer equipamento.</p>
+     <h3>O que querem dizer as cores dos objetos?</h3>
+     <p>Verde = no melhor (acima de 50° de altura), amarelo = utilizável (30–50°),
+        apagado = baixo demais (menos de 30°). Quanto mais alto, menos atmosfera
+        atravessas.</p>
+     <h3>Um objeto está no céu mas não tem barra em "O que observar". Porquê?</h3>
+     <p>As barras só começam aos 30° de altura — abaixo disso não vale a pena apontar
+        o telescópio. Na cúpula vês o objeto mesmo rasteiro; nas barras só quando sobe.</p>
+     <h3>De onde vêm os dados?</h3>
+     <p>Meteorologia do <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a>;
+        Sol, Lua e planetas calculados com o <a href="https://rhodesmill.org/skyfield/" target="_blank" rel="noopener">Skyfield</a>;
+        poluição luminosa do <a href="https://www.lightpollutionmap.info" target="_blank" rel="noopener">lightpollutionmap.info</a>;
+        mapa do OpenStreetMap. Ver os <button type="button" class="link-btn" data-page="ack">Agradecimentos</button>.</p>
+     <h3>Quantas noites mostra e que fiabilidade têm?</h3>
+     <p>As próximas ~7 noites. Como qualquer previsão, as primeiras são mais fiáveis;
+        a partir de 4–5 dias é indicativa.</p>
+     <h3>Porque é que a poluição luminosa às vezes não aparece?</h3>
+     <p>Esse fator precisa de uma chave de API pessoal. Sem ela o site funciona na
+        mesma, apenas sem esse fator — e avisa, porque os scores ficam otimistas em
+        zonas urbanas.</p>
+     <h3>Porque é que a primeira visita do dia demora a carregar?</h3>
+     <p>O site corre num plano gratuito que adormece ao fim de 15 minutos sem uso. A
+        primeira visita pode levar ~30–50 s a acordar; depois fica rápido.</p>
+     <h3>Onde ficam os meus locais guardados?</h3>
+     <p>No teu próprio browser (armazenamento local), não num servidor nosso. São
+        privados e podes apagá-los quando quiseres.</p>
+     <h3>Para que serve o modo vermelho?</h3>
+     <p>Recolore o site em tons de vermelho para não estragar a adaptação dos olhos ao
+        escuro — é a luz que se usa no terreno para não "cegar" entre observações.</p>` },
   links: { title: "Ligações úteis", html:
     `<p>Recursos que ajudam a planear e a tirar mais partido das noites:</p>
      <ul>
@@ -1597,13 +1667,72 @@ const PAGES = {
      </ul>
      <p class="footer-muted">Respeita os termos de cada fonte.</p>` },
   cookies: { title: "Política de cookies", html:
-    `<p><em>A preencher.</em> Vai descrever que armazenamento/cookies o site usa
-     (por agora, só armazenamento local para as tuas preferências e locais
-     guardados; no futuro, cookies de anúncios após consentimento).</p>` },
+    `<p class="footer-muted"><em>Rascunho — revê e adapta antes de publicar. Não é
+        aconselhamento jurídico.</em></p>
+     <h3>O que usamos hoje</h3>
+     <p>O Astrowe usa <strong>armazenamento local</strong> do teu browser (não são
+        cookies enviados a servidores) para guardar as tuas preferências: o modo
+        vermelho, o país preferido, os locais que guardas e a tua escolha de
+        consentimento. São essenciais ao funcionamento e ficam apenas no teu
+        dispositivo.</p>
+     <h3>Cookies de terceiros (publicidade)</h3>
+     <p>Quando a publicidade for ativada, o <strong>Google AdSense</strong> pode usar
+        cookies para mostrar e medir anúncios. Só são carregados <strong>depois de
+        aceitares</strong> no banner de consentimento. Se escolheres "Só essenciais",
+        não são usados.</p>
+     <h3>Como controlar</h3>
+     <p>Podes recusar os não essenciais no banner, apagar o armazenamento nas
+        definições do teu browser, e gerir as tuas opções de anúncios em
+        <a href="https://myadcenter.google.com" target="_blank" rel="noopener">myadcenter.google.com</a>.</p>
+     <p class="footer-muted">Última atualização: <em>[data a preencher]</em>.</p>` },
   privacy: { title: "Política de privacidade", html:
-    `<p><em>A preencher.</em> Vai explicar que dados se tratam e como.</p>` },
+    `<p class="footer-muted"><em>Rascunho — revê e adapta antes de publicar. Não é
+        aconselhamento jurídico.</em></p>
+     <h3>Quem é o responsável</h3>
+     <p>Responsável pelo tratamento: <em>[o teu nome ou entidade]</em>, contactável em
+        <em>[o teu email]</em>.</p>
+     <h3>Que dados tratamos</h3>
+     <p>Não é preciso registo nem conta. A <strong>localização</strong> que escolhes é
+        usada para calcular a previsão — é enviada ao Open-Meteo (meteorologia) e ao
+        nosso servidor, que faz os cálculos astronómicos e devolve o resultado. Não
+        associamos essa localização à tua identidade nem guardamos um histórico teu.
+        Os <strong>locais que guardas</strong> e as <strong>preferências</strong> ficam
+        apenas no teu browser (armazenamento local), não nos nossos servidores.</p>
+     <h3>Terceiros</h3>
+     <ul>
+       <li><a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> — meteorologia</li>
+       <li><a href="https://www.lightpollutionmap.info" target="_blank" rel="noopener">lightpollutionmap.info</a> — poluição luminosa</li>
+       <li>OpenStreetMap — mapa</li>
+       <li>Render — alojamento do site</li>
+       <li>Google AdSense — publicidade (quando ativa, só após consentimento)</li>
+     </ul>
+     <h3>Os teus direitos</h3>
+     <p>Ao abrigo do RGPD, tens direito de acesso, retificação, apagamento e oposição.
+        Como não guardamos dados pessoais associados a ti, o apagamento das
+        preferências e locais faz-se limpando o armazenamento do teu browser. Para
+        qualquer questão, contacta <em>[o teu email]</em>.</p>
+     <p class="footer-muted">Última atualização: <em>[data a preencher]</em>.</p>` },
   terms: { title: "Termos e condições", html:
-    `<p><em>A preencher.</em> Vai definir os termos de utilização do site.</p>` },
+    `<p class="footer-muted"><em>Rascunho — revê e adapta antes de publicar. Não é
+        aconselhamento jurídico.</em></p>
+     <h3>Uso do serviço</h3>
+     <p>O Astrowe é uma ferramenta de apoio à observação astronómica, fornecida
+        gratuitamente e <strong>"tal como está"</strong>. As previsões são estimativas
+        baseadas em modelos meteorológicos e cálculos astronómicos — podem estar
+        erradas. As decisões que tomares (sair, deslocar-te, montar equipamento) são
+        da tua responsabilidade.</p>
+     <h3>Sem garantias</h3>
+     <p>Não garantimos exatidão, disponibilidade contínua nem adequação a qualquer fim
+        específico. Não nos responsabilizamos por perdas ou danos resultantes do uso
+        (ou da impossibilidade de uso) do site.</p>
+     <h3>Conteúdos de terceiros</h3>
+     <p>Os dados de meteorologia, poluição luminosa e mapas pertencem às respetivas
+        fontes e regem-se pelos termos delas. As ligações externas são da
+        responsabilidade dos sites de destino.</p>
+     <h3>Alterações e lei aplicável</h3>
+     <p>Podemos alterar estes termos a qualquer momento. Aplica-se a lei de
+        <em>[país / jurisdição a preencher, ex.: Portugal]</em>.</p>
+     <p class="footer-muted">Última atualização: <em>[data a preencher]</em>.</p>` },
 };
 
 const menuBtn = $("menu-btn"), menuPanel = $("menu-panel");
