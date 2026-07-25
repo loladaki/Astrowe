@@ -23,6 +23,22 @@ app = FastAPI(title="Astrowe", description="Score de observação astronómica p
 WEB_DIR = Path(__file__).resolve().parent.parent / "web"
 
 
+@app.middleware("http")
+async def revalidate_static(request, call_next):
+    """Obriga o browser a revalidar o HTML/JS/CSS a cada visita.
+
+    Os ficheiros mudam mas mantêm o nome (`/app.js`, `/style.css`), por isso sem
+    isto o browser servia versões antigas em cache e o site parecia partido a
+    quem já cá tinha estado. `no-cache` não impede a cache — impede usá-la sem
+    perguntar ao servidor, que responde 304 quando nada mudou (barato).
+    """
+    response = await call_next(request)
+    path = request.url.path
+    if path == "/" or path.endswith((".html", ".js", ".css")):
+        response.headers["Cache-Control"] = "no-cache"
+    return response
+
+
 @app.get("/api/forecast")
 async def forecast(
     lat: float = Query(..., ge=-90, le=90),

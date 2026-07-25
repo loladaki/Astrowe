@@ -121,28 +121,31 @@ a { color: var(--accent); }
 .brand h1 { margin: 0; font-size: 1.9rem; font-weight: 650; letter-spacing: -0.02em; }
 .tagline { margin: var(--s1) 0 0; color: var(--dim); font-size: var(--t-md); }
 
-/* Interruptor de visão nocturna, canto superior direito */
+/* Interruptor de visão nocturna, alinhado ao topo direito com o título */
 .red-toggle {
-  position: absolute; top: var(--s5); right: var(--s5);
+  position: absolute; top: var(--s4); right: 0;
   display: inline-flex; align-items: center; gap: var(--s2);
-  padding: var(--s2) var(--s3);
+  padding: 7px 14px 7px 12px;
   border: 1px solid var(--border); border-radius: var(--pill);
   background: var(--surface); color: var(--dim);
-  font-size: var(--t-xs); font-weight: 600;
+  font-size: var(--t-sm); font-weight: 600; line-height: 1;
+  transition: color .15s, border-color .15s, background .15s;
 }
 .red-toggle:hover { border-color: var(--border-lit); color: var(--text); }
 .red-dot {
-  width: 9px; height: 9px; border-radius: 50%;
-  background: #b23; box-shadow: 0 0 0 2px rgba(200, 40, 30, 0.18);
+  width: 10px; height: 10px; border-radius: 50%;
+  background: #c0392b; box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.2);
+  transition: box-shadow .15s, background .15s;
 }
 .red-toggle[aria-pressed="true"] {
   border-color: var(--accent); color: var(--text);
   background: var(--accent-soft);
 }
 .red-toggle[aria-pressed="true"] .red-dot {
-  background: var(--accent); box-shadow: 0 0 8px var(--accent);
+  background: var(--accent); box-shadow: 0 0 10px var(--accent);
 }
-@media (max-width: 560px) {
+/* Em ecrãs estreitos sai da linha do título e centra-se por baixo */
+@media (max-width: 640px) {
   .red-toggle { position: static; margin: var(--s3) auto 0; }
 }
 
@@ -340,23 +343,31 @@ button { font-family: inherit; cursor: pointer; border-radius: var(--r2); }
 .sky-cap { margin: var(--s3) 0 0; font-size: var(--t-xs); color: var(--faint); text-align: center; }
 
 /* slider de tempo por baixo da cúpula */
-.sky-time { width: 100%; margin-top: var(--s3); display: flex; flex-direction: column;
-            align-items: center; gap: var(--s2); }
+.sky-time {
+  width: 100%; margin-top: var(--s4); display: flex; flex-direction: column;
+  align-items: stretch; gap: var(--s2);
+  padding: var(--s3) var(--s4); border: 1px solid var(--border);
+  border-radius: var(--r2); background: var(--surface);
+}
 .sky-time-lbl {
-  font-variant-numeric: tabular-nums; font-size: var(--t-md);
-  font-weight: 650; color: var(--text); letter-spacing: 0.02em;
+  align-self: center; font-variant-numeric: tabular-nums;
+  font-size: var(--t-lg); font-weight: 680; color: var(--text); letter-spacing: 0.02em;
+}
+.sky-time-lbl::before {
+  content: "🕐 "; font-size: var(--t-sm); opacity: 0.7;
 }
 .sky-slider {
   width: 100%; -webkit-appearance: none; appearance: none;
-  height: 4px; border-radius: var(--pill); background: var(--border-lit); outline: none;
+  height: 6px; border-radius: var(--pill); background: var(--border-lit);
+  outline: none; cursor: pointer;
 }
 .sky-slider::-webkit-slider-thumb {
-  -webkit-appearance: none; appearance: none; width: 16px; height: 16px;
-  border: none; border-radius: 50%; background: var(--accent); cursor: pointer;
+  -webkit-appearance: none; appearance: none; width: 20px; height: 20px;
+  border: 2px solid var(--bg); border-radius: 50%; background: var(--accent); cursor: pointer;
   box-shadow: 0 0 0 4px var(--accent-soft);
 }
 .sky-slider::-moz-range-thumb {
-  width: 16px; height: 16px; border: none; border-radius: 50%;
+  width: 20px; height: 20px; border: 2px solid var(--bg); border-radius: 50%;
   background: var(--accent); cursor: pointer;
 }
 .sky-slider:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 4px var(--accent-soft), 0 0 0 6px var(--accent); }
