@@ -51,7 +51,7 @@ JET_ROUGH = 130.0
 
 PROFILES = {
     "deepsky": {
-        "label": "céu profundo",
+        "label": "deep sky",
         # Galáxias e nebulosas exigem escuridão real e sofrem muito com a Lua.
         # O seeing conta pouco: o que importa é recolher luz, não resolver detalhe.
         "horizon_degrees": astro.ASTRONOMICAL_TWILIGHT_DEG,
@@ -62,7 +62,7 @@ PROFILES = {
         "planets_lead": False,
     },
     "planetary": {
-        "label": "planetas e Lua",
+        "label": "planets & Moon",
         # Planetas veem-se no crepúsculo e a Lua não atrapalha (é o alvo!).
         # Aqui o seeing é tudo — é ele que decide se vês as bandas de Júpiter.
         "horizon_degrees": astro.SUNSET_DEG,
@@ -112,12 +112,12 @@ def _transparency_factor(spread, floor: float) -> float:
 
 def _transparency_label(spread) -> str:
     if spread is None:
-        return "desconhecida"
+        return "unknown"
     if spread >= 6.0:
-        return "boa"
+        return "good"
     if spread >= 3.0:
-        return "razoável"
-    return "fraca"
+        return "fair"
+    return "poor"
 
 
 def _seeing_factor(jet_kmh, floor: float) -> float:
@@ -131,25 +131,25 @@ def _seeing_factor(jet_kmh, floor: float) -> float:
 
 def _seeing_label(jet_kmh) -> str:
     if jet_kmh is None:
-        return "desconhecido"
+        return "unknown"
     if jet_kmh < 30:
-        return "excelente"
+        return "excellent"
     if jet_kmh < 60:
-        return "bom"
+        return "good"
     if jet_kmh < 100:
-        return "médio"
-    return "fraco"
+        return "fair"
+    return "poor"
 
 
 def _dew_risk(spread) -> str:
     """Spread baixo = orvalho nas ópticas, e a sessão acaba mais cedo."""
     if spread is None:
-        return "desconhecido"
+        return "unknown"
     if spread < 2.0:
-        return "alto"
+        return "high"
     if spread < 4.0:
-        return "moderado"
-    return "baixo"
+        return "moderate"
+    return "low"
 
 
 def _feels_like(temp_c, wind_kmh):
@@ -164,26 +164,26 @@ def _feels_like(temp_c, wind_kmh):
 
 def _moon_phase_name(illum_pct: float) -> str:
     if illum_pct < 5:
-        return "Lua nova"
+        return "New Moon"
     if illum_pct < 35:
-        return "Lua fina"
+        return "Crescent Moon"
     if illum_pct < 65:
-        return "meia Lua"
+        return "Half Moon"
     if illum_pct < 95:
-        return "Lua gibosa"
-    return "Lua cheia"
+        return "Gibbous Moon"
+    return "Full Moon"
 
 
 def _moon_phrase(illum_pct: float, max_alt: float) -> str:
-    """"Lua gibosa baixa no céu" — em vez de "Lua 94% a 21°"."""
+    """"Gibbous Moon low in the sky" — instead of "Moon 94% at 21°"."""
     if max_alt <= 0:
-        return f"{_moon_phase_name(illum_pct)} abaixo do horizonte"
+        return f"{_moon_phase_name(illum_pct)} below the horizon"
     if max_alt < 15:
-        height = "rasante"
+        height = "skimming the horizon"
     elif max_alt < 40:
-        height = "baixa no céu"
+        height = "low in the sky"
     else:
-        height = "alta no céu"
+        height = "high in the sky"
     return f"{_moon_phase_name(illum_pct)} {height}"
 
 
@@ -284,8 +284,8 @@ def _factor_impacts(parts: list[dict], lp_factor: float,
     se esse ingrediente fosse perfeito. É o que responde a "o que me limita
     esta noite?" — a informação mais acionável que a app pode dar.
     """
-    labels = {"nuvens": "as nuvens", "lua": "a Lua",
-              "transparencia": "a transparência", "seeing": "o seeing"}
+    labels = {"nuvens": "Clouds", "lua": "Moon",
+              "transparencia": "Transparency", "seeing": "Seeing"}
     impacts = []
     for skip, label in labels.items():
         ideal = _score_from([_quality_without(p, skip) for p in parts], lp_factor)
@@ -298,7 +298,7 @@ def _factor_impacts(parts: list[dict], lp_factor: float,
         cost = _score_from([p["quality"] for p in parts], 1.0) - base_score
         if cost > 0:
             impacts.append(FactorImpact(factor="poluicao",
-                                        label="a poluição luminosa",
+                                        label="Light pollution",
                                         cost_points=cost))
 
     impacts.sort(key=lambda f: -f.cost_points)
@@ -308,16 +308,16 @@ def _factor_impacts(parts: list[dict], lp_factor: float,
 def _hour_reason(part: dict) -> str:
     """Uma razão legível para o valor desta hora — não um número a mais."""
     if part["transmission"] < 0.30:
-        return "encoberto"
+        return "overcast"
     if part["transmission"] < 0.70:
-        return "nuvens"
+        return "clouds"
     if part["mf"] < 0.75:
-        return "Lua alta"
+        return "Moon high"
     if part["tf"] < 0.85:
-        return "ar húmido"
+        return "humid air"
     if part["mf"] < 0.92:
-        return "Lua baixa"
-    return "bom"
+        return "Moon low"
+    return "good"
 
 
 def _hour_detail(part: dict, times, h, moon_alt, moon_illum,
@@ -392,28 +392,28 @@ def _headline(score: int, qualities: list[float], times, win_idx, win_end,
     frase, não um número num círculo.
     """
     if score < 30:
-        return "Não vale a pena"
+        return "Not worth it"
     if not qualities:
-        return "Sem dados"
+        return "No data"
 
     i, j = _best_run(qualities)
     inicio = times[win_idx[i]]
     fim = min(times[win_idx[j]] + timedelta(hours=1), win_end)
     cobre_tudo = (i == 0 and j == len(qualities) - 1)
 
-    sim = "Sim" if score >= 55 else "Talvez"
+    sim = "Yes" if score >= 55 else "Maybe"
     if cobre_tudo:
-        return f"{sim}, a noite toda"
+        return f"{sim}, all night"
     if i == 0:
-        return f"{sim}, até às {fim.strftime('%H:%M')}"
+        return f"{sim}, until {fim.strftime('%H:%M')}"
     if j == len(qualities) - 1:
         # Quando a Lua manda e se põe durante a janela, a inflexão real é o
         # ocaso, não o passo horário do score. A Lua desce suavemente, por isso
         # o corte por limiar cai cedo demais; ancorar ao ocaso é mais honesto.
         if moon_leads and moonset and inicio <= moonset <= fim:
             inicio = max(inicio, _round_hour(moonset))
-        return f"{sim}, melhor depois das {inicio.strftime('%H:%M')}"
-    return f"{sim}, entre as {inicio.strftime('%H:%M')} e as {fim.strftime('%H:%M')}"
+        return f"{sim}, best after {inicio.strftime('%H:%M')}"
+    return f"{sim}, between {inicio.strftime('%H:%M')} and {fim.strftime('%H:%M')}"
 
 
 def _verdict_reason(parts_win, times_win, moonset, illum_pct) -> str:
@@ -427,29 +427,29 @@ def _verdict_reason(parts_win, times_win, moonset, illum_pct) -> str:
     if moonset and illum_pct > 30 and times_win:
         # Só interessa se a Lua se põe perto da janela (senão é irrelevante).
         if times_win[0] <= moonset <= times_win[-1] + timedelta(hours=1):
-            razoes.append(f"Lua põe-se {moonset.strftime('%H:%M')}")
+            razoes.append(f"Moon sets {moonset.strftime('%H:%M')}")
 
     def melhora(chave):
         vals = [p[chave] for p in parts_win]
         return len(vals) >= 2 and vals[-1] > vals[0] + 0.05
 
     if melhora("sf"):
-        razoes.append("seeing melhora")
+        razoes.append("seeing improves")
     if melhora("transmission"):
-        razoes.append("céu abre")
+        razoes.append("sky clears")
     elif melhora("tf"):
-        razoes.append("ar seca")
+        razoes.append("air dries")
 
-    return ", ".join(razoes[:2]).capitalize() if razoes else ""
+    return "; ".join(razoes[:2]) if razoes else ""
 
 
 def _first_change(values, times, ok, win_end):
     """Hora a partir da qual a condição passa a estar boa (ou None)."""
     estado = [v is not None and ok(v) for v in values]
     if all(estado):
-        return "sempre"
+        return "always"
     if not any(estado):
-        return "nunca"
+        return "never"
     for k in range(1, len(estado)):
         if estado[k] and not estado[k - 1]:
             return times[k].strftime("%H:%M")
@@ -457,7 +457,7 @@ def _first_change(values, times, ok, win_end):
     for k in range(1, len(estado)):
         if not estado[k] and estado[k - 1]:
             return "~" + times[k].strftime("%H:%M")
-    return "sempre"
+    return "always"
 
 
 def _cards(h, times, win_idx, parts, win_end, moonset) -> dict:
@@ -473,27 +473,27 @@ def _cards(h, times, win_idx, parts, win_end, moonset) -> dict:
 
     # Nuvens: quando é que o céu está utilizável, não a média.
     quando = _first_change(nuvens, horas, lambda v: v < 25, win_end)
-    if quando == "sempre":
-        nuvens_txt = "Limpo toda a noite"
-    elif quando == "nunca":
-        nuvens_txt = "Encoberto"
+    if quando == "always":
+        nuvens_txt = "Clear all night"
+    elif quando == "never":
+        nuvens_txt = "Overcast"
     elif quando.startswith("~"):
-        nuvens_txt = f"Fecha por volta das {quando[1:]}"
+        nuvens_txt = f"Clouds over around {quando[1:]}"
     else:
-        nuvens_txt = f"Limpa às {quando}"
+        nuvens_txt = f"Clears at {quando}"
 
     # Orvalho: o mínimo e quando — é aí que a óptica embacia.
     validos = [(s, t) for s, t in zip(spreads, horas) if s is not None]
     if not validos:
-        orvalho_txt = "Sem dados"
+        orvalho_txt = "No data"
     else:
         pior, quando_pior = min(validos, key=lambda x: x[0])
         if pior >= 4:
-            orvalho_txt = "Sem problema"
+            orvalho_txt = "No risk"
         elif pior >= 2:
-            orvalho_txt = f"Possível às {quando_pior.strftime('%H:%M')}"
+            orvalho_txt = f"Possible at {quando_pior.strftime('%H:%M')}"
         else:
-            orvalho_txt = f"Provável às {quando_pior.strftime('%H:%M')}"
+            orvalho_txt = f"Likely at {quando_pior.strftime('%H:%M')}"
 
     # Temperatura: o mínimo, que é para isso que te vestes.
     t_validas = [t for t in temps if t is not None]
@@ -506,19 +506,19 @@ def _cards(h, times, win_idx, parts, win_end, moonset) -> dict:
         "dew_label": orvalho_txt,
         "dew_spark": [None if s is None else round(float(s), 1) for s in spreads],
         "temp_label": temp_txt,
-        "moon_label": (f"Põe-se {moonset.strftime('%H:%M')}" if moonset
-                       else "Não se põe esta noite"),
+        "moon_label": (f"Sets {moonset.strftime('%H:%M')}" if moonset
+                       else "Doesn't set tonight"),
     }
 
 
 def _verdict(score: int) -> str:
     if score >= 75:
-        return "Excelente"
+        return "Excellent"
     if score >= 55:
-        return "Boa"
+        return "Good"
     if score >= 35:
-        return "Razoável"
-    return "Fraca"
+        return "Fair"
+    return "Poor"
 
 
 def _mean(values):
@@ -613,11 +613,11 @@ def _build_night(d, window, display_window, twilight_window, times, h,
 
     if night_start is None or night_end is None:
         return NightScore(
-            date=d.isoformat(), in_progress=in_progress, score=0, verdict="Sem noite escura",
+            date=d.isoformat(), in_progress=in_progress, score=0, verdict="No dark night",
             moon_phase="—", moonrise=None, moonset=None,
-            seeing="desconhecido", dew_risk="desconhecido",
+            seeing="unknown", dew_risk="unknown",
             temperature_c=None, feels_like_c=None, wind_kmh=None,
-            headline="Sem noite utilizável", verdict_reason="", cards=None,
+            headline="No usable night", verdict_reason="", cards=None,
             meteor_shower=None, milky_way=None,
             limiting=[], objects=[], hours=[],
             window_start=None, window_end=None, window_hours=None,
@@ -625,18 +625,18 @@ def _build_night(d, window, display_window, twilight_window, times, h,
             cloud_cover_pct=None, transparency="—",
             moon_illumination_pct=0.0, moon_waxing=True,
             moon_max_altitude_deg=None,
-            conditions="O Sol não desce o suficiente para haver escuridão.",
-            details="O Sol não desce o suficiente nesta noite — sem escuridão utilizável.",
+            conditions="The Sun doesn't dip low enough for darkness.",
+            details="The Sun doesn't dip low enough this night — no usable darkness.",
         )
 
     idx = [i for i, t in enumerate(times) if night_start <= t <= night_end and remaining(t)]
     if not idx:
         return NightScore(
-            date=d.isoformat(), in_progress=in_progress, score=0, verdict="Sem dados",
+            date=d.isoformat(), in_progress=in_progress, score=0, verdict="No data",
             moon_phase="—", moonrise=None, moonset=None,
-            seeing="desconhecido", dew_risk="desconhecido",
+            seeing="unknown", dew_risk="unknown",
             temperature_c=None, feels_like_c=None, wind_kmh=None,
-            headline="Sem noite utilizável", verdict_reason="", cards=None,
+            headline="No usable night", verdict_reason="", cards=None,
             meteor_shower=None, milky_way=None,
             limiting=[], objects=[], hours=[],
             window_start=None, window_end=None, window_hours=None,
@@ -646,8 +646,8 @@ def _build_night(d, window, display_window, twilight_window, times, h,
             cloud_cover_pct=None, transparency="—",
             moon_illumination_pct=0.0, moon_waxing=True,
             moon_max_altitude_deg=None,
-            conditions="Sem previsão meteorológica para esta noite.",
-            details="Sem previsão meteorológica para esta noite.",
+            conditions="No weather forecast for this night.",
+            details="No weather forecast for this night.",
         )
 
     floor = profile["transparency_floor"]
@@ -705,22 +705,21 @@ def _build_night(d, window, display_window, twilight_window, times, h,
 
     phrases = []
     if cloud is not None:
-        phrases.append("céu limpo" if cloud < 15
-                       else "poucas nuvens" if cloud < 40 else "muitas nuvens")
+        phrases.append("clear sky" if cloud < 15
+                       else "few clouds" if cloud < 40 else "lots of cloud")
     phrases.append(moon_phrase)
     if spread_win is not None:
-        phrases.append("ar seco" if spread_win >= 6
-                       else "ar húmido" if spread_win < 3 else "humidade moderada")
+        phrases.append("dry air" if spread_win >= 6
+                       else "humid air" if spread_win < 3 else "moderate humidity")
     seeing_label = _seeing_label(jet_avg)
-    if seeing_label != "desconhecido":
-        phrases.append(f"seeing {seeing_label}")
+    if seeing_label != "unknown":
+        phrases.append(f"{seeing_label} seeing")
 
     # A janela e as condições vivem separadas: a interface já mostra as horas,
     # e repeti-las na frase era a origem do "5.4h" duplicado no card.
-    # `.capitalize()` não serve: põe em minúscula tudo o resto e come o L de "Lua".
     frase = ", ".join(phrases)
     conditions = frase[0].upper() + frase[1:] + "."
-    details = (f"{win_hours:.1f}h das {win_start.strftime('%H:%M')} às "
+    details = (f"{win_hours:.1f}h from {win_start.strftime('%H:%M')} to "
                f"{win_end.strftime('%H:%M')} · " + ", ".join(phrases) + ".")
 
     # Horas de exibição: do pôr ao nascer do Sol (crepúsculo incluído), para se
@@ -799,8 +798,8 @@ def _build_night(d, window, display_window, twilight_window, times, h,
     )
 
 
-WEEKDAYS_PT = ["segunda", "terça", "quarta", "quinta",
-               "sexta", "sábado", "domingo"]
+WEEKDAYS_EN = ["Monday", "Tuesday", "Wednesday", "Thursday",
+               "Friday", "Saturday", "Sunday"]
 
 
 def _build_summary(nights: list[NightScore], mode_label: str) -> str:
@@ -809,9 +808,9 @@ def _build_summary(nights: list[NightScore], mode_label: str) -> str:
     """
     scored = [n for n in nights if n.score > 0]
     if not scored:
-        return f"Nenhuma noite com condições utilizáveis para {mode_label} nos próximos dias."
+        return f"No usable {mode_label} nights in the coming days."
 
     best = max(scored, key=lambda n: n.score)
     d = datetime.fromisoformat(best.date)
-    weekday = WEEKDAYS_PT[d.weekday()]
-    return (f"Melhor noite: {weekday}, {d.strftime('%d/%m')} — {best.details}")
+    weekday = WEEKDAYS_EN[d.weekday()]
+    return (f"Best night: {weekday}, {d.strftime('%d/%m')} — {best.details}")

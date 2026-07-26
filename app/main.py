@@ -18,7 +18,7 @@ load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Astrowe", description="Score de observação astronómica por noite")
+app = FastAPI(title="Astrowe", description="Nightly astronomy observing score")
 
 WEB_DIR = Path(__file__).resolve().parent.parent / "web"
 
@@ -58,8 +58,8 @@ async def forecast(
         logger.warning("Falha ao obter meteorologia (%s, %s): %s", lat, lon, exc)
         raise HTTPException(
             status_code=502,
-            detail="O serviço de meteorologia está temporariamente indisponível. "
-                   "Tenta outra vez daqui a um minuto.",
+            detail="The weather service is temporarily unavailable. "
+                   "Try again in a minute.",
         ) from exc
 
     return await _score_with(data, lat, lon, mode)
@@ -82,9 +82,9 @@ async def forecast_post(req: ForecastRequest):
     o Skyfield e a poluição luminosa.
     """
     if not isinstance(req.weather, dict) or "hourly" not in req.weather:
-        raise HTTPException(status_code=400, detail="Meteorologia inválida.")
+        raise HTTPException(status_code=400, detail="Invalid weather data.")
     if not (-90 <= req.lat <= 90 and -180 <= req.lon <= 180):
-        raise HTTPException(status_code=400, detail="Coordenadas inválidas.")
+        raise HTTPException(status_code=400, detail="Invalid coordinates.")
     return await _score_with(req.weather, req.lat, req.lon, req.mode)
 
 

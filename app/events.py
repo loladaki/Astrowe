@@ -20,16 +20,16 @@ MILKY_WAY_DEC_DEG = -29.0078
 # Chuveiros principais: nome, mês e dia do pico, ZHR (meteoros/hora no melhor
 # caso) e radiante em J2000. Valores da International Meteor Organization.
 METEOR_SHOWERS = [
-    ("Quadrântidas", 1, 3, 110, 15.33, 49.7),
-    ("Líridas", 4, 22, 18, 18.07, 33.3),
-    ("Eta Aquáridas", 5, 6, 50, 22.53, -1.0),
-    ("Delta Aquáridas", 7, 30, 25, 22.70, -16.4),
-    ("Perseidas", 8, 12, 100, 3.22, 58.0),
-    ("Oriónidas", 10, 21, 20, 6.35, 15.6),
-    ("Táuridas do Sul", 11, 5, 5, 3.50, 14.0),
-    ("Leónidas", 11, 17, 15, 10.28, 21.6),
-    ("Gemínidas", 12, 14, 150, 7.55, 32.3),
-    ("Úrsidas", 12, 22, 10, 14.47, 75.3),
+    ("Quadrantids", 1, 3, 110, 15.33, 49.7),
+    ("Lyrids", 4, 22, 18, 18.07, 33.3),
+    ("Eta Aquariids", 5, 6, 50, 22.53, -1.0),
+    ("Delta Aquariids", 7, 30, 25, 22.70, -16.4),
+    ("Perseids", 8, 12, 100, 3.22, 58.0),
+    ("Orionids", 10, 21, 20, 6.35, 15.6),
+    ("Southern Taurids", 11, 5, 5, 3.50, 14.0),
+    ("Leonids", 11, 17, 15, 10.28, 21.6),
+    ("Geminids", 12, 14, 150, 7.55, 32.3),
+    ("Ursids", 12, 22, 10, 14.47, 75.3),
 ]
 
 # Uma noite conta como "de chuveiro" se estiver a esta distância do pico.
@@ -84,20 +84,20 @@ def meteor_shower(night: date, lat: float, lon: float, offset_seconds: int,
     tempos = _timing(lst, ra_d, dec_d, lat, when_local, window_start, window_end)
 
     if alt <= 0:
-        nota = "radiante abaixo do horizonte, poucos meteoros"
+        nota = "radiant below the horizon, few meteors"
     elif alt < 25:
-        nota = "radiante baixo, muitos meteoros ficam escondidos"
+        nota = "radiant low, many meteors stay hidden"
     else:
-        nota = "radiante bem alto"
+        nota = "radiant high up"
 
-    quando = "no pico" if dias == 0 else f"a {dias} dia{'s' if dias > 1 else ''} do pico"
+    quando = "at peak" if dias == 0 else f"{dias} day{'s' if dias > 1 else ''} from peak"
     return {
         "name": nome,
         "peak_offset_days": dias,
         "zhr": zhr,
         "radiant_altitude_deg": round(alt, 1),
         "radiant_direction": compass_point(az),
-        "summary": f"{quando}, até {zhr} meteoros/hora. {nota.capitalize()}.",
+        "summary": f"{quando}, up to {zhr} meteors/hour. {nota.capitalize()}.",
         **tempos,
     }
 
@@ -122,18 +122,18 @@ def milky_way_core(lat: float, lon: float, offset_seconds: int,
     tempos = _timing(lst, ra_d, dec_d, lat, when_local, window_start, window_end)
 
     if alt <= 0:
-        nota = "abaixo do horizonte nesta altura da noite"
+        nota = "below the horizon at this time of night"
     elif moonlight > 0.35:
-        nota = "no céu, mas o luar apaga-lhe o contraste"
+        nota = "up, but moonlight washes out its contrast"
     elif alt < 15:
-        nota = "muito rasante, precisas de horizonte sul desimpedido"
+        nota = "very low, needs a clear southern horizon"
     else:
-        nota = "bem posicionado a sul"
+        nota = "well placed to the south"
 
     return {
         "altitude_deg": round(alt, 1),
         "direction": compass_point(az),
         "max_altitude_deg": round(maxima, 1),
-        "summary": f"Núcleo a {round(alt)}° a sul. {nota.capitalize()}.",
+        "summary": f"Core at {round(alt)}° to the south. {nota.capitalize()}.",
         **tempos,
     }

@@ -2,7 +2,7 @@
 {
 "id": "M1",
 "ngc": "NGC 1952",
-"tipo": "remanescente de supernova",
+"tipo": "supernova remnant",
 "const": "Tau",
 "mag": 8.0,
 "ra_h": 5.57555,
@@ -11,7 +11,7 @@
 {
 "id": "M2",
 "ngc": "NGC 7089",
-"tipo": "enxame globular",
+"tipo": "globular cluster",
 "const": "Aqr",
 "mag": 6.0,
 "ra_h": 21.5575,
@@ -20,7 +20,7 @@
 {
 "id": "M3",
 "ngc": "NGC 5272",
-"tipo": "enxame globular",
+"tipo": "globular cluster",
 "const": "CVn",
 "mag": 6.0,
 "ra_h": 13.70312,
@@ -29,7 +29,7 @@
 {
 "id": "M4",
 "ngc": "NGC 6121",
-"tipo": "enxame globular",
+"tipo": "globular cluster",
 "const": "Sco",
 "mag": 5.0,
 "ra_h": 16.39317,
@@ -38,7 +38,7 @@
 {
 "id": "M5",
 "ngc": "NGC 5904",
-"tipo": "enxame globular",
+"tipo": "globular cluster",
 "const": "Se1",
 "mag": 5.0,
 "ra_h": 15.30938,
@@ -47,7 +47,7 @@
 {
 "id": "M6",
 "ngc": "NGC 6504",
-"tipo": "enxame aberto",
+"tipo": "open cluster",
 "const": "Sco",
 "mag": 4.0,
 "ra_h": 17.67243,
@@ -56,7 +56,7 @@
 {
 "id": "M7",
 "ngc": "NGC 6475",
-"tipo": "enxame aberto",
+"tipo": "open cluster",
 "const": "Sco",
 "mag": 3.0,
 "ra_h": 17.89755,
@@ -65,7 +65,7 @@
 {
 "id": "M8",
 "ngc": "NGC 6523",
-"tipo": "nebulosa",
+"tipo": "nebula",
 "const": "Sgr",
 "mag": 5.0,
 "ra_h": 18.06146,
@@ -74,7 +74,7 @@
 {
 "id": "M9",
 "ngc": "NGC 6333",
-"tipo": "enxame globular",
+"tipo": "globular cluster",
 "const": "Oph",
 "mag": 7.0,
 "ra_h": 17.31994,
@@ -83,7 +83,7 @@
 {
 "id": "M10",
 "ngc": "NGC 6254",
-"tipo": "enxame globular",
+"tipo": "globular cluster",
 "const": "Oph",
 "mag": 6.0,
 "ra_h": 16.9525,
@@ -92,7 +92,7 @@
 {
 "id": "M11",
 "ngc": "NGC 6705",
-"tipo": "enxame aberto",
+"tipo": "open cluster",
 "const": "Sct",
 "mag": 5.0,
 "ra_h": 18.85166,
@@ -101,7 +101,7 @@
 {
 "id": "M12",
 "ngc": "NGC 6218",
-"tipo": "enxame globular",
+"tipo": "globular cluster",
 "const": "Oph",
 "mag": 6.0,
 "ra_h": 16.78737,
@@ -110,7 +110,7 @@
 {
 "id": "M13",
 "ngc": "NGC 6205",
-"tipo": "enxame globular",
+"tipo": "globular cluster",
 "const": "Her",
 "mag": 5.0,
 "ra_h": 16.6949,
@@ -119,7 +119,7 @@
 {
 "id": "M14",
 "ngc": "NGC 6402",
-"tipo": "enxame globular",
+"tipo": "globular cluster",
 "const": "Oph",
 "mag": 7.0,
 "ra_h": 17.62671,
@@ -128,7 +128,7 @@
 {
 "id": "M15",
 "ngc": "NGC 7078",
-"tipo": "enxame globular",
+"tipo": "globular cluster",
 "const": "Peg",
 "mag": 6.0,
 "ra_h": 21.49955,
@@ -137,7 +137,7 @@
 {
 "id": "M16",
 "ngc": "NGC 6611",
-"tipo": "nebulosa",
+"tipo": "nebula",
 "const": "Se2",
 "mag": 6.0,
 "ra_h": 18.31338,
@@ -146,7 +146,7 @@
 {
 "id": "M17",
 "ngc": "NGC 6618",
-"tipo": "nebulosa",
+"tipo": "nebula",
 "const": "Sgr",
 "mag": 6.0,
 "ra_h": 18.34642,
@@ -155,7 +155,7 @@
 {
 "id": "M18",
 "ngc": "NGC 6613",
-"tipo": "enxame aberto",
+"tipo": "open cluster",
 "const": "Sgr",
 "mag": 6.0,
 "ra_h": 18.33291,
@@ -164,7 +164,7 @@
 {
 "id": "M19",
 "ngc": "NGC 6273",
-"tipo": "enxame globular",
+"tipo": "globular cluster",
 "const": "Oph",
 "mag": 7.0,
 "ra_h": 17.0438,
@@ -173,7 +173,7 @@
 {
 "id": "M20",
 "ngc": "NGC 6514",
-"tipo": "nebulosa",
+"tipo": "nebula",
 "const": "Sgr",
 "mag": 6.0,
 "ra_h": 18.04503,
@@ -182,7 +182,7 @@
 {
 "id": "M21",
 "ngc": "NGC 6531",
-"tipo": "enxame aberto",
+"tipo": "open cluster",
 "const": "Sgr",
 "mag": 5.0,
 "ra_h": 18.0704,
@@ -191,7 +191,7 @@
 {
 "id": "M22",
 "ngc": "NGC 6656",
-"tipo": "enxame globular",
+"tipo": "globular cluster",
 "const": "Sgr",
 "mag": 5.0,
 "ra_h": 18.60672,
@@ -200,7 +200,7 @@
 {
 "id": "M23",
 "ngc": "NGC 6494",
-"tipo": "enxame aberto",
+"tipo": "open cluster",
 "const": "Sgr",
 "mag": 5.0,
 "ra_h": 17.95133,
@@ -209,7 +209,7 @@
 {
 "id": "M24",
 "ngc": "NGC 6603",
-"tipo": "enxame aberto",
+"tipo": "open cluster",
 "const": "Sgr",
 "mag": 11.0,
 "ra_h": 18.28226,
@@ -218,7 +218,7 @@
 {
 "id": "M25",
 "ngc": "IC4725",
-"tipo": "enxame aberto",
+"tipo": "open cluster",
 "const": "Sgr",
 "mag": 4.0,
 "ra_h": 18.52966,
@@ -227,7 +227,7 @@
 {
 "id": "M26",
 "ngc": "NGC 6694",
-"tipo": "enxame aberto",
+"tipo": "open cluster",
 "const": "Sct",
 "mag": 8.0,
 "ra_h": 18.75518,
@@ -236,7 +236,7 @@
 {
 "id": "M27",
 "ngc": "NGC 6853",
-"tipo": "nebulosa planetária",
+"tipo": "planetary nebula",
 "const": "Vul",
 "mag": 8.0,
 "ra_h": 19.99344,
@@ -245,7 +245,7 @@
 {
 "id": "M28",
 "ngc": "NGC 6626",
-"tipo": "enxame globular",
+"tipo": "globular cluster",
 "const": "Sgr",
 "mag": 6.0,
 "ra_h": 18.40914,
@@ -254,7 +254,7 @@
 {
 "id": "M29",
 "ngc": "NGC 6913",
-"tipo": "enxame aberto",
+"tipo": "open cluster",
 "const": "Cyg",
 "mag": 6.0,
 "ra_h": 20.39938,
@@ -263,7 +263,7 @@
 {
 "id": "M30",
 "ngc": "NGC 7099",
-"tipo": "enxame globular",
+"tipo": "globular cluster",
 "const": "Cap",
 "mag": 7.0,
 "ra_h": 21.67278,
@@ -272,7 +272,7 @@
 {
 "id": "M31",
 "ngc": "NGC 224",
-"tipo": "galáxia",
+"tipo": "galaxy",
 "const": "And",
 "mag": 3.0,
 "ra_h": 0.71232,
@@ -281,7 +281,7 @@
 {
 "id": "M32",
 "ngc": "NGC 221",
-"tipo": "galáxia",
+"tipo": "galaxy",
 "const": "And",
 "mag": 8.0,
 "ra_h": 0.71162,
@@ -290,7 +290,7 @@
 {
 "id": "M33",
 "ngc": "NGC 598",
-"tipo": "galáxia",
+"tipo": "galaxy",
 "const": "Tri",
 "mag": 5.0,
 "ra_h": 1.56414,
@@ -299,7 +299,7 @@
 {
 "id": "M34",
 "ngc": "NGC 1039",
-"tipo": "enxame aberto",
+"tipo": "open cluster",
 "const": "Per",
 "mag": 5.0,
 "ra_h": 2.70206,
@@ -308,7 +308,7 @@
 {
 "id": "M35",
 "ngc": "NGC 2168",
-"tipo": "enxame aberto",
+"tipo": "open cluster",
 "const": "Gem",
 "mag": 5.0,
 "ra_h": 6.15141,
@@ -317,7 +317,7 @@
 {
 "id": "M36",
 "ngc": "NGC 1960",
-"tipo": "enxame aberto",
+"tipo": "open cluster",
 "const": "Aur",
 "mag": 6.0,
 "ra_h": 5.60493,
@@ -326,7 +326,7 @@
 {
 "id": "M37",
 "ngc": "NGC 2099",
-"tipo": "enxame aberto",
+"tipo": "open cluster",
 "const": "Aur",
 "mag": 5.0,
 "ra_h": 5.87176,
@@ -335,7 +335,7 @@
 {
 "id": "M38",
 "ngc": "NGC 1912",
-"tipo": "enxame aberto",
+"tipo": "open cluster",
 "const": "Aur",
 "mag": 6.0,
 "ra_h": 5.47847,
@@ -344,7 +344,7 @@
 {
 "id": "M39",
 "ngc": "NGC 7092",
-"tipo": "enxame aberto",
+"tipo": "open cluster",
 "const": "Cyg",
 "mag": 4.0,
 "ra_h": 21.53009,
@@ -353,7 +353,7 @@
 {
 "id": "M40",
 "ngc": "Winnecke 4",
-"tipo": "estrela dupla",
+"tipo": "double star",
 "const": "UMa",
 "mag": 8.4,
 "ra_h": 12.37014,
@@ -362,7 +362,7 @@
 {
 "id": "M41",
 "ngc": "NGC 2287",
-"tipo": "enxame aberto",
+"tipo": "open cluster",
 "const": "CMa",
 "mag": 4.0,
 "ra_h": 6.76665,
@@ -371,7 +371,7 @@
 {
 "id": "M42",
 "ngc": "NGC 9176",
-"tipo": "nebulosa",
+"tipo": "nebula",
 "const": "Ori",
 "mag": 4.0,
 "ra_h": 5.58791,
@@ -380,7 +380,7 @@
 {
 "id": "M43",
 "ngc": "NGC 1982",
-"tipo": "nebulosa",
+"tipo": "nebula",
 "const": "Ori",
 "mag": 9.0,
 "ra_h": 5.59205,
@@ -389,7 +389,7 @@
 {
 "id": "M44",
 "ngc": "NGC 2632",
-"tipo": "enxame aberto",
+"tipo": "open cluster",
 "const": "Cnc",
 "mag": 3.0,
 "ra_h": 8.67283,
@@ -398,7 +398,7 @@
 {
 "id": "M45",
 "ngc": null,
-"tipo": "enxame aberto",
+"tipo": "open cluster",
 "const": "Tau",
 "mag": 1.6,
 "ra_h": 3.79,
@@ -407,7 +407,7 @@
 {
 "id": "M46",
 "ngc": "NGC 2437",
-"tipo": "enxame aberto",
+"tipo": "open cluster",
 "const": "Pup",
 "mag": 6.0,
 "ra_h": 7.69634,
@@ -416,7 +416,7 @@
 {
 "id": "M47",
 "ngc": "NGC 2422",
-"tipo": "enxame aberto",
+"tipo": "open cluster",
 "const": "Pup",
 "mag": 4.0,
 "ra_h": 7.60973,
@@ -425,7 +425,7 @@
 {
 "id": "M48",
 "ngc": "NGC 2548",
-"tipo": "enxame aberto",
+"tipo": "open cluster",
 "const": "Hya",
 "mag": 5.0,
 "ra_h": 8.22866,
@@ -434,7 +434,7 @@
 {
 "id": "M49",
 "ngc": "NGC 4472",
-"tipo": "galáxia",
+"tipo": "galaxy",
 "const": "Vir",
 "mag": 8.0,
 "ra_h": 12.49632,
@@ -443,7 +443,7 @@
 {
 "id": "M50",
 "ngc": "NGC 2323",
-"tipo": "enxame aberto",
+"tipo": "open cluster",
 "const": "Mon",
 "mag": 5.0,
 "ra_h": 7.04458,
@@ -452,7 +452,7 @@
 {
 "id": "M51",
 "ngc": "NGC 5194",
-"tipo": "galáxia",
+"tipo": "galaxy",
 "const": "CVn",
 "mag": 8.0,
 "ra_h": 13.49797,
@@ -461,7 +461,7 @@
 {
 "id": "M52",
 "ngc": "NGC 7654",
-"tipo": "enxame aberto",
+"tipo": "open cluster",
 "const": "Cas",
 "mag": 6.0,
 "ra_h": 23.41344,
@@ -470,7 +470,7 @@
 {
 "id": "M53",
 "ngc": "NGC 5024",
-"tipo": "enxame globular",
+"tipo": "globular cluster",
 "const": "Com",
 "mag": 7.0,
 "ra_h": 13.21534,
@@ -479,7 +479,7 @@
 {
 "id": "M54",
 "ngc": "NGC 6715",
-"tipo": "enxame globular",
+"tipo": "globular cluster",
 "const": "Sgr",
 "mag": 7.0,
 "ra_h": 18.91758,
@@ -488,7 +488,7 @@
 {
 "id": "M55",
 "ngc": "NGC 6809",
-"tipo": "enxame globular",
+"tipo": "globular cluster",
 "const": "Sgr",
 "mag": 7.0,
 "ra_h": 19.6665,
@@ -497,7 +497,7 @@
 {
 "id": "M56",
 "ngc": "NGC 6779",
-"tipo": "enxame globular",
+"tipo": "globular cluster",
 "const": "Lyr",
 "mag": 8.0,
 "ra_h": 19.27653,
@@ -506,7 +506,7 @@
 {
 "id": "M57",
 "ngc": "NGC 6720",
-"tipo": "nebulosa planetária",
+"tipo": "planetary nebula",
 "const": "Lyr",
 "mag": 9.0,
 "ra_h": 18.89306,
@@ -515,7 +515,7 @@
 {
 "id": "M58",
 "ngc": "NGC 4579",
-"tipo": "galáxia",
+"tipo": "galaxy",
 "const": "Vir",
 "mag": 9.0,
 "ra_h": 12.62876,
@@ -524,7 +524,7 @@
 {
 "id": "M59",
 "ngc": "NGC 4621",
-"tipo": "galáxia",
+"tipo": "galaxy",
 "const": "Vir",
 "mag": 9.0,
 "ra_h": 12.70062,
@@ -533,7 +533,7 @@
 {
 "id": "M60",
 "ngc": "NGC 4649",
-"tipo": "galáxia",
+"tipo": "galaxy",
 "const": "Vir",
 "mag": 8.0,
 "ra_h": 12.72777,
@@ -542,7 +542,7 @@
 {
 "id": "M61",
 "ngc": "NGC 4303",
-"tipo": "galáxia",
+"tipo": "galaxy",
 "const": "Vir",
 "mag": 9.0,
 "ra_h": 12.36525,
@@ -551,7 +551,7 @@
 {
 "id": "M62",
 "ngc": "NGC 6266",
-"tipo": "enxame globular",
+"tipo": "globular cluster",
 "const": "Oph",
 "mag": 6.0,
 "ra_h": 17.02017,
@@ -560,7 +560,7 @@
 {
 "id": "M63",
 "ngc": "NGC 5055",
-"tipo": "galáxia",
+"tipo": "galaxy",
 "const": "CVn",
 "mag": 8.0,
 "ra_h": 13.2637,
@@ -569,7 +569,7 @@
 {
 "id": "M64",
 "ngc": "NGC 4826",
-"tipo": "galáxia",
+"tipo": "galaxy",
 "const": "Com",
 "mag": 8.0,
 "ra_h": 12.94546,
@@ -578,7 +578,7 @@
 {
 "id": "M65",
 "ngc": "NGC 3623",
-"tipo": "galáxia",
+"tipo": "galaxy",
 "const": "Leo",
 "mag": 9.0,
 "ra_h": 11.31553,
@@ -587,7 +587,7 @@
 {
 "id": "M66",
 "ngc": "NGC 3627",
-"tipo": "galáxia",
+"tipo": "galaxy",
 "const": "Leo",
 "mag": 9.0,
 "ra_h": 11.33749,
@@ -596,7 +596,7 @@
 {
 "id": "M67",
 "ngc": "NGC 2682",
-"tipo": "enxame aberto",
+"tipo": "open cluster",
 "const": "Cnc",
 "mag": 6.0,
 "ra_h": 8.85559,
@@ -605,7 +605,7 @@
 {
 "id": "M68",
 "ngc": "NGC 4590",
-"tipo": "enxame globular",
+"tipo": "globular cluster",
 "const": "Hya",
 "mag": 8.0,
 "ra_h": 12.65778,
@@ -614,7 +614,7 @@
 {
 "id": "M69",
 "ngc": "NGC 6637",
-"tipo": "enxame globular",
+"tipo": "globular cluster",
 "const": "Sgr",
 "mag": 7.0,
 "ra_h": 18.52312,
@@ -623,7 +623,7 @@
 {
 "id": "M70",
 "ngc": "NGC 6681",
-"tipo": "enxame globular",
+"tipo": "globular cluster",
 "const": "Sgr",
 "mag": 8.0,
 "ra_h": 18.72018,
@@ -632,7 +632,7 @@
 {
 "id": "M71",
 "ngc": "NGC 6838",
-"tipo": "enxame globular",
+"tipo": "globular cluster",
 "const": "Sge",
 "mag": 8.0,
 "ra_h": 19.89614,
@@ -641,7 +641,7 @@
 {
 "id": "M72",
 "ngc": "NGC 6981",
-"tipo": "enxame globular",
+"tipo": "globular cluster",
 "const": "Aqr",
 "mag": 9.0,
 "ra_h": 20.89109,
@@ -650,7 +650,7 @@
 {
 "id": "M73",
 "ngc": "NGC 6994",
-"tipo": "enxame aberto",
+"tipo": "open cluster",
 "const": "Aqr",
 "mag": 9.0,
 "ra_h": 20.98221,
@@ -659,7 +659,7 @@
 {
 "id": "M74",
 "ngc": "NGC 628",
-"tipo": "galáxia",
+"tipo": "galaxy",
 "const": "Psc",
 "mag": 9.0,
 "ra_h": 1.6116,
@@ -668,7 +668,7 @@
 {
 "id": "M75",
 "ngc": "NGC 6864",
-"tipo": "enxame globular",
+"tipo": "globular cluster",
 "const": "Sgr",
 "mag": 8.0,
 "ra_h": 20.10134,
@@ -677,7 +677,7 @@
 {
 "id": "M76",
 "ngc": "NGC 650",
-"tipo": "nebulosa planetária",
+"tipo": "planetary nebula",
 "const": "Per",
 "mag": 10.0,
 "ra_h": 1.70547,
@@ -686,7 +686,7 @@
 {
 "id": "M77",
 "ngc": "NGC 1068",
-"tipo": "galáxia",
+"tipo": "galaxy",
 "const": "Cet",
 "mag": 8.0,
 "ra_h": 2.71131,
@@ -695,7 +695,7 @@
 {
 "id": "M78",
 "ngc": "NGC 2068",
-"tipo": "nebulosa",
+"tipo": "nebula",
 "const": "Ori",
 "mag": 8.0,
 "ra_h": 5.77939,
@@ -704,7 +704,7 @@
 {
 "id": "M79",
 "ngc": "NGC 1904",
-"tipo": "enxame globular",
+"tipo": "globular cluster",
 "const": "Lep",
 "mag": 8.0,
 "ra_h": 5.40294,
@@ -713,7 +713,7 @@
 {
 "id": "M80",
 "ngc": "NGC 6093",
-"tipo": "enxame globular",
+"tipo": "globular cluster",
 "const": "Sco",
 "mag": 7.0,
 "ra_h": 16.28403,
@@ -722,7 +722,7 @@
 {
 "id": "M81",
 "ngc": "NGC 3031",
-"tipo": "galáxia",
+"tipo": "galaxy",
 "const": "UMa",
 "mag": 6.0,
 "ra_h": 9.92588,
@@ -731,7 +731,7 @@
 {
 "id": "M82",
 "ngc": "NGC 3034",
-"tipo": "galáxia",
+"tipo": "galaxy",
 "const": "UMa",
 "mag": 8.0,
 "ra_h": 9.93131,
@@ -740,7 +740,7 @@
 {
 "id": "M83",
 "ngc": "NGC 5236",
-"tipo": "galáxia",
+"tipo": "galaxy",
 "const": "Hya",
 "mag": 7.0,
 "ra_h": 13.61693,
@@ -749,7 +749,7 @@
 {
 "id": "M84",
 "ngc": "NGC 4374",
-"tipo": "galáxia",
+"tipo": "galaxy",
 "const": "Vir",
 "mag": 9.0,
 "ra_h": 12.41771,
@@ -758,7 +758,7 @@
 {
 "id": "M85",
 "ngc": "NGC 4382",
-"tipo": "galáxia",
+"tipo": "galaxy",
 "const": "Com",
 "mag": 9.0,
 "ra_h": 12.42336,
@@ -767,7 +767,7 @@
 {
 "id": "M86",
 "ngc": "NGC 4406",
-"tipo": "galáxia",
+"tipo": "galaxy",
 "const": "Vir",
 "mag": 9.0,
 "ra_h": 12.43659,
@@ -776,7 +776,7 @@
 {
 "id": "M87",
 "ngc": "NGC 4486",
-"tipo": "galáxia",
+"tipo": "galaxy",
 "const": "Vir",
 "mag": 8.0,
 "ra_h": 12.51373,
@@ -785,7 +785,7 @@
 {
 "id": "M88",
 "ngc": "NGC 4501",
-"tipo": "galáxia",
+"tipo": "galaxy",
 "const": "Com",
 "mag": 9.0,
 "ra_h": 12.5331,
@@ -794,7 +794,7 @@
 {
 "id": "M89",
 "ngc": "NGC 4552",
-"tipo": "galáxia",
+"tipo": "galaxy",
 "const": "Vir",
 "mag": 9.0,
 "ra_h": 12.59439,
@@ -803,7 +803,7 @@
 {
 "id": "M90",
 "ngc": "NGC 4560",
-"tipo": "galáxia",
+"tipo": "galaxy",
 "const": "Vir",
 "mag": 9.0,
 "ra_h": 12.61383,
@@ -812,7 +812,7 @@
 {
 "id": "M91",
 "ngc": "NGC 4548",
-"tipo": "galáxia",
+"tipo": "galaxy",
 "const": "Com",
 "mag": 10.0,
 "ra_h": 12.59068,
@@ -821,7 +821,7 @@
 {
 "id": "M92",
 "ngc": "NGC 6341",
-"tipo": "enxame globular",
+"tipo": "globular cluster",
 "const": "Her",
 "mag": 6.0,
 "ra_h": 17.28535,
@@ -830,7 +830,7 @@
 {
 "id": "M93",
 "ngc": "NGC 2447",
-"tipo": "enxame aberto",
+"tipo": "open cluster",
 "const": "Pup",
 "mag": 6.0,
 "ra_h": 7.74145,
@@ -839,7 +839,7 @@
 {
 "id": "M94",
 "ngc": "NGC 4736",
-"tipo": "galáxia",
+"tipo": "galaxy",
 "const": "CVn",
 "mag": 8.0,
 "ra_h": 12.84807,
@@ -848,7 +848,7 @@
 {
 "id": "M95",
 "ngc": "NGC 3351",
-"tipo": "galáxia",
+"tipo": "galaxy",
 "const": "Leo",
 "mag": 9.0,
 "ra_h": 10.73269,
@@ -857,7 +857,7 @@
 {
 "id": "M96",
 "ngc": "NGC 3368",
-"tipo": "galáxia",
+"tipo": "galaxy",
 "const": "Leo",
 "mag": 9.0,
 "ra_h": 10.77937,
@@ -866,7 +866,7 @@
 {
 "id": "M97",
 "ngc": "NGC 3587",
-"tipo": "nebulosa planetária",
+"tipo": "planetary nebula",
 "const": "UMa",
 "mag": 11.0,
 "ra_h": 11.24659,
@@ -875,7 +875,7 @@
 {
 "id": "M98",
 "ngc": "NGC 4192",
-"tipo": "galáxia",
+"tipo": "galaxy",
 "const": "Com",
 "mag": 10.0,
 "ra_h": 12.23008,
@@ -884,7 +884,7 @@
 {
 "id": "M99",
 "ngc": "NGC 4254",
-"tipo": "galáxia",
+"tipo": "galaxy",
 "const": "Com",
 "mag": 9.0,
 "ra_h": 12.31378,
@@ -893,7 +893,7 @@
 {
 "id": "M100",
 "ngc": "NGC 4321",
-"tipo": "galáxia",
+"tipo": "galaxy",
 "const": "Com",
 "mag": 9.0,
 "ra_h": 12.3819,
@@ -902,7 +902,7 @@
 {
 "id": "M101",
 "ngc": "NGC 5457",
-"tipo": "galáxia",
+"tipo": "galaxy",
 "const": "UMa",
 "mag": 7.0,
 "ra_h": 14.05348,
@@ -911,7 +911,7 @@
 {
 "id": "M102",
 "ngc": "NGC 5866",
-"tipo": "galáxia",
+"tipo": "galaxy",
 "const": "Dra",
 "mag": 9.9,
 "ra_h": 15.10819,
@@ -920,7 +920,7 @@
 {
 "id": "M103",
 "ngc": "NGC 581",
-"tipo": "enxame aberto",
+"tipo": "open cluster",
 "const": "Cas",
 "mag": 7.0,
 "ra_h": 1.55606,
@@ -929,7 +929,7 @@
 {
 "id": "M104",
 "ngc": "NGC 4594",
-"tipo": "galáxia",
+"tipo": "galaxy",
 "const": "Crv",
 "mag": 8.0,
 "ra_h": 12.66651,
@@ -938,7 +938,7 @@
 {
 "id": "M105",
 "ngc": "NGC 3379",
-"tipo": "galáxia",
+"tipo": "galaxy",
 "const": "Leo",
 "mag": 9.0,
 "ra_h": 10.79711,
@@ -947,7 +947,7 @@
 {
 "id": "M106",
 "ngc": "NGC 4258",
-"tipo": "galáxia",
+"tipo": "galaxy",
 "const": "CVn",
 "mag": 8.0,
 "ra_h": 12.31597,
@@ -956,7 +956,7 @@
 {
 "id": "M107",
 "ngc": "NGC 6171",
-"tipo": "enxame globular",
+"tipo": "globular cluster",
 "const": "Oph",
 "mag": 8.0,
 "ra_h": 16.5422,
@@ -965,7 +965,7 @@
 {
 "id": "M108",
 "ngc": "NGC 3556",
-"tipo": "galáxia",
+"tipo": "galaxy",
 "const": "UMa",
 "mag": 10.0,
 "ra_h": 11.19194,
@@ -974,7 +974,7 @@
 {
 "id": "M109",
 "ngc": "NGC 3992",
-"tipo": "galáxia",
+"tipo": "galaxy",
 "const": "UMa",
 "mag": 9.0,
 "ra_h": 11.95999,
@@ -983,7 +983,7 @@
 {
 "id": "M110",
 "ngc": "NGC 205",
-"tipo": "galáxia",
+"tipo": "galaxy",
 "const": "And",
 "mag": 8.0,
 "ra_h": 0.6728,

@@ -28,38 +28,38 @@ MIN_ALTITUDE_BRIGHT_DEG = 15.0
 # Objectos mais fracos que isto não se veem num telescópio amador típico.
 MAX_MAGNITUDE = 10.0
 
-# (nome em português, chave nas efemérides, slug no Telescopius)
+# (nome, chave nas efemérides, slug no Telescopius)
 PLANETS = [
-    ("Mercúrio", "mercury", "mercury"),
-    ("Vénus", "venus", "venus"),
-    ("Marte", "mars", "mars"),
-    ("Júpiter", "jupiter barycenter", "jupiter"),
-    ("Saturno", "saturn barycenter", "saturn"),
-    ("Úrano", "uranus barycenter", "uranus"),
-    ("Neptuno", "neptune barycenter", "neptune"),
+    ("Mercury", "mercury", "mercury"),
+    ("Venus", "venus", "venus"),
+    ("Mars", "mars", "mars"),
+    ("Jupiter", "jupiter barycenter", "jupiter"),
+    ("Saturn", "saturn barycenter", "saturn"),
+    ("Uranus", "uranus barycenter", "uranus"),
+    ("Neptune", "neptune barycenter", "neptune"),
 ]
 
 COMPASS = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
-           "S", "SSO", "SO", "OSO", "O", "ONO", "NO", "NNO"]
+           "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"]
 
 # Os alvos "brilhantes" — a Lua e os planetas. Entram sempre na lista (são
 # poucos e sempre relevantes) e lideram-na, ou não, conforme o modo.
-BRIGHT_KINDS = ("satélite", "planeta")
+BRIGHT_KINDS = ("moon", "planet")
 
 # Símbolos convencionais dos atlas celestes. O frontend desenha-os em SVG —
 # são a notação que qualquer observador reconhece sem legenda.
 SYMBOLS = {
-    "galáxia": "galaxy",
-    "enxame aberto": "open_cluster",
-    "nuvem estelar": "open_cluster",
-    "asterismo": "open_cluster",
-    "enxame globular": "globular",
-    "nebulosa planetária": "planetary",
-    "nebulosa": "nebula",
-    "remanescente de supernova": "nebula",
-    "estrela dupla": "double",
-    "planeta": "planet",
-    "satélite": "moon",
+    "galaxy": "galaxy",
+    "open cluster": "open_cluster",
+    "star cloud": "open_cluster",
+    "asterism": "open_cluster",
+    "globular cluster": "globular",
+    "planetary nebula": "planetary",
+    "nebula": "nebula",
+    "supernova remnant": "nebula",
+    "double star": "double",
+    "planet": "planet",
+    "moon": "moon",
 }
 
 # Fichas no Telescopius. A forma curta /deep-sky-objects/m-31 redirecciona
@@ -143,10 +143,10 @@ def _round_airmass(altitude_deg: float) -> float | None:
 
 def _trend(hours: float) -> str:
     if hours > 0.25:
-        return "a subir"
+        return "rising"
     if hours < -0.25:
-        return "a descer"
-    return "no ponto alto"
+        return "descending"
+    return "at its peak"
 
 
 def _timing(lst_h: float, ra_h: float, dec_deg: float, lat: float,
@@ -224,7 +224,7 @@ def visible_objects(lat: float, lon: float, offset_seconds: int,
         # sideral é da data, e J2000 está ~0.37° defasado por precessão.
         m_ra_d, m_dec_d, _ = moon_apparent.radec(epoch="date")
         found.append({
-            "name": "Lua", "kind": "satélite", "magnitude": None,
+            "name": "Moon", "kind": "moon", "magnitude": None,
             "altitude_deg": round(m_alt.degrees, 1),
             "azimuth_deg": round(m_az.degrees, 1),
             "direction": compass_point(m_az.degrees),
@@ -250,7 +250,7 @@ def visible_objects(lat: float, lon: float, offset_seconds: int,
         ra, dec, _ = apparent.radec()
         ra_d, dec_d, _ = apparent.radec(epoch="date")
         found.append({
-            "name": label, "kind": "planeta", "magnitude": None,
+            "name": label, "kind": "planet", "magnitude": None,
             "altitude_deg": round(alt.degrees, 1),
             "azimuth_deg": round(az.degrees, 1),
             "direction": compass_point(az.degrees),

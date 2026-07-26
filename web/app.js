@@ -351,14 +351,14 @@ function buildSkyDome(n, lat, lon, tz) {
     if (o.magnitude !== null && o.magnitude !== undefined) bits.push(`mag ${o.magnitude}`);
     pop.append(el("div", "sky-pop-kind", bits.join(" · ")));
     pop.append(el("div", "sky-pop-line",
-      `${Math.round(cur.alt)}° acima do horizonte, a ${skyCompass(cur.az)}`));
+      `${Math.round(cur.alt)}° above the horizon, ${skyCompass(cur.az)}`));
     const am = skyAirmass(cur.alt);
     if (am !== null) pop.append(el("div", "sky-pop-line", `airmass ${am.toFixed(1)}`));
     if (o.transit_time) {
       pop.append(el("div", "sky-pop-line",
-        `mais alto às ${hhmm(o.transit_time)} (${Math.round(o.max_altitude_deg)}°)`));
+        `highest at ${hhmm(o.transit_time)} (${Math.round(o.max_altitude_deg)}°)`));
     }
-    if (o.washed_out) pop.append(el("div", "sky-pop-warn", "apagado pelo luar"));
+    if (o.washed_out) pop.append(el("div", "sky-pop-warn", "washed out by moonlight"));
     // posição em % do quadrado; limitada para o popup não sair da cúpula (e
     // não criar scroll no telemóvel). Acima do ponto, ou abaixo se no topo.
     pop.style.left = Math.max(20, Math.min(80, cur.x / S * 100)).toFixed(1) + "%";
@@ -412,7 +412,7 @@ function buildSkyDome(n, lat, lon, tz) {
       const [alt, az] = altAz(o.ra_h, o.dec_deg, lst, lat);
       if (alt <= 0) continue;   // pôs-se: desaparece da cúpula
       const [x, y] = pos(alt, az);
-      const isMoon = o.kind === "satélite", isPlanet = o.kind === "planeta";
+      const isMoon = o.kind === "moon", isPlanet = o.kind === "planet";
       const low = alt < 30;
       const tier = alt >= 50 ? "var(--good)" : alt >= 30 ? "var(--ok)" : "var(--faint)";
       let dot;
@@ -468,7 +468,7 @@ function buildSkyDome(n, lat, lon, tz) {
 
   const control = el("div", "sky-time");
   const label = el("div", "sky-time-lbl");
-  const fmt = new Intl.DateTimeFormat("pt-PT",
+  const fmt = new Intl.DateTimeFormat("en-GB",
     { timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false });
   const slider = el("input", "sky-slider");
   slider.type = "range";
@@ -476,7 +476,7 @@ function buildSkyDome(n, lat, lon, tz) {
   slider.max = String(Math.round(t1));
   slider.step = String(5 * 60 * 1000);   // passos de 5 minutos
   slider.value = String(Math.round(Math.min(Math.max(tMid, t0), t1)));
-  slider.setAttribute("aria-label", "Hora da noite");
+  slider.setAttribute("aria-label", "Time of night");
 
   // Faixa da escuridão total (dusk→dawn) destacada no fundo do slider, com a
   // hora marcada em cada aresta — fora dela, o Sol ainda clareia o céu.
@@ -567,10 +567,10 @@ function rememberCountry(code) {
 }
 
 async function geocodeRequest(name, count, countryCode) {
-  let url = `${GEOCODE_URL}?name=${encodeURIComponent(name)}&count=${count}&language=pt&format=json`;
+  let url = `${GEOCODE_URL}?name=${encodeURIComponent(name)}&count=${count}&language=en&format=json`;
   if (countryCode) url += `&countryCode=${countryCode}`;
   const res = await fetch(url);
-  if (!res.ok) throw new Error("Falha na geocodificação");
+  if (!res.ok) throw new Error("Geocoding failed");
   return (await res.json()).results || [];
 }
 
@@ -605,7 +605,7 @@ async function geocode(name) {
   if (!results.length && name.includes(",")) {
     results = await geocodeMany(name.split(",")[0].trim(), 1);
   }
-  if (!results.length) throw new Error(`Localidade "${name}" não encontrada`);
+  if (!results.length) throw new Error(`Location "${name}" not found`);
   const r = results[0];
   rememberCountry(r.country_code);
   return { lat: r.latitude, lon: r.longitude, label: placeLabel(r) };
@@ -615,12 +615,12 @@ async function geocode(name) {
 
 async function loadForecast(keepDate) {
   if (!current) return;
-  setStatus(`A calcular as noites para ${current.label}…`);
+  setStatus(`Working out the nights for ${current.label}…`);
   resultEl.hidden = true;
   // O plano gratuito do Render adormece; a primeira resposta do dia demora a
   // acordar. Avisar em vez de deixar a pessoa achar que travou.
   const waking = setTimeout(
-    () => setStatus("A acordar o servidor… a primeira vez do dia pode levar até 1 min."),
+    () => setStatus("Waking the server… the first visit of the day can take up to 1 min."),
     4000);
   try {
     lastData = await computeForecast(current.lat, current.lon, mode);
@@ -661,9 +661,9 @@ function barClass(alt) {
 
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 const weekdayShort = (d) =>
-  cap(new Date(d + "T12:00:00").toLocaleDateString("pt-PT", { weekday: "short" }).replace(".", ""));
+  cap(new Date(d + "T12:00:00").toLocaleDateString("en-GB", { weekday: "short" }).replace(".", ""));
 const weekdayLong = (d) =>
-  cap(new Date(d + "T12:00:00").toLocaleDateString("pt-PT", { weekday: "long", day: "numeric", month: "short" }));
+  cap(new Date(d + "T12:00:00").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" }));
 
 /* ------------------------------------------------- painéis */
 
@@ -687,7 +687,7 @@ function block(label, node, aside) {
 function buildLimits(n, lp) {
   const box = el("div", "limits");
   if (!n.limiting.length) {
-    box.append(el("div", "limits-none", "Nada a limitar, condições no máximo."));
+    box.append(el("div", "limits-none", "Nothing holding it back — conditions at their best."));
     return box;
   }
   const night = n.limiting.filter((f) => f.factor !== "poluicao");
@@ -709,9 +709,9 @@ function buildLimits(n, lp) {
   if (lp) {
     // A poluição luminosa é constante: mostra-se a % que corta sempre, não um
     // valor em pontos que engana por variar com a noite.
-    box.append(el("div", "limit-group", "Este sítio"));
+    box.append(el("div", "limit-group", "This place"));
     const row = el("div", "limit");
-    row.append(el("span", "limit-name", `poluição luminosa · Bortle ${lp.bortle}`));
+    row.append(el("span", "limit-name", `light pollution · Bortle ${lp.bortle}`));
     const track = el("div", "limit-track");
     const fill = el("div", "limit-fill");
     fill.style.width = `${Math.max(8, lp.cut_pct)}%`;
@@ -722,7 +722,7 @@ function buildLimits(n, lp) {
     box.append(row);
   }
   if (night.length) {
-    box.append(el("div", "limit-group", "Esta noite"));
+    box.append(el("div", "limit-group", "Tonight"));
     for (const f of night) box.append(barRow(f.label, f.cost_points));
   }
   return box;
@@ -744,26 +744,26 @@ function buildConds(n) {
 
   grid.append(condItem({
     moon: moonSVG(n.moon_illumination_pct, n.moon_waxing, 22),
-    tag: "Lua",
+    tag: "Moon",
     value: n.moon_phase,
-    spark: el("div", "cond-note", `${Math.round(n.moon_illumination_pct)}% iluminada`),
+    spark: el("div", "cond-note", `${Math.round(n.moon_illumination_pct)}% lit`),
   }));
 
   grid.append(condItem({
-    icon: iconSVG("cloud"), tag: "Nuvens",
+    icon: iconSVG("cloud"), tag: "Clouds",
     value: c ? c.clouds_label : "—",
     spark: c ? scaledSpark(c.clouds_spark, "%", true, 25) : null,
   }));
 
-  const dewWarn = c && /Prov|Poss/.test(c.dew_label);
+  const dewWarn = c && /Likely|Possible/.test(c.dew_label);
   grid.append(condItem({
-    icon: iconSVG("droplet", 20, dewWarn ? "icon warn" : "icon"), tag: "Orvalho",
+    icon: iconSVG("droplet", 20, dewWarn ? "icon warn" : "icon"), tag: "Dew",
     value: c ? c.dew_label : "—",
     spark: c ? scaledSpark(c.dew_spark, "°", false, 3) : null,
   }));
 
   grid.append(condItem({
-    icon: iconSVG("thermo"), tag: "Temperatura",
+    icon: iconSVG("thermo"), tag: "Temperature",
     value: c ? c.temp_label : "—",
     spark: el("div", "cond-note",
       [n.wind_kmh !== null ? `vento ${Math.round(n.wind_kmh)} km/h` : "",
@@ -858,12 +858,12 @@ function buildMeteogram(hours) {
   // Bandas contínuas em vez de dezenas de caixinhas, sobre a noite escura toda.
   const box = el("div");
   box.append(timeHeader(hours));
-  box.append(meteoRow("nuvens", hours, "cloud", (v) => v === null ? "—" : `${Math.round(v)}%`));
+  box.append(meteoRow("clouds", hours, "cloud", (v) => v === null ? "—" : `${Math.round(v)}%`));
   box.append(meteoRow("seeing", hours, "jet",
-    (v) => v === null ? "—" : v < 60 ? "bom" : v < 100 ? "médio" : "fraco"));
-  box.append(meteoRow("Lua", hours, "moon",
+    (v) => v === null ? "—" : v < 60 ? "good" : v < 100 ? "fair" : "poor"));
+  box.append(meteoRow("Moon", hours, "moon",
     (v) => v === null ? "—" : v <= 0 ? "posta" : `${Math.round(v)}°`));
-  box.append(meteoRow("margem orvalho", hours, "spread", (v) => v === null ? "—" : `${v.toFixed(1)}°`));
+  box.append(meteoRow("dew margin", hours, "spread", (v) => v === null ? "—" : `${v.toFixed(1)}°`));
   box.append(meteoRow("temp", hours, "temp", (v) => v === null ? "—" : `${Math.round(v)}°`));
   return box;
 }
@@ -883,13 +883,13 @@ function objectItem(o, hours) {
   info.append(a);
 
   const quando = o.transit_time
-    ? `mais alto às ${hhmm(o.transit_time)} (${Math.round(o.max_altitude_deg)}°)`
-    : `${o.trend}, até ${Math.round(o.max_altitude_deg)}°`;
+    ? `highest at ${hhmm(o.transit_time)} (${Math.round(o.max_altitude_deg)}°)`
+    : `${o.trend}, up to ${Math.round(o.max_altitude_deg)}°`;
   const bits = [o.kind];
   if (o.magnitude !== null) bits.push(`mag ${o.magnitude}`);
   bits.push(quando);
   if (o.airmass !== null) bits.push(`airmass ${o.airmass.toFixed(1)}`);
-  if (o.washed_out) bits.push("apagado pelo luar");
+  if (o.washed_out) bits.push("washed out by moonlight");
   info.append(el("span", "obj-meta", bits.join(" · ")));
   item.append(info);
 
@@ -907,11 +907,11 @@ function objectItem(o, hours) {
 
 // Grupos de filtro: rótulo → tipos de símbolo que abrange.
 const OBJECT_GROUPS = [
-  ["Tudo", null],
-  ["Galáxias", ["galaxy"]],
-  ["Nebulosas", ["nebula", "planetary"]],
-  ["Enxames", ["open_cluster", "globular"]],
-  ["Planetas", ["planet", "moon", "double"]],
+  ["All", null],
+  ["Galaxies", ["galaxy"]],
+  ["Nebulae", ["nebula", "planetary"]],
+  ["Clusters", ["open_cluster", "globular"]],
+  ["Planets", ["planet", "moon", "double"]],
 ];
 
 function buildObjectsFilter(n, hours) {
@@ -925,8 +925,8 @@ function buildObjectsFilter(n, hours) {
     s.append(sw, document.createTextNode(txt));
     return s;
   };
-  legend.append(mk("var(--good)", "No melhor (>50°)"), mk("var(--ok)", "Utilizável (30–50°)"),
-                mk("var(--faint)", "Baixo (<30°)"));
+  legend.append(mk("var(--good)", "Best (>50°)"), mk("var(--ok)", "Usable (30–50°)"),
+                mk("var(--faint)", "Low (<30°)"));
 
   let active = null;    // conjunto de símbolos, ou null = tudo
   let expanded = false;
@@ -939,9 +939,9 @@ function buildObjectsFilter(n, hours) {
     for (const o of visible) rows.append(objectItem(o, hours));
 
     if (!matches.length) {
-      rows.append(el("div", "obj-empty", "Nenhum deste tipo acima do horizonte."));
+      rows.append(el("div", "obj-empty", "None of this type above the horizon."));
     } else if (matches.length > TOP_OBJECTS && !expanded) {
-      const more = el("button", "more", `Ver os outros ${matches.length - TOP_OBJECTS}`);
+      const more = el("button", "more", `See the other ${matches.length - TOP_OBJECTS}`);
       more.type = "button";
       more.addEventListener("click", () => { expanded = true; draw(); });
       rows.append(more);
@@ -975,9 +975,9 @@ function conditionPill(n) {
   const c = n.cloud_cover_pct;
   let label = "sem dados", cls = "";
   if (c !== null && c !== undefined) {
-    if (c < 15) { label = "céu limpo"; cls = "pill-good"; }
-    else if (c < 40) { label = "poucas nuvens"; cls = "pill-ok"; }
-    else { label = "muitas nuvens"; cls = "pill-poor"; }
+    if (c < 15) { label = "clear sky"; cls = "pill-good"; }
+    else if (c < 40) { label = "few clouds"; cls = "pill-ok"; }
+    else { label = "lots of cloud"; cls = "pill-poor"; }
   }
   const pill = el("span", "pill " + cls);
   pill.append(iconSVG("cloud", 13), document.createTextNode(label));
@@ -1068,31 +1068,31 @@ function buildHighlights(n) {
   if (n.meteor_shower) {
     const m = n.meteor_shower;
     add("☄️", m.name,
-      `${m.summary} Radiante a ${Math.round(m.radiant_altitude_deg)}° ${m.radiant_direction}.`);
+      `${m.summary} Radiant at ${Math.round(m.radiant_altitude_deg)}° ${m.radiant_direction}.`);
   }
   if (n.milky_way) {
     const g = n.milky_way;
-    add("🌌", "Via Láctea",
-      `${g.summary}${g.transit_time ? ` Mais alto às ${hhmm(g.transit_time)}.` : ""}`);
+    add("🌌", "Milky Way",
+      `${g.summary}${g.transit_time ? ` Highest at ${hhmm(g.transit_time)}.` : ""}`);
   }
   return box;
 }
 
 const RAW_COLUMNS = [
-  ["Hora", (h) => hhmm(h.time)],
+  ["Time", (h) => hhmm(h.time)],
   ["Qual.", (h) => `${(h.quality * 100).toFixed(0)}%`],
-  ["B/M/A", (h) => `${num(h.cloud_low_pct)}/${num(h.cloud_mid_pct)}/${num(h.cloud_high_pct)}`],
+  ["L/M/H", (h) => `${num(h.cloud_low_pct)}/${num(h.cloud_mid_pct)}/${num(h.cloud_high_pct)}`],
   ["Total", (h) => `${num(h.cloud_total_pct)}%`],
   ["Temp", (h) => `${num(h.temperature_c, 1)}°`],
-  ["Orvalho", (h) => `${num(h.dew_point_c, 1)}°`],
+  ["Dew", (h) => `${num(h.dew_point_c, 1)}°`],
   ["Spread", (h) => `${num(h.dew_spread_c, 1)}°`],
-  ["HR", (h) => `${num(h.humidity_pct)}%`],
-  ["Vento", (h) => num(h.wind_speed_kmh)],
-  ["Rajada", (h) => num(h.wind_gusts_kmh)],
+  ["RH", (h) => `${num(h.humidity_pct)}%`],
+  ["Wind", (h) => num(h.wind_speed_kmh)],
+  ["Gust", (h) => num(h.wind_gusts_kmh)],
   ["Jet", (h) => num(h.jet_stream_kmh)],
   ["Visib.", (h) => (h.visibility_m == null ? "—" : `${(h.visibility_m / 1000).toFixed(0)}km`)],
-  ["Lua alt", (h) => `${num(h.moon_altitude_deg)}°`],
-  ["Lua %", (h) => num(h.moon_illumination_pct)],
+  ["Moon alt", (h) => `${num(h.moon_altitude_deg)}°`],
+  ["Moon %", (h) => num(h.moon_illumination_pct)],
   ["Prec.", (h) => `${num(h.precipitation_prob_pct)}%`],
 ];
 
@@ -1132,10 +1132,10 @@ function renderStrip(data) {
                            (n.date === selectedDate ? " is-selected" : ""));
     b.type = "button";
     const dt = new Date(n.date + "T12:00:00");
-    b.append(el("span", "d", n.in_progress ? "Agora" : `${weekdayShort(n.date)} ${dt.getDate()}`),
+    b.append(el("span", "d", n.in_progress ? "Now" : `${weekdayShort(n.date)} ${dt.getDate()}`),
              el("span", "n", usable ? String(n.score) : "—"),
              moonSVG(n.moon_illumination_pct, n.moon_waxing, 20));
-    b.title = `${n.in_progress ? "Esta noite" : weekdayLong(n.date)}: ${n.headline}`;
+    b.title = `${n.in_progress ? "Tonight" : weekdayLong(n.date)}: ${n.headline}`;
     b.addEventListener("click", () => { selectedDate = n.date; render(); });
     stripEl.append(b);
   }
@@ -1155,7 +1155,7 @@ function renderDetail(n) {
   headRow.append(el("span", "verdict-head", n.headline));
   if (usable) headRow.append(conditionPill(n));
   body.append(headRow);
-  const dayLabel = n.in_progress ? "Esta noite" : weekdayLong(n.date);
+  const dayLabel = n.in_progress ? "Tonight" : weekdayLong(n.date);
   body.append(el("div", "verdict-sub", usable
     ? `${dayLabel} · ${hhmm(n.window_start)}–${hhmm(n.window_end)}`
     : `${dayLabel} · ${n.conditions}`));
@@ -1164,7 +1164,7 @@ function renderDetail(n) {
   if (usable) {
     const limits = buildLimits(n, lastData && lastData.light_pollution);
     limits.hidden = true;
-    const why = el("button", "why-toggle", "O que baixa o score");
+    const why = el("button", "why-toggle", "What lowers the score");
     why.type = "button";
     why.addEventListener("click", () => {
       limits.hidden = !limits.hidden;
@@ -1192,11 +1192,11 @@ function renderDetail(n) {
   const hl = buildHighlights(n);
   if (hl) detailEl.append(hl);
 
-  detailEl.append(block("Condições", buildConds(n)));
+  detailEl.append(block("Conditions", buildConds(n)));
 
   const raw = buildRaw(hrs);
   raw.hidden = true;
-  const toggle = el("button", "raw-toggle", "Tabela completa");
+  const toggle = el("button", "raw-toggle", "Full table");
   toggle.type = "button";
   toggle.addEventListener("click", () => {
     raw.hidden = !raw.hidden;
@@ -1204,16 +1204,16 @@ function renderDetail(n) {
   });
   const meteo = el("div");
   meteo.append(buildMeteogram(hrs), raw);
-  detailEl.append(block("A noite hora a hora", meteo, toggle));
+  detailEl.append(block("The night, hour by hour", meteo, toggle));
 
   if (n.objects.length) {
     // Cúpula: o céu visto de baixo, com slider para varrer a noite.
     const wrap = el("div", "sky-wrap");
     wrap.append(buildSkyDome(n, lastData.latitude, lastData.longitude, lastData.timezone),
-                el("p", "sky-cap", "Arrasta para ver o céu ao longo da noite."));
-    detailEl.append(block("O céu nesta noite", wrap));
+                el("p", "sky-cap", "Drag to watch the sky move through the night."));
+    detailEl.append(block("The sky tonight", wrap));
 
-    detailEl.append(block("O que observar, e quando", buildObjectsFilter(n, hrs)));
+    detailEl.append(block("What to observe, and when", buildObjectsFilter(n, hrs)));
   }
 }
 
@@ -1229,7 +1229,7 @@ function render() {
     placeSkyEl.textContent = `${lp.description} · Bortle ${lp.bortle} · SQM ${lp.sqm}`;
   } else {
     placeSkyEl.className = "place-sky is-missing";
-    placeSkyEl.textContent = "poluição luminosa não aplicada, scores optimistas em zonas urbanas";
+    placeSkyEl.textContent = "light pollution not applied — scores are optimistic in urban areas";
   }
 
   if (!selectedDate || !data.nights.some((n) => n.date === selectedDate)) {
@@ -1330,7 +1330,7 @@ form.addEventListener("submit", async (e) => {
   // ("Fundão, Distrito…, PT") não é geocodificável, e re-procurar era o que dava
   // o "não encontrada". Assim "Ver noites" volta a correr o local escolhido.
   if (current && name === current.label) { loadForecast(); return; }
-  setStatus("A procurar localidade…");
+  setStatus("Finding the location…");
   try {
     current = await geocode(name);
     await loadForecast();
@@ -1340,14 +1340,14 @@ form.addEventListener("submit", async (e) => {
 });
 
 geoBtn.addEventListener("click", () => {
-  if (!navigator.geolocation) { setStatus("⚠️ O browser não suporta geolocalização."); return; }
-  setStatus("A obter a tua localização…");
+  if (!navigator.geolocation) { setStatus("⚠️ Your browser doesn't support geolocation."); return; }
+  setStatus("Getting your location…");
   navigator.geolocation.getCurrentPosition(
     (pos) => {
-      current = { lat: pos.coords.latitude, lon: pos.coords.longitude, label: "a tua localização" };
+      current = { lat: pos.coords.latitude, lon: pos.coords.longitude, label: "your location" };
       loadForecast();
     },
-    () => setStatus("⚠️ Não foi possível obter a localização."),
+    () => setStatus("⚠️ Couldn't get your location."),
   );
 });
 
@@ -1414,7 +1414,7 @@ async function openCompare() {
   const places = loadSaved();
   if (places.length < 2) return;
   compareModal.hidden = false;
-  compareBody.innerHTML = "<p class='status'>A calcular…</p>";
+  compareBody.innerHTML = "<p class='status'>Calculating…</p>";
 
   const results = await Promise.all(places.map(async (p) => {
     try {
@@ -1424,7 +1424,7 @@ async function openCompare() {
 
   const ok = results.filter((r) => !r.error);
   if (!ok.length) {
-    compareBody.innerHTML = "<p class='status'>Não foi possível calcular.</p>";
+    compareBody.innerHTML = "<p class='status'>Couldn't calculate.</p>";
     return;
   }
 
@@ -1441,7 +1441,7 @@ async function openCompare() {
   hr.append(document.createElement("th"));
   for (const n of ok[0].data.nights) {
     const dt = new Date(n.date + "T12:00:00");
-    hr.append(el("th", null, dt.toLocaleDateString("pt-PT", { weekday: "short", day: "numeric" })));
+    hr.append(el("th", null, dt.toLocaleDateString("en-GB", { weekday: "short", day: "numeric" })));
   }
   thead.append(hr);
 
@@ -1451,7 +1451,7 @@ async function openCompare() {
     const th = el("th", "cmp-place");
     th.append(document.createTextNode(r.place.name),
               el("span", null, r.data.light_pollution
-                ? r.data.light_pollution.description : "poluição luminosa desconhecida"));
+                ? r.data.light_pollution.description : "light pollution unknown"));
     tr.append(th);
     for (const n of r.data.nights) {
       const td = el("td", compareClass(n.score), String(n.score));
@@ -1464,7 +1464,7 @@ async function openCompare() {
   table.append(thead, tbody);
 
   const verdict = el("p", "cmp-verdict");
-  verdict.append(document.createTextNode("Melhor combinação: "));
+  verdict.append(document.createTextNode("Best combination: "));
   verdict.append(el("strong", null, `${best.place}, ${weekdayLong(best.night.date)}`));
   verdict.append(document.createTextNode(`: ${best.night.headline.toLowerCase()}, score ${best.score}.`));
 
@@ -1566,187 +1566,184 @@ try { applyRedMode(localStorage.getItem(RED_KEY) === "1"); } catch { /* ignorar 
 // completas. Os textos legais (cookies/privacidade/termos) tens de ser TU a
 // escrevê-los — deixo o esqueleto.
 const PAGES = {
-  howto: { title: "Como usar", html:
-    `<p>O Astrowe responde a uma pergunta: <strong>das próximas noites, qual vale a
-        pena?</strong> Em três passos:</p>
-     <h3>1. Escolhe onde e o que</h3>
-     <p>Escreve a localização (ou usa o 📍 para a tua, ou o 🗺 para escolher no
-        mapa). Depois escolhe o tipo de observação: <strong>Céu profundo</strong>
-        (galáxias, nebulosas — exige escuridão) ou <strong>Planetas e Lua</strong>
-        (basta o Sol posto; manda o seeing).</p>
-     <h3>2. Lê a tira de noites</h3>
-     <p>Cada noite tem um score de 0 a 100 e a fase da Lua. A melhor fica
-        destacada. Clica numa para ver o detalhe. Depois da meia-noite, a noite a
-        decorrer aparece como <strong>Agora</strong>, só com as horas que faltam.</p>
-     <h3>3. Vê o detalhe</h3>
+  howto: { title: "How to use", html:
+    `<p>Astrowe answers one question: <strong>of the next few nights, which is
+        worth it?</strong> In three steps:</p>
+     <h3>1. Choose where and what</h3>
+     <p>Type a location (or use 📍 for yours, or 🗺 to pick on the map). Then choose the
+        observing type: <strong>Deep sky</strong> (galaxies, nebulae — needs darkness)
+        or <strong>Planets & Moon</strong> (just needs the Sun down; seeing is what
+        matters).</p>
+     <h3>2. Read the strip of nights</h3>
+     <p>Each night has a score from 0 to 100 and the Moon phase. The best one is
+        highlighted. Click a night for the detail. After midnight, the night in progress
+        shows as <strong>Now</strong>, with only the hours left.</p>
+     <h3>3. Read the detail</h3>
      <ul>
-       <li><strong>Veredicto</strong> — a resposta em frase, e "o que baixa o score".</li>
-       <li><strong>Banda</strong> — a noite de relance: a janela óptima destacada e
-           quando a Lua se põe.</li>
-       <li><strong>Condições</strong> — nuvens, orvalho, temperatura, Lua, hora a hora.</li>
-       <li><strong>A cúpula</strong> — o céu visto de baixo; arrasta o slider para o
-           ver mover-se ao longo da noite.</li>
-       <li><strong>O que observar</strong> — os alvos, quando estão no seu melhor,
-           com a cor a dizer quão alto estão (verde/amarelo/apagado).</li>
+       <li><strong>Verdict</strong> — the answer in a sentence, plus "what lowers the score".</li>
+       <li><strong>Band</strong> — the night at a glance: the best window highlighted and
+           when the Moon sets.</li>
+       <li><strong>Conditions</strong> — clouds, dew, temperature, Moon, hour by hour.</li>
+       <li><strong>The dome</strong> — the sky seen from below; drag the slider to watch
+           it move through the night.</li>
+       <li><strong>What to observe</strong> — the targets, when they're at their best,
+           colour-coded by how high they are (green/amber/faded).</li>
      </ul>
-     <p>Podes <strong>guardar locais</strong> e <strong>compará-los</strong> noite a
-        noite. E o <strong>modo vermelho</strong> recolore o site para não estragar
-        a tua visão nocturna no terreno.</p>` },
-  faq: { title: "Perguntas frequentes", html:
-    `<p class="faq-hint">Toca numa pergunta para veres a resposta.</p>
-     <details><summary>O que é o score e como é calculado?</summary>
-       <p>Um número de 0 a 100 por noite. Combina, hora a hora, as nuvens por camada,
-          a fase e altura da Lua, a transparência (secura do ar), o seeing (turbulência
-          alta) e a poluição luminosa do local. Não faz a média da noite — procura a
-          melhor janela contígua de horas. Os números crus estão na "Tabela completa".</p>
+     <p>You can <strong>save places</strong> and <strong>compare them</strong> night by
+        night. And <strong>night-vision mode</strong> recolours the site red so it doesn't
+        spoil your dark adaptation in the field.</p>` },
+  faq: { title: "FAQ", html:
+    `<p class="faq-hint">Tap a question to see the answer.</p>
+     <details><summary>What is the score and how is it calculated?</summary>
+       <p>A number from 0 to 100 per night. It combines, hour by hour, cloud by layer, the
+          Moon's phase and altitude, transparency (how dry the air is), seeing (high
+          turbulence) and the site's light pollution. It doesn't average the night — it
+          finds the best contiguous window of hours. The raw numbers live in the
+          "Full table".</p>
      </details>
-     <details><summary>Porque tem a mesma noite scores diferentes em "Céu profundo" e "Planetas e Lua"?</summary>
-       <p>Usam pesos e janelas diferentes. Céu profundo exige escuridão astronómica e a
-          Lua penaliza muito. Planetas veem-se logo no crepúsculo e a Lua quase não
-          conta — aí o que decide é o seeing.</p>
+     <details><summary>Why does the same night score differently in "Deep sky" and "Planets & Moon"?</summary>
+       <p>They use different weights and windows. Deep sky needs astronomical darkness and
+          the Moon penalises heavily. Planets show up in twilight and the Moon barely
+          counts — there, seeing is what decides.</p>
      </details>
-     <details><summary>O que é a janela óptima?</summary>
-       <p>O troço de horas com melhor qualidade seguida — a melhor altura para observar
-          nessa noite. Aparece destacada na banda e nas horas.</p>
+     <details><summary>What is the best window?</summary>
+       <p>The stretch of hours with the best contiguous quality — the best time to observe
+          that night. It's highlighted in the band and in the hours.</p>
      </details>
-     <details><summary>Porque muda o score de um dia para o outro?</summary>
-       <p>A previsão meteorológica atualiza-se. A mesma noite, vista com mais dias de
-          antecedência, é menos fiável.</p>
+     <details><summary>Why does a night's score change from one day to the next?</summary>
+       <p>The weather forecast updates. The same night, seen further ahead, is less
+          reliable.</p>
      </details>
-     <details><summary>Preciso de telescópio?</summary>
-       <p>Não necessariamente. O score é sobre as condições do céu — serve para olho nu,
-          binóculos ou telescópio. A Lua, os planetas e os chuveiros de meteoros veem-se
-          sem qualquer equipamento.</p>
+     <details><summary>Do I need a telescope?</summary>
+       <p>Not necessarily. The score is about sky conditions — it works for the naked eye,
+          binoculars or a telescope. The Moon, the planets and meteor showers are all
+          visible with no equipment.</p>
      </details>
-     <details><summary>O que querem dizer as cores dos objetos?</summary>
-       <p>Verde = no melhor (acima de 50° de altura), amarelo = utilizável (30–50°),
-          apagado = baixo demais (menos de 30°). Quanto mais alto, menos atmosfera
-          atravessas.</p>
+     <details><summary>What do the object colours mean?</summary>
+       <p>Green = at its best (above 50° altitude), amber = usable (30–50°), faded = too
+          low (below 30°). The higher it is, the less atmosphere you look through.</p>
      </details>
-     <details><summary>Um objeto está no céu mas não tem barra em "O que observar". Porquê?</summary>
-       <p>As barras só começam aos 30° de altura — abaixo disso não vale a pena apontar
-          o telescópio. Na cúpula vês o objeto mesmo rasteiro; nas barras só quando sobe.</p>
+     <details><summary>An object is up but has no bar in "What to observe". Why?</summary>
+       <p>The bars only start at 30° altitude — below that it's not worth pointing a
+          telescope. On the dome you see the object even when it's low; in the bars, only
+          once it climbs.</p>
      </details>
-     <details><summary>De onde vêm os dados?</summary>
-       <p>Meteorologia do <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a>;
-          Sol, Lua e planetas calculados com o <a href="https://rhodesmill.org/skyfield/" target="_blank" rel="noopener">Skyfield</a>;
-          poluição luminosa do <a href="https://www.lightpollutionmap.info" target="_blank" rel="noopener">lightpollutionmap.info</a>;
-          mapa do OpenStreetMap. Ver os <button type="button" class="link-btn" data-page="ack">Agradecimentos</button>.</p>
+     <details><summary>Where does the data come from?</summary>
+       <p>Weather from <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a>;
+          Sun, Moon and planets computed with <a href="https://rhodesmill.org/skyfield/" target="_blank" rel="noopener">Skyfield</a>;
+          light pollution from <a href="https://www.lightpollutionmap.info" target="_blank" rel="noopener">lightpollutionmap.info</a>;
+          map from OpenStreetMap. See the <button type="button" class="link-btn" data-page="ack">Acknowledgements</button>.</p>
      </details>
-     <details><summary>Quantas noites mostra e que fiabilidade têm?</summary>
-       <p>As próximas ~7 noites. Como qualquer previsão, as primeiras são mais fiáveis;
-          a partir de 4–5 dias é indicativa.</p>
+     <details><summary>How many nights does it show, and how reliable are they?</summary>
+       <p>The next ~7 nights. Like any forecast, the first ones are more reliable; beyond
+          4–5 days it's indicative.</p>
      </details>
-     <details><summary>Porque é que a poluição luminosa às vezes não aparece?</summary>
-       <p>Esse fator precisa de uma chave de API pessoal. Sem ela o site funciona na
-          mesma, apenas sem esse fator — e avisa, porque os scores ficam otimistas em
-          zonas urbanas.</p>
+     <details><summary>Why does light pollution sometimes not appear?</summary>
+       <p>That factor needs a personal API key. Without it the site still works, just
+          without that factor — and it warns you, because the scores get optimistic in
+          urban areas.</p>
      </details>
-     <details><summary>Porque é que a primeira visita do dia demora a carregar?</summary>
-       <p>O site corre num plano gratuito que adormece ao fim de 15 minutos sem uso. A
-          primeira visita pode levar ~30–50 s a acordar; depois fica rápido.</p>
+     <details><summary>Why is the first visit of the day slow to load?</summary>
+       <p>The site runs on a free tier that sleeps after 15 minutes of no use. The first
+          visit can take ~30–50 s to wake up; after that it's fast.</p>
      </details>
-     <details><summary>Onde ficam os meus locais guardados?</summary>
-       <p>No teu próprio browser (armazenamento local), não num servidor nosso. São
-          privados e podes apagá-los quando quiseres.</p>
+     <details><summary>Where are my saved places kept?</summary>
+       <p>In your own browser (local storage), not on our server. They're private and you
+          can delete them whenever you want.</p>
      </details>
-     <details><summary>Para que serve o modo vermelho?</summary>
-       <p>Recolore o site em tons de vermelho para não estragar a adaptação dos olhos ao
-          escuro — é a luz que se usa no terreno para não "cegar" entre observações.</p>
+     <details><summary>What is night-vision mode for?</summary>
+       <p>It recolours the site in shades of red so it doesn't spoil your eyes' dark
+          adaptation — the light you use in the field so you don't "blind" yourself between
+          observations.</p>
      </details>` },
-  links: { title: "Ligações úteis", html:
-    `<p>Recursos que ajudam a planear e a tirar mais partido das noites:</p>
+  links: { title: "Useful links", html:
+    `<p>Resources that help you plan and get more out of your nights:</p>
      <ul>
        <li><a href="https://astronomy.tools/" target="_blank" rel="noopener">astronomy.tools</a>
-           — calculadoras de campo de visão, comparadores de ocular e telescópio</li>
+           — field-of-view calculators, eyepiece and telescope comparators</li>
        <li><a href="https://telescopius.com/" target="_blank" rel="noopener">Telescopius</a>
-           — fichas de objetos, mapas do céu e planeamento de sessões</li>
+           — object pages, sky maps and session planning</li>
      </ul>` },
-  contact: { title: "Contactar", html:
-    `<p>Para dúvidas, sugestões ou reportar um problema, escreve para
+  contact: { title: "Contact", html:
+    `<p>For questions, suggestions or to report a problem, write to
         <a href="mailto:astrowe.info@gmail.com">astrowe.info@gmail.com</a>.</p>` },
-  bugs: { title: "Reportar erros", html:
-    `<p>Encontraste um erro ou tens uma ideia?</p>
-     <p><a href="https://github.com/loladaki/Astrowe/issues" target="_blank" rel="noopener">Abre um issue no GitHub</a>, ou usa o <button type="button" class="link-btn" data-page="contact">contacto</button>.</p>` },
-  status: { title: "Estado do serviço", html:
-    `<p>Estado atual: <strong id="status-live">a verificar…</strong></p>
-     <p class="footer-muted">O site corre no Render (plano gratuito): a primeira visita do dia pode demorar ~30–50 s a acordar.</p>` },
-  ack: { title: "Agradecimentos", html:
-    `<p>O Astrowe assenta em dados e ferramentas abertas:</p>
+  bugs: { title: "Report a bug", html:
+    `<p>Found a bug or have an idea?</p>
+     <p><a href="https://github.com/loladaki/Astrowe/issues" target="_blank" rel="noopener">Open an issue on GitHub</a>, or use the <button type="button" class="link-btn" data-page="contact">contact page</button>.</p>` },
+  status: { title: "Service status", html:
+    `<p>Current status: <strong id="status-live">checking…</strong></p>
+     <p class="footer-muted">The site runs on Render (free tier): the first visit of the
+        day can take ~30–50 s to wake up.</p>` },
+  ack: { title: "Acknowledgements", html:
+    `<p>Astrowe is built on open data and tools:</p>
      <ul>
-       <li><a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> — meteorologia</li>
-       <li><a href="https://rhodesmill.org/skyfield/" target="_blank" rel="noopener">Skyfield</a> — efemérides (Sol, Lua, planetas)</li>
-       <li><a href="https://www.lightpollutionmap.info" target="_blank" rel="noopener">lightpollutionmap.info</a> — poluição luminosa</li>
-       <li><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> + <a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a> — mapa</li>
-       <li>Catálogo Messier validado contra o SIMBAD</li>
+       <li><a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> — weather</li>
+       <li><a href="https://rhodesmill.org/skyfield/" target="_blank" rel="noopener">Skyfield</a> — ephemerides (Sun, Moon, planets)</li>
+       <li><a href="https://www.lightpollutionmap.info" target="_blank" rel="noopener">lightpollutionmap.info</a> — light pollution</li>
+       <li><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> + <a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a> — map</li>
+       <li>Messier catalogue validated against SIMBAD</li>
      </ul>
-     <p class="footer-muted">Respeita os termos de cada fonte.</p>` },
-  cookies: { title: "Política de cookies", html:
-    `<p class="footer-muted"><em>Rascunho — revê e adapta antes de publicar. Não é
-        aconselhamento jurídico.</em></p>
-     <h3>O que usamos hoje</h3>
-     <p>O Astrowe usa <strong>armazenamento local</strong> do teu browser (não são
-        cookies enviados a servidores) para guardar as tuas preferências: o modo
-        vermelho, o país preferido, os locais que guardas e a tua escolha de
-        consentimento. São essenciais ao funcionamento e ficam apenas no teu
-        dispositivo.</p>
-     <h3>Cookies de terceiros (publicidade)</h3>
-     <p>Quando a publicidade for ativada, o <strong>Google AdSense</strong> pode usar
-        cookies para mostrar e medir anúncios. Só são carregados <strong>depois de
-        aceitares</strong> no banner de consentimento. Se escolheres "Só essenciais",
-        não são usados.</p>
-     <h3>Como controlar</h3>
-     <p>Podes recusar os não essenciais no banner, apagar o armazenamento nas
-        definições do teu browser, e gerir as tuas opções de anúncios em
+     <p class="footer-muted">Please respect each source's terms.</p>` },
+  cookies: { title: "Cookie policy", html:
+    `<p class="footer-muted"><em>Draft — review and adapt before publishing. Not legal advice.</em></p>
+     <h3>What we use today</h3>
+     <p>Astrowe uses your browser's <strong>local storage</strong> (not cookies sent to
+        servers) to keep your preferences: night-vision mode, preferred country, the
+        places you save, and your consent choice. These are essential to how the site
+        works and stay only on your device.</p>
+     <h3>Third-party cookies (advertising)</h3>
+     <p>When advertising is enabled, <strong>Google AdSense</strong> may use cookies to
+        show and measure ads. They are only loaded <strong>after you accept</strong> in
+        the consent banner. If you choose "Essential only", they aren't used.</p>
+     <h3>How to control it</h3>
+     <p>You can decline the non-essential ones in the banner, clear the storage in your
+        browser settings, and manage your ad options at
         <a href="https://myadcenter.google.com" target="_blank" rel="noopener">myadcenter.google.com</a>.</p>
-     <p class="footer-muted">Última atualização: 26/07/2026.</p>` },
-  privacy: { title: "Política de privacidade", html:
-    `<p class="footer-muted"><em>Rascunho — revê e adapta antes de publicar. Não é
-        aconselhamento jurídico.</em></p>
-     <h3>Quem é o responsável</h3>
-     <p>Responsável pelo tratamento: <strong>José Bento</strong> (a título particular),
-        contactável em <a href="mailto:astrowe.info@gmail.com">astrowe.info@gmail.com</a>.</p>
-     <h3>Que dados tratamos</h3>
-     <p>Não é preciso registo nem conta. A <strong>localização</strong> que escolhes é
-        usada para calcular a previsão — é enviada ao Open-Meteo (meteorologia) e ao
-        nosso servidor, que faz os cálculos astronómicos e devolve o resultado. Não
-        associamos essa localização à tua identidade nem guardamos um histórico teu.
-        Os <strong>locais que guardas</strong> e as <strong>preferências</strong> ficam
-        apenas no teu browser (armazenamento local), não nos nossos servidores.</p>
-     <h3>Terceiros</h3>
+     <p class="footer-muted">Last updated: 26/07/2026.</p>` },
+  privacy: { title: "Privacy policy", html:
+    `<p class="footer-muted"><em>Draft — review and adapt before publishing. Not legal advice.</em></p>
+     <h3>Who is responsible</h3>
+     <p>Data controller: <strong>José Bento</strong> (as an individual), reachable at
+        <a href="mailto:astrowe.info@gmail.com">astrowe.info@gmail.com</a>.</p>
+     <h3>What data we process</h3>
+     <p>No sign-up or account is needed. The <strong>location</strong> you choose is used
+        to compute the forecast — it's sent to Open-Meteo (weather) and to our server,
+        which does the astronomical calculations and returns the result. We don't link
+        that location to your identity, nor keep a history of you. The <strong>places you
+        save</strong> and your <strong>preferences</strong> stay only in your browser
+        (local storage), not on our servers.</p>
+     <h3>Third parties</h3>
      <ul>
-       <li><a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> — meteorologia</li>
-       <li><a href="https://www.lightpollutionmap.info" target="_blank" rel="noopener">lightpollutionmap.info</a> — poluição luminosa</li>
-       <li>OpenStreetMap — mapa</li>
-       <li>Render — alojamento do site</li>
-       <li>Google AdSense — publicidade (quando ativa, só após consentimento)</li>
+       <li><a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> — weather</li>
+       <li><a href="https://www.lightpollutionmap.info" target="_blank" rel="noopener">lightpollutionmap.info</a> — light pollution</li>
+       <li>OpenStreetMap — map</li>
+       <li>Render — site hosting</li>
+       <li>Google AdSense — advertising (when enabled, only after consent)</li>
      </ul>
-     <h3>Os teus direitos</h3>
-     <p>Ao abrigo do RGPD, tens direito de acesso, retificação, apagamento e oposição.
-        Como não guardamos dados pessoais associados a ti, o apagamento das
-        preferências e locais faz-se limpando o armazenamento do teu browser. Para
-        qualquer questão, contacta <a href="mailto:astrowe.info@gmail.com">astrowe.info@gmail.com</a>.</p>
-     <p class="footer-muted">Última atualização: 26/07/2026.</p>` },
-  terms: { title: "Termos e condições", html:
-    `<p class="footer-muted"><em>Rascunho — revê e adapta antes de publicar. Não é
-        aconselhamento jurídico.</em></p>
-     <h3>Uso do serviço</h3>
-     <p>O Astrowe é uma ferramenta de apoio à observação astronómica, fornecida
-        gratuitamente e <strong>"tal como está"</strong>. As previsões são estimativas
-        baseadas em modelos meteorológicos e cálculos astronómicos — podem estar
-        erradas. As decisões que tomares (sair, deslocar-te, montar equipamento) são
-        da tua responsabilidade.</p>
-     <h3>Sem garantias</h3>
-     <p>Não garantimos exatidão, disponibilidade contínua nem adequação a qualquer fim
-        específico. Não nos responsabilizamos por perdas ou danos resultantes do uso
-        (ou da impossibilidade de uso) do site.</p>
-     <h3>Conteúdos de terceiros</h3>
-     <p>Os dados de meteorologia, poluição luminosa e mapas pertencem às respetivas
-        fontes e regem-se pelos termos delas. As ligações externas são da
-        responsabilidade dos sites de destino.</p>
-     <h3>Alterações e lei aplicável</h3>
-     <p>Podemos alterar estes termos a qualquer momento. Aplica-se a lei de Portugal.</p>
-     <p class="footer-muted">Última atualização: 26/07/2026.</p>` },
+     <h3>Your rights</h3>
+     <p>Under the GDPR you have the right of access, rectification, erasure and objection.
+        As we don't keep personal data linked to you, deleting your preferences and saved
+        places is done by clearing your browser storage. For any question, contact
+        <a href="mailto:astrowe.info@gmail.com">astrowe.info@gmail.com</a>.</p>
+     <p class="footer-muted">Last updated: 26/07/2026.</p>` },
+  terms: { title: "Terms & conditions", html:
+    `<p class="footer-muted"><em>Draft — review and adapt before publishing. Not legal advice.</em></p>
+     <h3>Use of the service</h3>
+     <p>Astrowe is a tool to support astronomical observation, provided free and
+        <strong>"as is"</strong>. Forecasts are estimates based on weather models and
+        astronomical calculations — they can be wrong. Any decisions you make (going out,
+        travelling, setting up gear) are your responsibility.</p>
+     <h3>No warranty</h3>
+     <p>We don't guarantee accuracy, continuous availability or fitness for any particular
+        purpose. We're not liable for any loss or damage arising from use (or inability to
+        use) the site.</p>
+     <h3>Third-party content</h3>
+     <p>Weather, light-pollution and map data belong to their respective sources and are
+        governed by their terms. External links are the responsibility of the destination
+        sites.</p>
+     <h3>Changes and governing law</h3>
+     <p>We may change these terms at any time. The law of Portugal applies.</p>
+     <p class="footer-muted">Last updated: 26/07/2026.</p>` },
 };
 
 const menuBtn = $("menu-btn"), menuPanel = $("menu-panel");
@@ -1763,10 +1760,10 @@ async function checkStatus() {
   if (!el) return;
   try {
     const r = await fetch("/api/health", { cache: "no-store" });
-    el.textContent = r.ok ? "operacional ✓" : "com problemas";
+    el.textContent = r.ok ? "operational ✓" : "having problems";
     el.className = r.ok ? "status-ok" : "status-bad";
   } catch {
-    el.textContent = "inacessível"; el.className = "status-bad";
+    el.textContent = "unreachable"; el.className = "status-bad";
   }
 }
 

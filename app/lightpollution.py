@@ -64,18 +64,18 @@ def sqm_from_artificial(artificial_mcd_m2: float) -> float:
 
 
 def bortle_phrase(bortle: int) -> str:
-    """Bortle em português corrente — o número sozinho não diz nada a ninguém."""
+    """Bortle em linguagem corrente — o número sozinho não diz nada a ninguém."""
     if bortle <= 2:
-        return "céu muito escuro"
+        return "very dark sky"
     if bortle == 3:
-        return "céu escuro"
+        return "dark sky"
     if bortle == 4:
-        return "céu rural, pouca luz"
+        return "rural sky, little light"
     if bortle == 5:
-        return "céu suburbano"
+        return "suburban sky"
     if bortle <= 7:
-        return "muita luz à volta"
-    return "céu urbano, muito poluído"
+        return "lots of light around"
+    return "urban sky, heavily polluted"
 
 
 def bortle_from_sqm(sqm: float) -> int:
