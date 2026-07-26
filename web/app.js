@@ -1663,7 +1663,8 @@ const PAGES = {
            — fichas de objetos, mapas do céu e planeamento de sessões</li>
      </ul>` },
   contact: { title: "Contactar", html:
-    `<p>Para dúvidas ou sugestões: <a href="mailto:preencher@exemplo.pt">preencher@exemplo.pt</a> <em>(a preencher)</em>.</p>` },
+    `<p>Para dúvidas, sugestões ou reportar um problema, escreve para
+        <a href="mailto:astrowe.info@gmail.com">astrowe.info@gmail.com</a>.</p>` },
   bugs: { title: "Reportar erros", html:
     `<p>Encontraste um erro ou tens uma ideia?</p>
      <p><a href="https://github.com/loladaki/Astrowe/issues" target="_blank" rel="noopener">Abre um issue no GitHub</a>, ou usa o <button type="button" class="link-btn" data-page="contact">contacto</button>.</p>` },
@@ -1704,7 +1705,7 @@ const PAGES = {
         aconselhamento jurídico.</em></p>
      <h3>Quem é o responsável</h3>
      <p>Responsável pelo tratamento: <em>[o teu nome ou entidade]</em>, contactável em
-        <em>[o teu email]</em>.</p>
+        <a href="mailto:astrowe.info@gmail.com">astrowe.info@gmail.com</a>.</p>
      <h3>Que dados tratamos</h3>
      <p>Não é preciso registo nem conta. A <strong>localização</strong> que escolhes é
         usada para calcular a previsão — é enviada ao Open-Meteo (meteorologia) e ao
@@ -1724,7 +1725,7 @@ const PAGES = {
      <p>Ao abrigo do RGPD, tens direito de acesso, retificação, apagamento e oposição.
         Como não guardamos dados pessoais associados a ti, o apagamento das
         preferências e locais faz-se limpando o armazenamento do teu browser. Para
-        qualquer questão, contacta <em>[o teu email]</em>.</p>
+        qualquer questão, contacta <a href="mailto:astrowe.info@gmail.com">astrowe.info@gmail.com</a>.</p>
      <p class="footer-muted">Última atualização: <em>[data a preencher]</em>.</p>` },
   terms: { title: "Termos e condições", html:
     `<p class="footer-muted"><em>Rascunho — revê e adapta antes de publicar. Não é
