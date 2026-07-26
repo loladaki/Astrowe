@@ -95,9 +95,14 @@ async def _score_with(data: dict, lat: float, lon: float, mode: str):
     return score.build_forecast(data, lat, lon, mode, lp)
 
 
-@app.get("/api/health")
+@app.api_route("/api/health", methods=["GET", "HEAD"])
 async def health():
-    """Diagnóstico rápido: que ingredientes estão disponíveis."""
+    """Diagnóstico rápido: que ingredientes estão disponíveis.
+
+    Responde a GET *e HEAD*: monitores como o UptimeRobot usam HEAD, e uma rota
+    só-GET não casa com HEAD — a pedido caía no mount estático e devolvia 404,
+    fazendo o monitor achar (erradamente) que o site estava em baixo.
+    """
     return {
         "open_meteo": True,  # aberta, sem chave
         "light_pollution_key_configured": lightpollution.api_key_configured(),
