@@ -1,0 +1,38 @@
+name: CI
+
+# Corre nos PRs (antes de juntar a main) e nos pushes para main (depois de juntar).
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # As efemérides do Skyfield (~17 MB) descarregam-se na 1ª execução; ficam
+      # em cache para as seguintes não repetirem o download.
+      - name: Cache Skyfield ephemeris
+        uses: actions/cache@v4
+        with:
+          path: de421.bsp
+          key: skyfield-de421
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Run Python tests
+        run: pytest -q
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: JavaScript syntax check
+        run: node --check web/app.js

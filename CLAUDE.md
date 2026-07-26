@@ -80,6 +80,25 @@ uvicorn app.main:app --reload
 
 A **primeira** chamada à API é lenta (Skyfield descarrega `de421.bsp`). Depois fica em cache.
 
+## Testes, CI e fluxo de trabalho
+
+O motor de cálculo (score, efemérides, poluição luminosa) tem testes em `tests/`
+— corre com `pip install -r requirements-dev.txt` e depois `pytest`. Cobrem os
+fatores contínuos, a melhor janela, a airmass/culminação, os rótulos (que têm de
+ficar em inglês) e uma integração ponta-a-ponta do `build_forecast` com
+meteorologia sintética (sem rede).
+
+`.github/workflows/ci.yml` corre o `pytest` + `node --check web/app.js` em cada
+PR e nos pushes para `main`.
+
+**Regra:** não commitar direto para `main`. Trabalhar em branch → abrir PR → a CI
+tem de passar → juntar. O site em produção (Render) faz deploy do `main`, por
+isso `main` tem de estar sempre verde. O `main` está em inglês (site localizado);
+ao mexer, escrever em inglês — a suite valida que não sobra português.
+
+Ao mudar `web/app.js`/`web/style.css`, incrementar o `?v=N` em `web/index.html`
+(cache-busting; o backend serve HTML/JS/CSS com `no-cache`).
+
 ## Deploy
 
 **GitHub Pages não serve** — o backend calcula efemérides em Python. Há
