@@ -111,6 +111,11 @@ body::before {
   max-width: 1240px;
   margin: 0 auto;
   padding: var(--s5) var(--s5) var(--s7);
+  /* Coluna a toda a altura, para o footer ficar sempre no fundo mesmo quando
+     ainda não há resultados (senão colava-se ao header). */
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 a { color: var(--accent); }
@@ -627,7 +632,7 @@ button { font-family: inherit; cursor: pointer; border-radius: var(--r2); }
 
 /* ---------------------------------------------------- footer legal */
 .site-footer {
-  margin-top: var(--s7); padding-top: var(--s5);
+  margin-top: auto; padding-top: var(--s5);
   border-top: 1px solid var(--border); text-align: center;
 }
 .footer-links {
@@ -652,6 +657,22 @@ button { font-family: inherit; cursor: pointer; border-radius: var(--r2); }
 .page-body ul { padding-left: var(--s4); }
 .page-body li { margin: var(--s1) 0; }
 .page-body a { color: var(--accent); }
+
+/* FAQ em acordeão: só as perguntas; a resposta abre ao clicar */
+.faq-hint { color: var(--faint); font-size: var(--t-sm); margin: 0 0 var(--s2); }
+.page-body details { border-bottom: 1px solid var(--border); }
+.page-body summary {
+  cursor: pointer; list-style: none; padding: var(--s3) 0;
+  display: flex; justify-content: space-between; align-items: center; gap: var(--s3);
+  font-weight: 600; color: var(--text);
+}
+.page-body summary::-webkit-details-marker { display: none; }
+.page-body summary::after {
+  content: "+"; color: var(--accent); font-size: 1.3em; line-height: 1; flex: none;
+}
+.page-body details[open] summary::after { content: "−"; }
+.page-body summary:hover { color: var(--accent); }
+.page-body details p { margin: 0 0 var(--s3); color: var(--dim); }
 .status-ok { color: var(--good); }
 .status-bad { color: var(--poor); }
 

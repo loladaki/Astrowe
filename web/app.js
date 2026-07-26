@@ -1593,53 +1593,67 @@ const PAGES = {
         noite. E o <strong>modo vermelho</strong> recolore o site para não estragar
         a tua visão nocturna no terreno.</p>` },
   faq: { title: "Perguntas frequentes", html:
-    `<h3>O que é o score e como é calculado?</h3>
-     <p>Um número de 0 a 100 por noite. Combina, hora a hora, as nuvens por camada,
-        a fase e altura da Lua, a transparência (secura do ar), o seeing (turbulência
-        alta) e a poluição luminosa do local. Não faz a média da noite — procura a
-        melhor janela contígua de horas. Os números crus estão na "Tabela completa".</p>
-     <h3>Porque tem a mesma noite scores diferentes em "Céu profundo" e "Planetas e Lua"?</h3>
-     <p>Usam pesos e janelas diferentes. Céu profundo exige escuridão astronómica e a
-        Lua penaliza muito. Planetas veem-se logo no crepúsculo e a Lua quase não
-        conta — aí o que decide é o seeing.</p>
-     <h3>O que é a janela óptima?</h3>
-     <p>O troço de horas com melhor qualidade seguida — a melhor altura para observar
-        nessa noite. Aparece destacada na banda e nas horas.</p>
-     <h3>Porque muda o score de um dia para o outro?</h3>
-     <p>A previsão meteorológica atualiza-se. A mesma noite, vista com mais dias de
-        antecedência, é menos fiável.</p>
-     <h3>Preciso de telescópio?</h3>
-     <p>Não necessariamente. O score é sobre as condições do céu — serve para olho nu,
-        binóculos ou telescópio. A Lua, os planetas e os chuveiros de meteoros veem-se
-        sem qualquer equipamento.</p>
-     <h3>O que querem dizer as cores dos objetos?</h3>
-     <p>Verde = no melhor (acima de 50° de altura), amarelo = utilizável (30–50°),
-        apagado = baixo demais (menos de 30°). Quanto mais alto, menos atmosfera
-        atravessas.</p>
-     <h3>Um objeto está no céu mas não tem barra em "O que observar". Porquê?</h3>
-     <p>As barras só começam aos 30° de altura — abaixo disso não vale a pena apontar
-        o telescópio. Na cúpula vês o objeto mesmo rasteiro; nas barras só quando sobe.</p>
-     <h3>De onde vêm os dados?</h3>
-     <p>Meteorologia do <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a>;
-        Sol, Lua e planetas calculados com o <a href="https://rhodesmill.org/skyfield/" target="_blank" rel="noopener">Skyfield</a>;
-        poluição luminosa do <a href="https://www.lightpollutionmap.info" target="_blank" rel="noopener">lightpollutionmap.info</a>;
-        mapa do OpenStreetMap. Ver os <button type="button" class="link-btn" data-page="ack">Agradecimentos</button>.</p>
-     <h3>Quantas noites mostra e que fiabilidade têm?</h3>
-     <p>As próximas ~7 noites. Como qualquer previsão, as primeiras são mais fiáveis;
-        a partir de 4–5 dias é indicativa.</p>
-     <h3>Porque é que a poluição luminosa às vezes não aparece?</h3>
-     <p>Esse fator precisa de uma chave de API pessoal. Sem ela o site funciona na
-        mesma, apenas sem esse fator — e avisa, porque os scores ficam otimistas em
-        zonas urbanas.</p>
-     <h3>Porque é que a primeira visita do dia demora a carregar?</h3>
-     <p>O site corre num plano gratuito que adormece ao fim de 15 minutos sem uso. A
-        primeira visita pode levar ~30–50 s a acordar; depois fica rápido.</p>
-     <h3>Onde ficam os meus locais guardados?</h3>
-     <p>No teu próprio browser (armazenamento local), não num servidor nosso. São
-        privados e podes apagá-los quando quiseres.</p>
-     <h3>Para que serve o modo vermelho?</h3>
-     <p>Recolore o site em tons de vermelho para não estragar a adaptação dos olhos ao
-        escuro — é a luz que se usa no terreno para não "cegar" entre observações.</p>` },
+    `<p class="faq-hint">Toca numa pergunta para veres a resposta.</p>
+     <details><summary>O que é o score e como é calculado?</summary>
+       <p>Um número de 0 a 100 por noite. Combina, hora a hora, as nuvens por camada,
+          a fase e altura da Lua, a transparência (secura do ar), o seeing (turbulência
+          alta) e a poluição luminosa do local. Não faz a média da noite — procura a
+          melhor janela contígua de horas. Os números crus estão na "Tabela completa".</p>
+     </details>
+     <details><summary>Porque tem a mesma noite scores diferentes em "Céu profundo" e "Planetas e Lua"?</summary>
+       <p>Usam pesos e janelas diferentes. Céu profundo exige escuridão astronómica e a
+          Lua penaliza muito. Planetas veem-se logo no crepúsculo e a Lua quase não
+          conta — aí o que decide é o seeing.</p>
+     </details>
+     <details><summary>O que é a janela óptima?</summary>
+       <p>O troço de horas com melhor qualidade seguida — a melhor altura para observar
+          nessa noite. Aparece destacada na banda e nas horas.</p>
+     </details>
+     <details><summary>Porque muda o score de um dia para o outro?</summary>
+       <p>A previsão meteorológica atualiza-se. A mesma noite, vista com mais dias de
+          antecedência, é menos fiável.</p>
+     </details>
+     <details><summary>Preciso de telescópio?</summary>
+       <p>Não necessariamente. O score é sobre as condições do céu — serve para olho nu,
+          binóculos ou telescópio. A Lua, os planetas e os chuveiros de meteoros veem-se
+          sem qualquer equipamento.</p>
+     </details>
+     <details><summary>O que querem dizer as cores dos objetos?</summary>
+       <p>Verde = no melhor (acima de 50° de altura), amarelo = utilizável (30–50°),
+          apagado = baixo demais (menos de 30°). Quanto mais alto, menos atmosfera
+          atravessas.</p>
+     </details>
+     <details><summary>Um objeto está no céu mas não tem barra em "O que observar". Porquê?</summary>
+       <p>As barras só começam aos 30° de altura — abaixo disso não vale a pena apontar
+          o telescópio. Na cúpula vês o objeto mesmo rasteiro; nas barras só quando sobe.</p>
+     </details>
+     <details><summary>De onde vêm os dados?</summary>
+       <p>Meteorologia do <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a>;
+          Sol, Lua e planetas calculados com o <a href="https://rhodesmill.org/skyfield/" target="_blank" rel="noopener">Skyfield</a>;
+          poluição luminosa do <a href="https://www.lightpollutionmap.info" target="_blank" rel="noopener">lightpollutionmap.info</a>;
+          mapa do OpenStreetMap. Ver os <button type="button" class="link-btn" data-page="ack">Agradecimentos</button>.</p>
+     </details>
+     <details><summary>Quantas noites mostra e que fiabilidade têm?</summary>
+       <p>As próximas ~7 noites. Como qualquer previsão, as primeiras são mais fiáveis;
+          a partir de 4–5 dias é indicativa.</p>
+     </details>
+     <details><summary>Porque é que a poluição luminosa às vezes não aparece?</summary>
+       <p>Esse fator precisa de uma chave de API pessoal. Sem ela o site funciona na
+          mesma, apenas sem esse fator — e avisa, porque os scores ficam otimistas em
+          zonas urbanas.</p>
+     </details>
+     <details><summary>Porque é que a primeira visita do dia demora a carregar?</summary>
+       <p>O site corre num plano gratuito que adormece ao fim de 15 minutos sem uso. A
+          primeira visita pode levar ~30–50 s a acordar; depois fica rápido.</p>
+     </details>
+     <details><summary>Onde ficam os meus locais guardados?</summary>
+       <p>No teu próprio browser (armazenamento local), não num servidor nosso. São
+          privados e podes apagá-los quando quiseres.</p>
+     </details>
+     <details><summary>Para que serve o modo vermelho?</summary>
+       <p>Recolore o site em tons de vermelho para não estragar a adaptação dos olhos ao
+          escuro — é a luz que se usa no terreno para não "cegar" entre observações.</p>
+     </details>` },
   links: { title: "Ligações úteis", html:
     `<p>Recursos que ajudam a planear e a tirar mais partido das noites:</p>
      <ul>
