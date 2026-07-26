@@ -1699,13 +1699,13 @@ const PAGES = {
      <p>Podes recusar os não essenciais no banner, apagar o armazenamento nas
         definições do teu browser, e gerir as tuas opções de anúncios em
         <a href="https://myadcenter.google.com" target="_blank" rel="noopener">myadcenter.google.com</a>.</p>
-     <p class="footer-muted">Última atualização: <em>[data a preencher]</em>.</p>` },
+     <p class="footer-muted">Última atualização: 26/07/2026.</p>` },
   privacy: { title: "Política de privacidade", html:
     `<p class="footer-muted"><em>Rascunho — revê e adapta antes de publicar. Não é
         aconselhamento jurídico.</em></p>
      <h3>Quem é o responsável</h3>
-     <p>Responsável pelo tratamento: <em>[o teu nome ou entidade]</em>, contactável em
-        <a href="mailto:astrowe.info@gmail.com">astrowe.info@gmail.com</a>.</p>
+     <p>Responsável pelo tratamento: <strong>José Bento</strong> (a título particular),
+        contactável em <a href="mailto:astrowe.info@gmail.com">astrowe.info@gmail.com</a>.</p>
      <h3>Que dados tratamos</h3>
      <p>Não é preciso registo nem conta. A <strong>localização</strong> que escolhes é
         usada para calcular a previsão — é enviada ao Open-Meteo (meteorologia) e ao
@@ -1726,7 +1726,7 @@ const PAGES = {
         Como não guardamos dados pessoais associados a ti, o apagamento das
         preferências e locais faz-se limpando o armazenamento do teu browser. Para
         qualquer questão, contacta <a href="mailto:astrowe.info@gmail.com">astrowe.info@gmail.com</a>.</p>
-     <p class="footer-muted">Última atualização: <em>[data a preencher]</em>.</p>` },
+     <p class="footer-muted">Última atualização: 26/07/2026.</p>` },
   terms: { title: "Termos e condições", html:
     `<p class="footer-muted"><em>Rascunho — revê e adapta antes de publicar. Não é
         aconselhamento jurídico.</em></p>
@@ -1745,9 +1745,8 @@ const PAGES = {
         fontes e regem-se pelos termos delas. As ligações externas são da
         responsabilidade dos sites de destino.</p>
      <h3>Alterações e lei aplicável</h3>
-     <p>Podemos alterar estes termos a qualquer momento. Aplica-se a lei de
-        <em>[país / jurisdição a preencher, ex.: Portugal]</em>.</p>
-     <p class="footer-muted">Última atualização: <em>[data a preencher]</em>.</p>` },
+     <p>Podemos alterar estes termos a qualquer momento. Aplica-se a lei de Portugal.</p>
+     <p class="footer-muted">Última atualização: 26/07/2026.</p>` },
 };
 
 const menuBtn = $("menu-btn"), menuPanel = $("menu-panel");
