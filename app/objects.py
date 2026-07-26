@@ -164,6 +164,53 @@ def _timing(lst_h: float, ra_h: float, dec_deg: float, lat: float,
     }
 
 
+def _bright_at(observer, ts, body, when_local: datetime, offset_seconds: int,
+               lat: float, lon: float, window_start, window_end) -> dict | None:
+    """Campos de posição de um corpo brilhante (Lua/planeta) num instante, ou
+    None se estiver abaixo do limiar."""
+    t = ts.from_datetime(_local_to_utc(when_local, offset_seconds))
+    apparent = observer.at(t).observe(body).apparent()
+    alt, az, _ = apparent.altaz()
+    if alt.degrees < MIN_ALTITUDE_BRIGHT_DEG:
+        return None
+    ra, dec, _ = apparent.radec()
+    ra_d, dec_d, _ = apparent.radec(epoch="date")
+    lst = local_sidereal_hours(t, lon)
+    return {
+        "altitude_deg": round(alt.degrees, 1),
+        "azimuth_deg": round(az.degrees, 1),
+        "direction": compass_point(az.degrees),
+        "ra_h": round(ra.hours, 5),
+        "dec_deg": round(dec.degrees, 4),
+        "airmass": _round_airmass(alt.degrees),
+        "ra_date": ra_d.hours, "dec_date": dec_d.degrees,
+        **_timing(lst, ra_d.hours, dec_d.degrees, lat, when_local,
+                  window_start, window_end),
+    }
+
+
+def _bright_best(observer, ts, body, when_local: datetime, offset_seconds: int,
+                 lat: float, lon: float, window_times, window_start,
+                 window_end) -> dict | None:
+    """Um corpo brilhante no seu melhor instante da noite. Assim aparece mesmo
+    quando só nasce depois da hora recomendada (ex.: Saturno de madrugada em
+    modo planetas) — de contrário ficava de fora por não estar no céu à hora
+    de referência."""
+    at_ref = _bright_at(observer, ts, body, when_local, offset_seconds,
+                        lat, lon, window_start, window_end)
+    if at_ref is not None:
+        return at_ref
+    if not window_times:
+        return None
+    t_arr = ts.from_datetimes([_local_to_utc(w, offset_seconds) for w in window_times])
+    alts = observer.at(t_arr).observe(body).apparent().altaz()[0].degrees
+    i = int(np.argmax(alts))
+    if alts[i] < MIN_ALTITUDE_BRIGHT_DEG:
+        return None
+    return _bright_at(observer, ts, body, window_times[i], offset_seconds,
+                      lat, lon, window_start, window_end)
+
+
 @lru_cache(maxsize=1)
 def _catalog() -> list[dict]:
     with open(CATALOG_PATH, encoding="utf-8") as fh:
@@ -213,55 +260,29 @@ def visible_objects(lat: float, lon: float, offset_seconds: int,
 
     found = []
 
-    # --- A Lua, quando está no céu ---
-    # Em modo planetas é um alvo por direito próprio; em céu profundo é o
-    # estorvo. Em qualquer dos casos, se está lá em cima deve constar.
-    moon_apparent = observer.at(t).observe(eph["moon"]).apparent()
-    m_alt, m_az, _ = moon_apparent.altaz()
-    if m_alt.degrees >= MIN_ALTITUDE_BRIGHT_DEG:
-        m_ra, m_dec, _ = moon_apparent.radec()
-        # Para o cálculo do trânsito é preciso o referencial *da data*: o tempo
-        # sideral é da data, e J2000 está ~0.37° defasado por precessão.
-        m_ra_d, m_dec_d, _ = moon_apparent.radec(epoch="date")
-        found.append({
-            "name": "Moon", "kind": "moon", "magnitude": None,
-            "altitude_deg": round(m_alt.degrees, 1),
-            "azimuth_deg": round(m_az.degrees, 1),
-            "direction": compass_point(m_az.degrees),
-            "washed_out": False,
-            "ra_h": round(m_ra.hours, 5),
-            "dec_deg": round(m_dec.degrees, 4),
-            "url": TELESCOPIUS_MOON,
-            "airmass": _round_airmass(m_alt.degrees),
-            "ra_date": m_ra_d.hours, "dec_date": m_dec_d.degrees,
-            **timing(m_ra_d.hours, m_dec_d.degrees),
-        })
+    # --- A Lua e os planetas ---
+    # Brilhantes e sempre relevantes. Cada um entra no seu melhor instante da
+    # noite (ver _bright_best), por isso aparecem mesmo quando só nascem depois
+    # da hora de referência — importante sobretudo em modo planetas.
+    moon_fields = _bright_best(observer, ts, eph["moon"], when_local,
+                               offset_seconds, lat, lon, window_times,
+                               window_start, window_end)
+    if moon_fields is not None:
+        found.append({"name": "Moon", "kind": "moon", "magnitude": None,
+                      "washed_out": False, "url": TELESCOPIUS_MOON, **moon_fields})
 
-    # --- Sistema solar (brilhante, não sofre com o luar) ---
     for label, key, slug in PLANETS:
         try:
             body = eph[key]
         except KeyError:
             continue
-        apparent = observer.at(t).observe(body).apparent()
-        alt, az, _ = apparent.altaz()
-        if alt.degrees < MIN_ALTITUDE_BRIGHT_DEG:
+        pf = _bright_best(observer, ts, body, when_local, offset_seconds,
+                          lat, lon, window_times, window_start, window_end)
+        if pf is None:
             continue
-        ra, dec, _ = apparent.radec()
-        ra_d, dec_d, _ = apparent.radec(epoch="date")
-        found.append({
-            "name": label, "kind": "planet", "magnitude": None,
-            "altitude_deg": round(alt.degrees, 1),
-            "azimuth_deg": round(az.degrees, 1),
-            "direction": compass_point(az.degrees),
-            "washed_out": False,
-            "ra_h": round(ra.hours, 5),
-            "dec_deg": round(dec.degrees, 4),
-            "url": TELESCOPIUS_PLANET.format(slug=slug),
-            "airmass": _round_airmass(alt.degrees),
-            "ra_date": ra_d.hours, "dec_date": dec_d.degrees,
-            **timing(ra_d.hours, dec_d.degrees),
-        })
+        found.append({"name": label, "kind": "planet", "magnitude": None,
+                      "washed_out": False,
+                      "url": TELESCOPIUS_PLANET.format(slug=slug), **pf})
 
     # --- Céu profundo (todos de uma vez) ---
     catalog, stars = _catalog_vectorised()

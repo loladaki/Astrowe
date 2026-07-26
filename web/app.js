@@ -78,6 +78,7 @@ let current = null;
 let mode = "deepsky";
 let lastData = null;
 let selectedDate = null;
+let skyPlayTimer = null;   // animação do slider da cúpula (só uma de cada vez)
 
 const hhmm = (iso) => iso.slice(11, 16);
 const hh = (iso) => iso.slice(11, 13) + "h";
@@ -292,6 +293,33 @@ const BRIGHT_STARS = [
   [1.4303, 60.235, 2.68, "Ruchbah"], [19.5121, 27.960, 3.05, "Albireo"],
   [3.7914, 24.105, 2.87, "Alcyone"], [2.1191, 34.987, 2.64, "Sheratan"],
   [16.0056, -22.622, 2.56, "Dschubba"], [17.7204, -37.104, 2.29, "Lesath"],
+  [12.2570, 57.033, 3.31, "Megrez"], [1.9066, 63.670, 3.35, "Segin"],
+  [19.7495, 45.131, 2.87, "Fawaris"], [12.2525, -58.749, 2.79, "Delta Cru"],
+];
+
+// Linhas das constelações: pares de estrelas (por nome) a unir. Só se desenham
+// quando ambas estão acima do horizonte. Ténues, por baixo dos alvos.
+const CONSTELLATION_LINES = [
+  // Orion
+  ["Betelgeuse", "Bellatrix"], ["Betelgeuse", "Alnitak"], ["Bellatrix", "Mintaka"],
+  ["Alnitak", "Alnilam"], ["Alnilam", "Mintaka"], ["Alnitak", "Saiph"], ["Mintaka", "Rigel"],
+  // Ursa Major (Big Dipper)
+  ["Alkaid", "Mizar"], ["Mizar", "Alioth"], ["Alioth", "Megrez"], ["Megrez", "Phecda"],
+  ["Phecda", "Merak"], ["Merak", "Dubhe"], ["Dubhe", "Megrez"],
+  // Cassiopeia
+  ["Segin", "Ruchbah"], ["Ruchbah", "Gamma Cas"], ["Gamma Cas", "Schedar"], ["Schedar", "Caph"],
+  // Cygnus (Northern Cross)
+  ["Deneb", "Sadr"], ["Sadr", "Albireo"], ["Gienah", "Sadr"], ["Sadr", "Fawaris"],
+  // Leo
+  ["Regulus", "Algieba"], ["Algieba", "Denebola"], ["Denebola", "Regulus"],
+  // Scorpius
+  ["Dschubba", "Antares"], ["Antares", "Sargas"], ["Sargas", "Shaula"], ["Shaula", "Lesath"],
+  // Crux (Southern Cross)
+  ["Acrux", "Gacrux"], ["Mimosa", "Delta Cru"],
+  // Gemini
+  ["Castor", "Pollux"],
+  // Triângulo de Verão (asterismo)
+  ["Vega", "Deneb"], ["Deneb", "Altair"], ["Altair", "Vega"],
 ];
 
 /**
@@ -310,6 +338,7 @@ const BRIGHT_STARS = [
  * instante médio, por isso deriva alguns graus ao longo da noite.
  */
 function buildSkyDome(n, lat, lon, tz) {
+  if (skyPlayTimer) { clearInterval(skyPlayTimer); skyPlayTimer = null; }   // pára o play anterior
   const R = 150, cx = 160, cy = 160, S = 320;
   const wrap = el("div", "sky-dome");
   const box = svg("svg", { viewBox: `0 0 ${S} ${S}`, class: "sky" });
@@ -388,11 +417,25 @@ function buildSkyDome(n, lat, lon, tz) {
     pop.hidden = true;
     const lst = localSiderealDeg(utcDate, lon);
 
-    // estrelas reais de fundo (só as acima do horizonte)
+    // estrelas reais: primeiro as posições, depois as linhas das constelações
+    // (por baixo), e por fim os pontos + nomes.
+    const starPos = {};
+    const starDots = [];
     for (const [raH, decDeg, mag, name] of BRIGHT_STARS) {
       const [alt, az] = altAz(raH, decDeg, lst, lat);
       if (alt <= 0) continue;
       const [x, y] = pos(alt, az);
+      starPos[name] = [x, y];
+      starDots.push([x, y, mag, name, alt]);
+    }
+    for (const [a, b] of CONSTELLATION_LINES) {
+      const pa = starPos[a], pb = starPos[b];
+      if (!pa || !pb) continue;
+      layer.append(svg("line", { x1: pa[0].toFixed(1), y1: pa[1].toFixed(1),
+                                 x2: pb[0].toFixed(1), y2: pb[1].toFixed(1),
+                                 class: "sky-constline" }));
+    }
+    for (const [x, y, mag, name, alt] of starDots) {
       const r = Math.max(0.5, 1.9 - mag * 0.42);
       const op = Math.max(0.25, 0.95 - mag * 0.16);
       layer.append(svg("circle", { cx: x.toFixed(1), cy: y.toFixed(1), r: r.toFixed(2),
@@ -505,9 +548,38 @@ function buildSkyDome(n, lat, lon, tz) {
     label.textContent = fmt.format(d);
     draw(d);
   };
-  slider.addEventListener("input", update);
-  control.append(label, slider);
-  if (darkMarks) control.append(darkMarks);
+
+  // ---- botão play: anima o slider ao longo da noite ----
+  const play = el("button", "sky-play");
+  play.type = "button"; play.textContent = "▶"; play.setAttribute("aria-label", "Play");
+  const stopPlay = () => {
+    if (skyPlayTimer) { clearInterval(skyPlayTimer); skyPlayTimer = null; }
+    play.textContent = "▶"; play.setAttribute("aria-label", "Play");
+  };
+  const startPlay = () => {
+    play.textContent = "⏸"; play.setAttribute("aria-label", "Pause");
+    // Acumulador próprio: o `step` do slider (5 min) faria o valor "encaixar" e
+    // não avançar. Desenhamos na posição real (suave) e movemos o thumb à parte.
+    let posMs = Number(slider.value), tickMs = 60, inc = (t1 - t0) * tickMs / 14000;
+    skyPlayTimer = setInterval(() => {
+      posMs += inc;
+      if (posMs >= t1) posMs = t0;            // recomeça no início da noite
+      slider.value = String(Math.round(posMs));
+      const d = new Date(posMs);
+      label.textContent = fmt.format(d);
+      draw(d);
+    }, tickMs);
+  };
+  play.addEventListener("click", () => { skyPlayTimer ? stopPlay() : startPlay(); });
+  // arrastar o slider pausa a animação
+  slider.addEventListener("input", () => { stopPlay(); update(); });
+
+  const sliderWrap = el("div", "sky-slider-wrap");
+  sliderWrap.append(slider);
+  if (darkMarks) sliderWrap.append(darkMarks);
+  const row = el("div", "sky-time-row");
+  row.append(play, sliderWrap);
+  control.append(label, row);
   wrap.append(control);
 
   update();   // primeira pintura, à hora recomendada

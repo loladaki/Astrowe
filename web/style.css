@@ -355,6 +355,7 @@ button { font-family: inherit; cursor: pointer; border-radius: var(--r2); }
 .sky-hit { cursor: pointer; }
 .sky-lbl { fill: var(--dim); font-size: 9px; font-family: inherit; pointer-events: none; }
 .sky-star-lbl { fill: var(--faint); font-size: 8px; font-family: inherit; pointer-events: none; opacity: 0.8; }
+.sky-constline { stroke: var(--faint); stroke-width: 0.5; opacity: 0.4; pointer-events: none; }
 .sky-card { fill: var(--faint); font-size: 11px; font-weight: 600; font-family: inherit; pointer-events: none; }
 .sky-cap { margin: var(--s3) 0 0; font-size: var(--t-xs); color: var(--faint); text-align: center; }
 
@@ -372,6 +373,17 @@ button { font-family: inherit; cursor: pointer; border-radius: var(--r2); }
 .sky-time-lbl::before {
   content: "🕐 "; font-size: var(--t-sm); opacity: 0.7;
 }
+/* linha do slider: botão play + o slider (com os marcadores por baixo) */
+.sky-time-row { display: flex; align-items: center; gap: var(--s3); width: 100%; }
+.sky-slider-wrap { flex: 1; min-width: 0; }
+.sky-play {
+  flex: none; width: 34px; height: 34px; border-radius: 50%;
+  border: 1px solid var(--border-lit); background: var(--surface-2);
+  color: var(--accent); font-size: 0.85rem; line-height: 1;
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.sky-play:hover { border-color: var(--accent); }
+
 /* marcadores do início/fim da escuridão total, nas arestas da faixa do slider */
 .sky-marks { position: relative; width: 100%; height: 14px; }
 .sky-mark {
