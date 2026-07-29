@@ -1232,8 +1232,9 @@ function renderStrip(data) {
 
   for (const n of data.nights) {
     const usable = n.window_start !== null;
-    // A melhor noite fica sempre destacada; a seleccionada leva a moldura de
-    // acento por cima. Coincidem por defeito, divergem quando clicas noutra.
+    // A melhor noite fica sempre destacada (is-best); a seleccionada leva a
+    // moldura de acento (is-selected). Por defeito a seleccionada é a mais
+    // próxima, por isso divergem sempre que a melhor não é a de hoje.
     const b = el("button", `night-btn ${stripClass(n.score, usable)}` +
                            (n.date === bestDate ? " is-best" : "") +
                            (n.date === selectedDate ? " is-selected" : ""));
@@ -1343,13 +1344,11 @@ function render() {
   }
 
   if (!selectedDate || !data.nights.some((n) => n.date === selectedDate)) {
-    // Se há uma noite a decorrer agora, é essa que se mostra — é para isso que
-    // se abre o site à noite. Senão, a melhor noite que aí vem.
+    // Abre-se na noite MAIS PRÓXIMA — a pergunta é "vale a pena sair hoje?".
+    // Se já há uma noite a decorrer, é essa; senão, a primeira que aí vem. A
+    // melhor da semana fica assinalada na tira (is-best), mas não é a que abre.
     const live = data.nights.find((n) => n.in_progress);
-    const usable = data.nights.filter((n) => n.score > 0);
-    selectedDate = (live || (usable.length
-      ? usable.reduce((a, b) => (b.score > a.score ? b : a))
-      : data.nights[0])).date;
+    selectedDate = (live || data.nights[0]).date;
   }
 
   renderStrip(data);
