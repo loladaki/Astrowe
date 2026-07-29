@@ -1,6 +1,7 @@
 """Passagens da ISS: parsing do TLE e cálculo das passagens visíveis.
 
 Usa um TLE fixo (offline, determinístico) — sem tocar na rede."""
+import time
 from datetime import datetime
 
 import httpx
@@ -67,7 +68,9 @@ def test_fetch_iss_tle_negative_cache_skips_retry(clean_tle_cache, monkeypatch):
 
 def test_fetch_iss_tle_retries_after_cooldown(clean_tle_cache, monkeypatch):
     # Passado o cooldown, volta a tentar (e aqui recupera com sucesso).
-    satellites._tle_cache["last_fail"] = 0.0  # muito no passado (time.monotonic)
+    # Falha já fora do cooldown. (monotonic() tem origem arbitrária, por isso
+    # datamos relativamente ao relógio atual, não a um 0.0 absoluto.)
+    satellites._tle_cache["last_fail"] = time.monotonic() - satellites.FAIL_COOLDOWN_S - 1
     tle_text = "ISS (ZARYA)\n" + ISS_TLE[0] + "\n" + ISS_TLE[1] + "\n"
 
     class FakeResp:
