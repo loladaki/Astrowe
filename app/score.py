@@ -9,12 +9,12 @@ a noite inteira"), calculamos uma **qualidade hora a hora** e procuramos a
 from __future__ import annotations
 
 import math
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from app import astro, events, objects, satellites
 from app.models import (FactorImpact, ForecastResponse, HourDetail,
-                        LightPollution, MeteorShower, MilkyWay, NightCards,
-                        NightScore, SkyObject)
+                        ISSOutlook, ISSPass, LightPollution, MeteorShower,
+                        MilkyWay, NightCards, NightScore, SkyObject)
 
 # Pesos por camada de nuvens: as baixas tapam tudo, os cirros altos deixam
 # passar bastante. Modeladas como obstruções independentes que se multiplicam.
@@ -534,6 +534,30 @@ def _parse_hourly(data: dict):
     return times, h
 
 
+def _build_iss_outlook(nights: list[NightScore], lat: float, lon: float,
+                       offset: int, now_local: datetime) -> ISSOutlook:
+    """'Vou ver a ISS?' — ao nível de toda a previsão.
+
+    Se há passagens nalguma noite da janela, é visível e a `next_pass` é a mais
+    próxima ainda por vir. Se não, procura quando volta a temporada (até
+    `OUTLOOK_HORIZON_DAYS` além da janela). Ver ISSOutlook.
+    """
+    upcoming = [p for n in nights for p in n.iss_passes
+                if datetime.fromisoformat(p.start) > now_local]
+    if upcoming:
+        soonest = min(upcoming, key=lambda p: p.start)
+        return ISSOutlook(visible_this_week=True, next_pass=soonest,
+                          horizon_days=satellites.OUTLOOK_HORIZON_DAYS)
+
+    # Nenhuma na janela — procurar além dela quando a ISS volta a ser visível.
+    last_date = date.fromisoformat(nights[-1].date) if nights else now_local.date()
+    nxt = satellites.next_visible_pass(lat, lon, offset, last_date + timedelta(days=1),
+                                       after=now_local)
+    return ISSOutlook(visible_this_week=False,
+                      next_pass=ISSPass(**nxt) if nxt else None,
+                      horizon_days=satellites.OUTLOOK_HORIZON_DAYS)
+
+
 def build_forecast(data: dict, lat: float, lon: float,
                    mode: str = DEFAULT_MODE,
                    light_pollution: dict | None = None) -> ForecastResponse:
@@ -593,6 +617,7 @@ def build_forecast(data: dict, lat: float, lon: float,
         light_pollution=LightPollution(**light_pollution) if light_pollution else None,
         generated_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
         summary=_build_summary(nights, profile["label"]),
+        iss=_build_iss_outlook(nights, lat, lon, offset, now_local),
         nights=nights,
     )
 

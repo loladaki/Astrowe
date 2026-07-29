@@ -8,12 +8,13 @@ from __future__ import annotations
 
 import logging
 import time
-from datetime import date
+from datetime import date, datetime, timedelta
 
 import httpx
 from skyfield.api import EarthSatellite, wgs84
 
-from app.astro import _ensure_loaded, _local_to_utc, _utc_to_local
+from app.astro import (SUNSET_DEG, _ensure_loaded, _local_to_utc, _utc_to_local,
+                       compute_windows)
 from app.objects import compass_point
 
 logger = logging.getLogger(__name__)
@@ -31,6 +32,11 @@ USER_AGENT = "Astrowe/1.0 (+https://astrowe.onrender.com; astrowe.info@gmail.com
 
 MIN_PASS_ALTITUDE_DEG = 15.0     # passagens rasantes não valem a pena
 SUN_MAX_ALT_FOR_VISIBLE = -3.0   # observador em crepúsculo/escuro para a ver
+
+# Até quantos dias à frente procurar a próxima passagem quando não há nenhuma na
+# janela de 7 noites. Chega para apanhar o regresso da temporada; mais longe que
+# isto o TLE já não é fiável (a data sairia errada).
+OUTLOOK_HORIZON_DAYS = 16
 
 FETCH_TIMEOUT_S = 5.0            # curto: uma fonte lenta não deve pendurar o pedido
 FAIL_COOLDOWN_S = 900.0         # após falhar, esperar 15 min antes de voltar a tentar
@@ -148,3 +154,32 @@ def iss_passes(lat: float, lon: float, offset_seconds: int,
                 })
             cur = {}
     return passes
+
+
+def next_visible_pass(lat: float, lon: float, offset_seconds: int,
+                      start_date: date, after: datetime,
+                      horizon_days: int = OUTLOOK_HORIZON_DAYS,
+                      tle: tuple[str, str] | None = None) -> dict | None:
+    """A próxima passagem visível a partir de `start_date`, até `horizon_days`.
+
+    Varre noite a noite (janela pôr→nascer do Sol) e devolve a primeira passagem
+    que comece depois de `after` (hora local). None se não houver nenhuma no
+    horizonte — a ISS está fora da temporada de visibilidade deste sítio.
+
+    ⚠️ A data/hora é **aproximada** a semanas de distância: o TLE envelhece e a
+    propagação SGP4 acumula erro. Serve para "por volta de quando volta", não
+    para cronometrar.
+    """
+    tle = tle or fetch_iss_tle()
+    if tle is None:
+        return None
+    dates = [start_date + timedelta(days=i) for i in range(horizon_days + 1)]
+    windows = compute_windows(lat, lon, offset_seconds, dates, SUNSET_DEG)
+    for d in dates:
+        sun_set, sun_rise = windows.get(d, (None, None))
+        if sun_set is None:
+            continue
+        for p in iss_passes(lat, lon, offset_seconds, sun_set, sun_rise, tle=tle):
+            if datetime.fromisoformat(p["start"]) > after:
+                return p
+    return None

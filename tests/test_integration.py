@@ -82,6 +82,16 @@ def test_nights_have_english_verdicts_and_kinds(forecast):
             assert obj.kind in VALID_KINDS
 
 
+def test_iss_outlook_always_present(forecast):
+    # A secção da ISS existe sempre; offline (TLE None) não há passagens nem
+    # próxima, mas o outlook mesmo assim responde "não visível".
+    iss = forecast.iss
+    assert iss is not None
+    assert iss.visible_this_week is False
+    assert iss.next_pass is None
+    assert iss.horizon_days == satellites.OUTLOOK_HORIZON_DAYS
+
+
 def test_planetary_mode_leads_with_bright_targets():
     data = _synthetic_weather()
     fc = score.build_forecast(data, 38.72, -9.14, "planetary", None)

@@ -69,6 +69,19 @@ class ISSPass(BaseModel):
     duration_min: int
 
 
+class ISSOutlook(BaseModel):
+    """Resposta à pergunta 'vou ver a ISS?', ao nível de toda a previsão.
+
+    A ISS só é visível em *temporadas* (quando a órbita apanha o Sol ao
+    crepúsculo); há semanas sem qualquer passagem. Esta secção diz sempre algo:
+    ou é visível esta semana, ou quando volta a sê-lo (data aproximada — o TLE
+    perde precisão a semanas de distância), ou que não há nada no horizonte.
+    """
+    visible_this_week: bool              # há passagens nalguma noite da janela
+    next_pass: ISSPass | None = None     # a próxima passagem visível (pode ser além da janela)
+    horizon_days: int                    # até quantos dias à frente se procurou
+
+
 class MilkyWay(BaseModel):
     """Núcleo galáctico — o alvo do verão para astrofotografia."""
     altitude_deg: float
@@ -180,4 +193,5 @@ class ForecastResponse(BaseModel):
     light_pollution: LightPollution | None   # None se não houver chave da API
     generated_at: str                    # ISO UTC
     summary: str                         # o julgamento de topo
+    iss: ISSOutlook | None = None        # vou ver a ISS? (ver ISSOutlook)
     nights: list[NightScore]
