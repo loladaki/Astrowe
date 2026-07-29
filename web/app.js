@@ -1129,7 +1129,8 @@ function buildDaylightBand(n) {
 /** Faixa fina de destaques da noite, logo abaixo do veredicto — em vez de uma
  *  caixa perdida no fim. Só aparece quando há algo a assinalar. */
 function buildHighlights(n) {
-  if (!n.meteor_shower && !n.milky_way) return null;
+  const iss = n.iss_passes || [];
+  if (!n.meteor_shower && !n.milky_way && !iss.length) return null;
   const box = el("div", "highlights");
   const add = (icon, name, text) => {
     const row = el("div", "hl");
@@ -1146,6 +1147,11 @@ function buildHighlights(n) {
     const g = n.milky_way;
     add("🌌", "Milky Way",
       `${g.summary}${g.transit_time ? ` Highest at ${hhmm(g.transit_time)}.` : ""}`);
+  }
+  for (const p of iss) {
+    add("🛰️", "ISS pass",
+      `${hhmm(p.start)}–${hhmm(p.end)}, peaks ${Math.round(p.peak_altitude_deg)}° `
+      + `to the ${p.peak_direction} (rises ${p.rise_direction}, sets ${p.set_direction}).`);
   }
   return box;
 }
@@ -1359,7 +1365,9 @@ function renderSuggestions(results) {
     const li = document.createElement("li");
     li.setAttribute("role", "option");
     li.append(el("span", "sug-name", r.name),
-              el("span", "sug-sub", [r.admin1, r.country].filter(Boolean).join(" · ")));
+              el("span", "sug-sub", [r.admin1, r.country].filter(Boolean).join(" · ")),
+              el("span", "sug-coords",
+                 `${r.latitude.toFixed(3)}, ${r.longitude.toFixed(3)}`));
     // mousedown corre antes do blur do input, senão a lista fecha primeiro.
     li.addEventListener("mousedown", (e) => { e.preventDefault(); chooseSuggestion(i); });
     li.addEventListener("mouseenter", () => setHighlight(i));

@@ -580,6 +580,9 @@ button { font-family: inherit; cursor: pointer; border-radius: var(--r2); }
 .suggestions li.active { background: var(--accent-soft); }
 .sug-name { font-size: var(--t-md); }
 .sug-sub { font-size: var(--t-xs); color: var(--faint); }
+/* coordenadas noutra cor, para distinguir dois locais com o mesmo nome */
+.sug-coords { font-size: var(--t-xs); color: var(--accent);
+              font-variant-numeric: tabular-nums; opacity: 0.85; }
 
 /* ---------------------------------------------------- modais */
 
