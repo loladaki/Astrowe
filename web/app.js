@@ -838,7 +838,7 @@ function buildConds(n) {
     icon: iconSVG("thermo"), tag: "Temperature",
     value: c ? c.temp_label : "—",
     spark: el("div", "cond-note",
-      [n.wind_kmh !== null ? `vento ${Math.round(n.wind_kmh)} km/h` : "",
+      [n.wind_kmh !== null ? `wind ${Math.round(n.wind_kmh)} km/h` : "",
        `seeing ${n.seeing}`].filter(Boolean).join(" · ")),
   }));
 
@@ -934,7 +934,7 @@ function buildMeteogram(hours) {
   box.append(meteoRow("seeing", hours, "jet",
     (v) => v === null ? "—" : v < 60 ? "good" : v < 100 ? "fair" : "poor"));
   box.append(meteoRow("Moon", hours, "moon",
-    (v) => v === null ? "—" : v <= 0 ? "posta" : `${Math.round(v)}°`));
+    (v) => v === null ? "—" : v <= 0 ? "set" : `${Math.round(v)}°`));
   box.append(meteoRow("dew margin", hours, "spread", (v) => v === null ? "—" : `${v.toFixed(1)}°`));
   box.append(meteoRow("temp", hours, "temp", (v) => v === null ? "—" : `${Math.round(v)}°`));
   return box;
