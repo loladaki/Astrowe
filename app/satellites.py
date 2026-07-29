@@ -18,13 +18,21 @@ from app.objects import compass_point
 
 logger = logging.getLogger(__name__)
 
-# CATNR 25544 = ISS (ZARYA).
-ISS_TLE_URL = "https://celestrak.org/NORAD/elements/gp.php?CATNR=25544&FORMAT=TLE"
+# Fontes do TLE da ISS (CATNR 25544 = ISS ZARYA), por ordem de preferência.
+# Duas fontes em hosts diferentes: se uma bloquear o IP do Render (ou estiver em
+# baixo), a outra safa. Ambas devolvem o bloco de 3 linhas (nome + linha 1 + 2).
+ISS_TLE_SOURCES = (
+    "https://celestrak.org/NORAD/elements/gp.php?CATNR=25544&FORMAT=TLE",
+    "https://api.wheretheiss.at/v1/satellites/25544/tles?format=text",
+)
+
+# User-Agent próprio (boa cidadania; alguns hosts recusam UAs de biblioteca).
+USER_AGENT = "Astrowe/1.0 (+https://astrowe.onrender.com; astrowe.info@gmail.com)"
 
 MIN_PASS_ALTITUDE_DEG = 15.0     # passagens rasantes não valem a pena
 SUN_MAX_ALT_FOR_VISIBLE = -3.0   # observador em crepúsculo/escuro para a ver
 
-FETCH_TIMEOUT_S = 5.0            # curto: um Celestrak lento não deve pendurar o pedido
+FETCH_TIMEOUT_S = 5.0            # curto: uma fonte lenta não deve pendurar o pedido
 FAIL_COOLDOWN_S = 900.0         # após falhar, esperar 15 min antes de voltar a tentar
 
 _tle_cache: dict = {"day": None, "lines": None, "last_fail": None}
@@ -38,11 +46,28 @@ def _parse_tle(text: str) -> tuple[str, str] | None:
     return (l1, l2) if l1 and l2 else None
 
 
-def fetch_iss_tle() -> tuple[str, str] | None:
-    """TLE da ISS, do Celestrak. Em cache por dia; None se falhar.
+def _http_get_tle(url: str) -> str:
+    """GET do texto de um TLE, forçando IPv4 e com User-Agent próprio.
 
-    Cache negativa: depois de uma falha, não voltar a tentar durante
-    `FAIL_COOLDOWN_S`. Sem isto, uma indisponibilidade do Celestrak fazia cada
+    ⚠️ IPv4 forçado (`local_address="0.0.0.0"`): em datacenters como o Render, o
+    domínio resolvia para IPv6 sem rota e a ligação ficava pendurada até ao
+    timeout (o `timed out` que fazia a ISS nunca aparecer em produção). Vincular
+    o socket a IPv4 evita esse impasse.
+    """
+    transport = httpx.HTTPTransport(local_address="0.0.0.0")
+    with httpx.Client(timeout=FETCH_TIMEOUT_S, transport=transport,
+                      headers={"User-Agent": USER_AGENT},
+                      follow_redirects=True) as client:
+        resp = client.get(url)
+        resp.raise_for_status()
+        return resp.text
+
+
+def fetch_iss_tle() -> tuple[str, str] | None:
+    """TLE da ISS. Em cache por dia; tenta cada fonte por ordem; None se todas falharem.
+
+    Cache negativa: depois de todas falharem, não voltar a tentar durante
+    `FAIL_COOLDOWN_S`. Sem isto, uma indisponibilidade das fontes fazia cada
     pedido pendurar o timeout completo (e antes bloqueava o event loop).
     """
     today = date.today()
@@ -51,19 +76,17 @@ def fetch_iss_tle() -> tuple[str, str] | None:
     last_fail = _tle_cache["last_fail"]
     if last_fail is not None and (time.monotonic() - last_fail) < FAIL_COOLDOWN_S:
         return None
-    try:
-        resp = httpx.get(ISS_TLE_URL, timeout=FETCH_TIMEOUT_S)
-        resp.raise_for_status()
-        parsed = _parse_tle(resp.text)
-        if parsed:
-            _tle_cache.update(day=today, lines=parsed, last_fail=None)
-        else:
-            _tle_cache["last_fail"] = time.monotonic()
-        return parsed
-    except (httpx.HTTPError, StopIteration) as exc:
-        logger.warning("Falha a obter o TLE da ISS: %s", exc)
-        _tle_cache["last_fail"] = time.monotonic()
-        return None
+    for url in ISS_TLE_SOURCES:
+        try:
+            parsed = _parse_tle(_http_get_tle(url))
+            if parsed:
+                _tle_cache.update(day=today, lines=parsed, last_fail=None)
+                return parsed
+            logger.warning("TLE da ISS de %s veio ilegível", url)
+        except httpx.HTTPError as exc:
+            logger.warning("Falha a obter o TLE da ISS de %s: %s", url, exc)
+    _tle_cache["last_fail"] = time.monotonic()
+    return None
 
 
 def iss_passes(lat: float, lon: float, offset_seconds: int,
