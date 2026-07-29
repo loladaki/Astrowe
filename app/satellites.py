@@ -7,6 +7,7 @@ previsão sai na mesma, apenas sem passagens da ISS.
 from __future__ import annotations
 
 import logging
+import time
 from datetime import date
 
 import httpx
@@ -23,7 +24,10 @@ ISS_TLE_URL = "https://celestrak.org/NORAD/elements/gp.php?CATNR=25544&FORMAT=TL
 MIN_PASS_ALTITUDE_DEG = 15.0     # passagens rasantes não valem a pena
 SUN_MAX_ALT_FOR_VISIBLE = -3.0   # observador em crepúsculo/escuro para a ver
 
-_tle_cache: dict = {"day": None, "lines": None}
+FETCH_TIMEOUT_S = 5.0            # curto: um Celestrak lento não deve pendurar o pedido
+FAIL_COOLDOWN_S = 900.0         # após falhar, esperar 15 min antes de voltar a tentar
+
+_tle_cache: dict = {"day": None, "lines": None, "last_fail": None}
 
 
 def _parse_tle(text: str) -> tuple[str, str] | None:
@@ -35,19 +39,30 @@ def _parse_tle(text: str) -> tuple[str, str] | None:
 
 
 def fetch_iss_tle() -> tuple[str, str] | None:
-    """TLE da ISS, do Celestrak. Em cache por dia; None se falhar."""
+    """TLE da ISS, do Celestrak. Em cache por dia; None se falhar.
+
+    Cache negativa: depois de uma falha, não voltar a tentar durante
+    `FAIL_COOLDOWN_S`. Sem isto, uma indisponibilidade do Celestrak fazia cada
+    pedido pendurar o timeout completo (e antes bloqueava o event loop).
+    """
     today = date.today()
     if _tle_cache["day"] == today and _tle_cache["lines"]:
         return _tle_cache["lines"]
+    last_fail = _tle_cache["last_fail"]
+    if last_fail is not None and (time.monotonic() - last_fail) < FAIL_COOLDOWN_S:
+        return None
     try:
-        resp = httpx.get(ISS_TLE_URL, timeout=10.0)
+        resp = httpx.get(ISS_TLE_URL, timeout=FETCH_TIMEOUT_S)
         resp.raise_for_status()
         parsed = _parse_tle(resp.text)
         if parsed:
-            _tle_cache.update(day=today, lines=parsed)
+            _tle_cache.update(day=today, lines=parsed, last_fail=None)
+        else:
+            _tle_cache["last_fail"] = time.monotonic()
         return parsed
     except (httpx.HTTPError, StopIteration) as exc:
         logger.warning("Falha a obter o TLE da ISS: %s", exc)
+        _tle_cache["last_fail"] = time.monotonic()
         return None
 
 
