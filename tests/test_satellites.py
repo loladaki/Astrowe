@@ -2,7 +2,7 @@
 
 Usa um TLE fixo (offline, determinístico) — sem tocar na rede."""
 import time
-from datetime import datetime
+from datetime import date, datetime
 
 import httpx
 import pytest
@@ -95,6 +95,30 @@ def test_fetch_iss_tle_retries_after_cooldown(clean_tle_cache, monkeypatch):
     assert satellites.fetch_iss_tle() == ISS_TLE
     assert satellites._tle_cache["last_fail"] is None
     assert satellites._tle_cache["lines"] == ISS_TLE
+
+
+def test_next_visible_pass_finds_one_in_season():
+    # Lisboa, temporada com passagens ~24–27/07/2026 (TLE fixo, horizonte curto).
+    after = datetime(2026, 7, 24, 0, 0)
+    nxt = satellites.next_visible_pass(38.72, -9.14, 3600, date(2026, 7, 24), after,
+                                       horizon_days=5, tle=ISS_TLE)
+    assert nxt is not None
+    assert datetime.fromisoformat(nxt["start"]) > after
+    assert nxt["peak_altitude_deg"] >= satellites.MIN_PASS_ALTITUDE_DEG
+
+
+def test_next_visible_pass_skips_passes_before_after():
+    # Com `after` já depois da temporada curta, nada qualifica no horizonte dado.
+    after = datetime(2026, 7, 28, 12, 0)
+    nxt = satellites.next_visible_pass(38.72, -9.14, 3600, date(2026, 7, 24), after,
+                                       horizon_days=4, tle=ISS_TLE)
+    assert nxt is None
+
+
+def test_next_visible_pass_none_without_tle(monkeypatch):
+    monkeypatch.setattr(satellites, "fetch_iss_tle", lambda: None)
+    assert satellites.next_visible_pass(38.72, -9.14, 3600, date(2026, 7, 24),
+                                        datetime(2026, 7, 24, 0, 0), horizon_days=3) is None
 
 
 def test_iss_passes_finds_a_visible_pass():

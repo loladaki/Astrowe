@@ -838,7 +838,7 @@ function buildConds(n) {
     icon: iconSVG("thermo"), tag: "Temperature",
     value: c ? c.temp_label : "—",
     spark: el("div", "cond-note",
-      [n.wind_kmh !== null ? `vento ${Math.round(n.wind_kmh)} km/h` : "",
+      [n.wind_kmh !== null ? `wind ${Math.round(n.wind_kmh)} km/h` : "",
        `seeing ${n.seeing}`].filter(Boolean).join(" · ")),
   }));
 
@@ -934,7 +934,7 @@ function buildMeteogram(hours) {
   box.append(meteoRow("seeing", hours, "jet",
     (v) => v === null ? "—" : v < 60 ? "good" : v < 100 ? "fair" : "poor"));
   box.append(meteoRow("Moon", hours, "moon",
-    (v) => v === null ? "—" : v <= 0 ? "posta" : `${Math.round(v)}°`));
+    (v) => v === null ? "—" : v <= 0 ? "set" : `${Math.round(v)}°`));
   box.append(meteoRow("dew margin", hours, "spread", (v) => v === null ? "—" : `${v.toFixed(1)}°`));
   box.append(meteoRow("temp", hours, "temp", (v) => v === null ? "—" : `${Math.round(v)}°`));
   return box;
@@ -1156,6 +1156,35 @@ function buildHighlights(n) {
   return box;
 }
 
+/** "Will I see the ISS?" — a section that always answers: visible this week,
+ *  when it comes back, or nothing on the horizon. The ISS is only visible in
+ *  the weeks its orbit catches the sun at dusk/dawn, so many weeks show none. */
+function buildISSOutlook(data) {
+  const iss = data.iss;
+  if (!iss) return null;
+  const p = iss.next_pass;
+  const where = p && `up to ${Math.round(p.peak_altitude_deg)}° ${p.peak_direction}`;
+  let text;
+  if (iss.visible_this_week && p) {
+    text = `Visible this week — soonest ${weekdayShort(p.start.slice(0, 10))} `
+      + `at ${hhmm(p.start)}, ${where}. Passes are marked on their nights above.`;
+  } else if (p) {
+    text = `Not visible this week. The ISS returns to the sky around `
+      + `${weekdayLong(p.start.slice(0, 10))} — first pass at ${hhmm(p.start)}, `
+      + `${where}. Dates this far ahead are approximate.`;
+  } else {
+    text = `Not visible from here for at least the next ${iss.horizon_days} days. `
+      + `The ISS only shows in the weeks its orbit catches the sunlight at dusk `
+      + `or dawn — check back later.`;
+  }
+  const box = el("div", "highlights");
+  const row = el("div", "hl");
+  row.append(el("span", "hl-icon", "🛰️"), el("span", "hl-name", "ISS"),
+             el("span", "hl-text", text));
+  box.append(row);
+  return block("Space station (ISS)", box);
+}
+
 const RAW_COLUMNS = [
   ["Time", (h) => hhmm(h.time)],
   ["Qual.", (h) => `${(h.quality * 100).toFixed(0)}%`],
@@ -1271,6 +1300,9 @@ function renderDetail(n) {
   if (hl) detailEl.append(hl);
 
   detailEl.append(block("Conditions", buildConds(n)));
+
+  const issOutlook = buildISSOutlook(lastData);
+  if (issOutlook) detailEl.append(issOutlook);
 
   const raw = buildRaw(hrs);
   raw.hidden = true;
