@@ -47,38 +47,50 @@ def clean_tle_cache():
 
 
 def test_fetch_iss_tle_negative_cache_skips_retry(clean_tle_cache, monkeypatch):
-    # Uma falha do Celestrak não deve fazer o pedido seguinte voltar à rede
+    # Todas as fontes a falhar não deve fazer o pedido seguinte voltar à rede
     # durante o cooldown — devolve None de imediato.
     calls = {"n": 0}
 
-    def boom(*a, **k):
+    def boom(url):
         calls["n"] += 1
         raise httpx.ConnectTimeout("timed out")
 
-    monkeypatch.setattr(satellites.httpx, "get", boom)
+    monkeypatch.setattr(satellites, "_http_get_tle", boom)
 
     assert satellites.fetch_iss_tle() is None
-    assert calls["n"] == 1
+    # Tenta cada fonte uma vez antes de desistir.
+    assert calls["n"] == len(satellites.ISS_TLE_SOURCES)
     assert satellites._tle_cache["last_fail"] is not None
 
     # Segunda chamada dentro do cooldown: não toca na rede.
     assert satellites.fetch_iss_tle() is None
-    assert calls["n"] == 1
+    assert calls["n"] == len(satellites.ISS_TLE_SOURCES)
+
+
+def test_fetch_iss_tle_falls_back_to_second_source(clean_tle_cache, monkeypatch):
+    # Primeira fonte falha, segunda safa: devolve o TLE e não marca falha.
+    tle_text = "ISS (ZARYA)\n" + ISS_TLE[0] + "\n" + ISS_TLE[1] + "\n"
+
+    def maybe(url):
+        if url == satellites.ISS_TLE_SOURCES[0]:
+            raise httpx.ConnectTimeout("timed out")
+        return tle_text
+
+    monkeypatch.setattr(satellites, "_http_get_tle", maybe)
+
+    assert satellites.fetch_iss_tle() == ISS_TLE
+    assert satellites._tle_cache["last_fail"] is None
+    assert satellites._tle_cache["lines"] == ISS_TLE
 
 
 def test_fetch_iss_tle_retries_after_cooldown(clean_tle_cache, monkeypatch):
     # Passado o cooldown, volta a tentar (e aqui recupera com sucesso).
-    # Falha já fora do cooldown. (monotonic() tem origem arbitrária, por isso
-    # datamos relativamente ao relógio atual, não a um 0.0 absoluto.)
+    # (monotonic() tem origem arbitrária, por isso datamos relativamente ao
+    # relógio atual, não a um 0.0 absoluto.)
     satellites._tle_cache["last_fail"] = time.monotonic() - satellites.FAIL_COOLDOWN_S - 1
     tle_text = "ISS (ZARYA)\n" + ISS_TLE[0] + "\n" + ISS_TLE[1] + "\n"
 
-    class FakeResp:
-        text = tle_text
-        def raise_for_status(self):
-            pass
-
-    monkeypatch.setattr(satellites.httpx, "get", lambda *a, **k: FakeResp())
+    monkeypatch.setattr(satellites, "_http_get_tle", lambda url: tle_text)
 
     assert satellites.fetch_iss_tle() == ISS_TLE
     assert satellites._tle_cache["last_fail"] is None
