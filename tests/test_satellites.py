@@ -1,7 +1,11 @@
 """Passagens da ISS: parsing do TLE e cálculo das passagens visíveis.
 
 Usa um TLE fixo (offline, determinístico) — sem tocar na rede."""
+import time
 from datetime import datetime
+
+import httpx
+import pytest
 
 from app import satellites
 
@@ -31,6 +35,54 @@ def test_iss_passes_graceful_without_tle(monkeypatch):
 
 def test_iss_passes_empty_window():
     assert satellites.iss_passes(38.72, -9.14, 3600, None, None, tle=ISS_TLE) == []
+
+
+@pytest.fixture
+def clean_tle_cache():
+    # Isolar a cache-módulo entre testes que mexem no fetch.
+    saved = dict(satellites._tle_cache)
+    satellites._tle_cache.update(day=None, lines=None, last_fail=None)
+    yield
+    satellites._tle_cache.update(saved)
+
+
+def test_fetch_iss_tle_negative_cache_skips_retry(clean_tle_cache, monkeypatch):
+    # Uma falha do Celestrak não deve fazer o pedido seguinte voltar à rede
+    # durante o cooldown — devolve None de imediato.
+    calls = {"n": 0}
+
+    def boom(*a, **k):
+        calls["n"] += 1
+        raise httpx.ConnectTimeout("timed out")
+
+    monkeypatch.setattr(satellites.httpx, "get", boom)
+
+    assert satellites.fetch_iss_tle() is None
+    assert calls["n"] == 1
+    assert satellites._tle_cache["last_fail"] is not None
+
+    # Segunda chamada dentro do cooldown: não toca na rede.
+    assert satellites.fetch_iss_tle() is None
+    assert calls["n"] == 1
+
+
+def test_fetch_iss_tle_retries_after_cooldown(clean_tle_cache, monkeypatch):
+    # Passado o cooldown, volta a tentar (e aqui recupera com sucesso).
+    # Falha já fora do cooldown. (monotonic() tem origem arbitrária, por isso
+    # datamos relativamente ao relógio atual, não a um 0.0 absoluto.)
+    satellites._tle_cache["last_fail"] = time.monotonic() - satellites.FAIL_COOLDOWN_S - 1
+    tle_text = "ISS (ZARYA)\n" + ISS_TLE[0] + "\n" + ISS_TLE[1] + "\n"
+
+    class FakeResp:
+        text = tle_text
+        def raise_for_status(self):
+            pass
+
+    monkeypatch.setattr(satellites.httpx, "get", lambda *a, **k: FakeResp())
+
+    assert satellites.fetch_iss_tle() == ISS_TLE
+    assert satellites._tle_cache["last_fail"] is None
+    assert satellites._tle_cache["lines"] == ISS_TLE
 
 
 def test_iss_passes_finds_a_visible_pass():

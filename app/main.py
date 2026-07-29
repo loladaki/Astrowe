@@ -1,6 +1,7 @@
 """Astrowe — API FastAPI + serve o frontend estático."""
 from __future__ import annotations
 
+import asyncio
 import logging
 from pathlib import Path
 from typing import Literal
@@ -92,7 +93,12 @@ async def _score_with(data: dict, lat: float, lon: float, mode: str):
     # Degradação graciosa: sem chave da API (ou se ela falhar) devolve None e a
     # previsão sai na mesma, apenas sem o fator de poluição luminosa.
     lp = await lightpollution.fetch(lat, lon)
-    return score.build_forecast(data, lat, lon, mode, lp)
+    # `build_forecast` é síncrono e faz trabalho pesado (Skyfield) + uma chamada
+    # de rede bloqueante ao Celestrak (TLE da ISS). Corrido no event loop,
+    # bloqueava-o durante o timeout dessa chamada, o que fazia o `/api/health`
+    # deixar de responder e o Render matar o serviço. Fora do loop, num thread,
+    # o health check continua a responder mesmo com o Celestrak em baixo.
+    return await asyncio.to_thread(score.build_forecast, data, lat, lon, mode, lp)
 
 
 @app.api_route("/api/health", methods=["GET", "HEAD"])
