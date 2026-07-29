@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from app import score
+from app import satellites, score
 
 HOURLY_VARS = [
     "cloud_cover", "cloud_cover_low", "cloud_cover_mid", "cloud_cover_high",
@@ -41,8 +41,16 @@ def _synthetic_weather(days=7):
             "hourly": hourly}
 
 
+@pytest.fixture(scope="module", autouse=True)
+def _no_network_iss():
+    # As passagens da ISS buscam o TLE ao Celestrak; nos testes ficamos offline.
+    from unittest import mock
+    with mock.patch.object(satellites, "fetch_iss_tle", return_value=None):
+        yield
+
+
 @pytest.fixture(scope="module")
-def forecast():
+def forecast(_no_network_iss):
     data = _synthetic_weather()
     return score.build_forecast(data, 38.72, -9.14, "deepsky", None)
 

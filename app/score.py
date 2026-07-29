@@ -11,7 +11,7 @@ from __future__ import annotations
 import math
 from datetime import datetime, timedelta, timezone
 
-from app import astro, events, objects
+from app import astro, events, objects, satellites
 from app.models import (FactorImpact, ForecastResponse, HourDetail,
                         LightPollution, MeteorShower, MilkyWay, NightCards,
                         NightScore, SkyObject)
@@ -748,6 +748,9 @@ def _build_night(d, window, display_window, twilight_window, times, h,
                                   win_start, win_end)
     galaxy = events.milky_way_core(lat, lon, offset, times[mid],
                                    win_start, win_end, moonlight)
+    # Passagens da ISS: dão-se no crepúsculo, por isso usam a janela pôr→nascer
+    # do Sol (não a janela escura recomendada).
+    iss = satellites.iss_passes(lat, lon, offset, sun_set, sun_rise)
 
     win_qualities = [p["quality"] for p in parts[ext_i:ext_j + 1]]
 
@@ -775,6 +778,7 @@ def _build_night(d, window, display_window, twilight_window, times, h,
         wind_kmh=None if wind is None else round(wind, 1),
         meteor_shower=MeteorShower(**shower) if shower else None,
         milky_way=MilkyWay(**galaxy) if galaxy else None,
+        iss_passes=iss,
         limiting=impacts,
         objects=[SkyObject(**o) for o in sky],
         hours=hours,

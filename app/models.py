@@ -57,6 +57,18 @@ class MeteorShower(BaseModel):
     transit_time: str | None
 
 
+class ISSPass(BaseModel):
+    """Uma passagem visível da ISS na noite."""
+    start: str                           # hora local ISO (nasce)
+    peak: str                            # culminação
+    end: str                             # põe-se
+    peak_altitude_deg: float
+    peak_direction: str
+    rise_direction: str
+    set_direction: str
+    duration_min: int
+
+
 class MilkyWay(BaseModel):
     """Núcleo galáctico — o alvo do verão para astrofotografia."""
     altitude_deg: float
@@ -152,6 +164,7 @@ class NightScore(BaseModel):
 
     meteor_shower: MeteorShower | None   # se a noite cair perto de um pico
     milky_way: MilkyWay | None
+    iss_passes: list[ISSPass] = []       # passagens visíveis da ISS
 
     limiting: list[FactorImpact]         # o que custa pontos, do pior ao menor
     objects: list[SkyObject]             # o que se vê a meio da janela
