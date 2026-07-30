@@ -606,6 +606,16 @@ button { font-family: inherit; cursor: pointer; border-radius: var(--r2); }
 #map { height: min(58vh, 440px); width: 100%; }
 .leaflet-container { background: var(--surface-2); }
 
+/* Info do ponto clicado (coordenadas + Bortle) à esquerda do botão. */
+.map-info { display: grid; gap: 2px; min-width: 0; }
+#map-coords { color: var(--text); }
+.map-lp { font-size: var(--t-xs); color: var(--dim); }
+.map-lp.is-loading { color: var(--faint); font-style: italic; }
+.map-lp.is-missing { color: var(--faint); }
+.map-lp.is-good { color: var(--good); }
+.map-lp.is-ok   { color: var(--ok); }
+.map-lp.is-poor { color: var(--poor); }
+
 /* Legenda da poluição luminosa, sobre o mapa. */
 .lp-legend {
   display: grid; gap: 4px;
