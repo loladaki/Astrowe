@@ -1598,9 +1598,28 @@ function initMap() {
   map = L.map("map").setView(current ? [current.lat, current.lon] : [39.6, -8.0],
                              current ? 10 : 6);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 18,
+    maxZoom: 19,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
   }).addTo(map);
+
+  // A "cunha" do Astrowe: camada de poluição luminosa por cima do mapa, para
+  // se ver ONDE está escuro antes de escolher o sítio. Tiles do Atlas de David
+  // Lorenz (VIIRS 2024) — o mesmo dataset livre que a comunidade usa. tileSize
+  // 1024 + zoomOffset −2 são o esquema próprio dele (não mexer).
+  const lightPollution = L.tileLayer(
+    "https://djlorenz.github.io/astronomy/image_tiles/tiles2024/tile_{z}_{x}_{y}.png", {
+      minZoom: 2, maxNativeZoom: 8, maxZoom: 19, tileSize: 1024, zoomOffset: -2,
+      opacity: 0.55,
+      errorTileUrl: "https://djlorenz.github.io/astronomy/image_tiles/tiles2024/black.png",
+      attribution: 'Light pollution &copy; <a href="https://djlorenz.github.io/astronomy/lp/" '
+        + 'target="_blank" rel="noopener">D. Lorenz</a>',
+    }).addTo(map);
+
+  // Toggle da camada — fica ligada por defeito (é o que interessa mostrar).
+  L.control.layers(null, { "Light pollution": lightPollution },
+                   { collapsed: false }).addTo(map);
+  addMapLegend();
+
   map.on("click", (e) => {
     picked = { lat: e.latlng.lat, lon: e.latlng.lng };
     if (marker) marker.setLatLng(e.latlng);
@@ -1608,6 +1627,20 @@ function initMap() {
     mapCoords.textContent = `${picked.lat.toFixed(4)}, ${picked.lon.toFixed(4)}`;
     mapConfirm.disabled = false;
   });
+}
+
+/** Legenda da camada: um gradiente do céu escuro ao brilho da cidade. */
+function addMapLegend() {
+  const legend = L.control({ position: "bottomleft" });
+  legend.onAdd = () => {
+    const div = L.DomUtil.create("div", "lp-legend");
+    div.innerHTML =
+      '<span class="lp-legend-title">Light pollution</span>'
+      + '<span class="lp-legend-bar" aria-hidden="true"></span>'
+      + '<span class="lp-legend-ends"><span>darker sky</span><span>city glow</span></span>';
+    return div;
+  };
+  legend.addTo(map);
 }
 
 mapBtn.addEventListener("click", () => {
@@ -1790,7 +1823,8 @@ const PAGES = {
      <ul>
        <li><a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> — weather</li>
        <li><a href="https://rhodesmill.org/skyfield/" target="_blank" rel="noopener">Skyfield</a> — ephemerides (Sun, Moon, planets)</li>
-       <li><a href="https://www.lightpollutionmap.info" target="_blank" rel="noopener">lightpollutionmap.info</a> — light pollution</li>
+       <li><a href="https://www.lightpollutionmap.info" target="_blank" rel="noopener">lightpollutionmap.info</a> — light pollution (score)</li>
+       <li><a href="https://djlorenz.github.io/astronomy/lp/" target="_blank" rel="noopener">David J. Lorenz's Light Pollution Atlas</a> — light pollution map layer</li>
        <li><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> + <a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a> — map</li>
        <li>Messier catalogue validated against SIMBAD</li>
      </ul>

@@ -606,6 +606,27 @@ button { font-family: inherit; cursor: pointer; border-radius: var(--r2); }
 #map { height: min(58vh, 440px); width: 100%; }
 .leaflet-container { background: var(--surface-2); }
 
+/* Legenda da poluição luminosa, sobre o mapa. */
+.lp-legend {
+  display: grid; gap: 4px;
+  padding: 8px 10px; border-radius: var(--r1);
+  background: rgba(6, 6, 7, 0.82); border: 1px solid var(--border-lit);
+  color: var(--text); font-size: var(--t-xs); line-height: 1.2;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+.lp-legend-title { font-weight: 600; }
+.lp-legend-bar {
+  height: 8px; border-radius: 4px;
+  /* Aproxima a rampa do Atlas de Lorenz: escuro → azul → verde → amarelo →
+     vermelho → branco (menos para mais poluição). */
+  background: linear-gradient(to right,
+    #0b1026, #1a3b8a, #2f9e44, #ffd43b, #fd7e14, #e03131, #ffffff);
+}
+.lp-legend-ends {
+  display: flex; justify-content: space-between; color: var(--dim);
+}
+/* No modo vermelho, o mapa já é filtrado; a legenda segue a paleta do site. */
+
 .compare-body { padding: var(--s4); overflow-x: auto; }
 .cmp-verdict {
   margin: 0 0 var(--s4); padding: var(--s3) var(--s4);
