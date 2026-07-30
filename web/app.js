@@ -28,6 +28,7 @@ const mapModal = $("map-modal");
 const mapClose = $("map-close");
 const mapConfirm = $("map-confirm");
 const mapCoords = $("map-coords");
+const mapLp = $("map-lp");
 const compareModal = $("compare-modal");
 const compareClose = $("compare-close");
 const compareBody = $("compare-body");
@@ -1626,7 +1627,40 @@ function initMap() {
     else marker = L.marker(e.latlng).addTo(map);
     mapCoords.textContent = `${picked.lat.toFixed(4)}, ${picked.lon.toFixed(4)}`;
     mapConfirm.disabled = false;
+    showPointDarkness(picked.lat, picked.lon);
   });
+}
+
+/** Bortle 1–3 escuro, 4–5 razoável, 6+ poluído — cor pela mesma paleta do site. */
+function bortleClass(bortle) {
+  if (bortle <= 3) return "good";
+  if (bortle <= 5) return "ok";
+  return "poor";
+}
+
+// Cada clique pede a poluição luminosa do ponto; a sequência ignora respostas
+// obsoletas se clicares depressa noutro sítio.
+let lpRequestSeq = 0;
+async function showPointDarkness(lat, lon) {
+  const seq = ++lpRequestSeq;
+  mapLp.textContent = "checking sky darkness…";
+  mapLp.className = "map-lp is-loading";
+  try {
+    const r = await fetch(`/api/lightpollution?lat=${lat}&lon=${lon}`);
+    if (seq !== lpRequestSeq) return;   // já clicaste noutro ponto
+    const lp = r.ok ? (await r.json()).light_pollution : null;
+    if (lp) {
+      mapLp.textContent = `Bortle ${lp.bortle} · ${lp.description} · SQM ${lp.sqm}`;
+      mapLp.className = `map-lp is-${bortleClass(lp.bortle)}`;
+    } else {
+      mapLp.textContent = "sky darkness unavailable here";
+      mapLp.className = "map-lp is-missing";
+    }
+  } catch {
+    if (seq !== lpRequestSeq) return;
+    mapLp.textContent = "sky darkness unavailable";
+    mapLp.className = "map-lp is-missing";
+  }
 }
 
 /** Legenda da camada: um gradiente do céu escuro ao brilho da cidade. */
@@ -1645,6 +1679,8 @@ function addMapLegend() {
 
 mapBtn.addEventListener("click", () => {
   mapModal.hidden = false;
+  mapLp.textContent = "";           // limpa o Bortle do ponto anterior
+  mapLp.className = "map-lp";
   if (!map) initMap();
   setTimeout(() => map.invalidateSize(), 50);
   if (current) map.setView([current.lat, current.lon], 10);

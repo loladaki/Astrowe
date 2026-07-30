@@ -26,3 +26,15 @@ def test_root_serves_html():
     r = client.get("/")
     assert r.status_code == 200
     assert "Astrowe" in r.text
+
+
+def test_lightpollution_point_shape():
+    # Sem chave da API (ambiente de teste) degrada para null, mas responde 200
+    # com a chave "light_pollution" — é o que o mapa consome ao clicar.
+    r = client.get("/api/lightpollution", params={"lat": 38.72, "lon": -9.14})
+    assert r.status_code == 200
+    assert "light_pollution" in r.json()
+
+
+def test_lightpollution_point_rejects_bad_coords():
+    assert client.get("/api/lightpollution", params={"lat": 200, "lon": 0}).status_code == 422

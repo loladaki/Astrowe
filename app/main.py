@@ -101,6 +101,20 @@ async def _score_with(data: dict, lat: float, lon: float, mode: str):
     return await asyncio.to_thread(score.build_forecast, data, lat, lon, mode, lp)
 
 
+@app.get("/api/lightpollution")
+async def light_pollution_point(
+    lat: float = Query(..., ge=-90, le=90),
+    lon: float = Query(..., ge=-180, le=180),
+):
+    """Poluição luminosa (Bortle/SQM) num ponto, para o mapa mostrar ao clicar.
+
+    Devolve `{"light_pollution": {...}}` ou `{"light_pollution": null}` quando não
+    há chave ou o ponto não tem dados — a `fetch` já degrada em silêncio e faz
+    cache por ~100 m, por isso clicar à volta do mesmo sítio não gasta quota.
+    """
+    return {"light_pollution": await lightpollution.fetch(lat, lon)}
+
+
 @app.api_route("/api/health", methods=["GET", "HEAD"])
 async def health():
     """Diagnóstico rápido: que ingredientes estão disponíveis.
