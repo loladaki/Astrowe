@@ -606,6 +606,30 @@ button { font-family: inherit; cursor: pointer; border-radius: var(--r2); }
 #map { height: min(58vh, 440px); width: 100%; }
 .leaflet-container { background: var(--surface-2); }
 
+/* Barra e lista de "sítios mais escuros por perto" (a cunha). */
+.map-tools {
+  display: flex; align-items: center; gap: var(--s3);
+  padding: var(--s3) var(--s4); border-top: 1px solid var(--border);
+}
+.darker-status { color: var(--dim); font-size: var(--t-sm); }
+.darker-list {
+  list-style: none; margin: 0; padding: 0 var(--s4) var(--s3);
+  display: grid; gap: var(--s2);
+}
+.darker-item {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: var(--s3); padding: var(--s2) var(--s3); cursor: pointer;
+  border: 1px solid var(--border); border-radius: var(--r1);
+  background: var(--surface);
+}
+.darker-item:hover { border-color: var(--border-lit); }
+.darker-bortle { font-weight: 600; }
+.darker-item.is-good .darker-bortle { color: var(--good); }
+.darker-item.is-ok   .darker-bortle { color: var(--ok); }
+.darker-item.is-poor .darker-bortle { color: var(--poor); }
+.darker-desc { color: var(--dim); font-size: var(--t-sm); }
+.darker-meta { color: var(--faint); font-size: var(--t-xs); white-space: nowrap; }
+
 /* Info do ponto clicado (coordenadas + Bortle) à esquerda do botão. */
 .map-info { display: grid; gap: 2px; min-width: 0; }
 #map-coords { color: var(--text); }

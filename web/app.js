@@ -29,6 +29,9 @@ const mapClose = $("map-close");
 const mapConfirm = $("map-confirm");
 const mapCoords = $("map-coords");
 const mapLp = $("map-lp");
+const darkerBtn = $("darker-btn");
+const darkerStatus = $("darker-status");
+const darkerList = $("darker-list");
 const compareModal = $("compare-modal");
 const compareClose = $("compare-close");
 const compareBody = $("compare-body");
@@ -1592,7 +1595,7 @@ compareModal.addEventListener("click", (e) => {
 
 /* ------------------------------------------------- mapa */
 
-let map = null, marker = null, picked = null;
+let map = null, marker = null, picked = null, darkerLayer = null;
 
 function initMap() {
   // O Leaflet só mede bem o contentor depois de visível.
@@ -1620,15 +1623,21 @@ function initMap() {
   L.control.layers(null, { "Light pollution": lightPollution },
                    { collapsed: false }).addTo(map);
   addMapLegend();
+  darkerLayer = L.layerGroup().addTo(map);   // marcadores das sugestões
 
-  map.on("click", (e) => {
-    picked = { lat: e.latlng.lat, lon: e.latlng.lng };
-    if (marker) marker.setLatLng(e.latlng);
-    else marker = L.marker(e.latlng).addTo(map);
-    mapCoords.textContent = `${picked.lat.toFixed(4)}, ${picked.lon.toFixed(4)}`;
-    mapConfirm.disabled = false;
-    showPointDarkness(picked.lat, picked.lon);
-  });
+  map.on("click", (e) => selectMapPoint(e.latlng.lat, e.latlng.lng));
+}
+
+/** Escolhe um ponto no mapa: marcador, coordenadas, botão e leitura do Bortle.
+ *  Se `lpText` vier dado (sugestão já traz o Bortle), evita novo pedido. */
+function selectMapPoint(lat, lon, lpText, lpClass) {
+  picked = { lat, lon };
+  if (marker) marker.setLatLng([lat, lon]);
+  else marker = L.marker([lat, lon]).addTo(map);
+  mapCoords.textContent = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+  mapConfirm.disabled = false;
+  if (lpText) { mapLp.textContent = lpText; mapLp.className = lpClass; }
+  else showPointDarkness(lat, lon);
 }
 
 /** Bortle 1–3 escuro, 4–5 razoável, 6+ poluído — cor pela mesma paleta do site. */
@@ -1663,6 +1672,63 @@ async function showPointDarkness(lat, lon) {
   }
 }
 
+const DARKER_RADIUS_KM = 40;
+
+/** A "cunha": sugerir sítios mais escuros por perto. Parte do ponto escolhido
+ *  (ou da localização atual, ou do centro do mapa) e pede ao backend. */
+async function findDarkerNearby() {
+  const c = map && map.getCenter();
+  const origin = picked
+    || (current ? { lat: current.lat, lon: current.lon } : null)
+    || (c ? { lat: c.lat, lon: c.lng } : null);
+  if (!origin) return;
+
+  darkerBtn.disabled = true;
+  darkerStatus.textContent = "Scanning nearby skies…";
+  darkerList.hidden = true;
+  darkerList.innerHTML = "";
+  if (darkerLayer) darkerLayer.clearLayers();
+  try {
+    const r = await fetch(`/api/darker-nearby?lat=${origin.lat}&lon=${origin.lon}`
+                          + `&radius_km=${DARKER_RADIUS_KM}`);
+    const data = r.ok ? await r.json() : null;
+    const suggestions = data ? data.suggestions : [];
+    if (!suggestions.length) {
+      darkerStatus.textContent = data && data.origin
+        ? `This is about the darkest sky within ${DARKER_RADIUS_KM} km — nothing clearly better nearby.`
+        : "Sky darkness data isn't available here.";
+      return;
+    }
+    darkerStatus.textContent = `Darker skies within ${DARKER_RADIUS_KM} km — tap one to use it:`;
+    for (const s of suggestions) renderDarkerItem(s);
+    darkerList.hidden = false;
+  } catch {
+    darkerStatus.textContent = "Couldn't check nearby skies. Try again.";
+  } finally {
+    darkerBtn.disabled = false;
+  }
+}
+
+function renderDarkerItem(s) {
+  const li = el("li", `darker-item is-${bortleClass(s.bortle)}`);
+  const info = el("div", "darker-info");
+  info.append(el("span", "darker-bortle", `Bortle ${s.bortle}`),
+              el("span", "darker-desc", ` · ${s.description}`));
+  li.append(info, el("div", "darker-meta",
+                     `${s.distance_km} km ${s.direction} · SQM ${s.sqm}`));
+  li.addEventListener("click", () => {
+    selectMapPoint(s.lat, s.lon, `Bortle ${s.bortle} · ${s.description} · SQM ${s.sqm}`,
+                   `map-lp is-${bortleClass(s.bortle)}`);
+    if (map) map.setView([s.lat, s.lon], 9);
+  });
+  if (darkerLayer) {
+    L.circleMarker([s.lat, s.lon], {
+      radius: 8, color: "#8bae7f", weight: 2, fillColor: "#8bae7f", fillOpacity: 0.5,
+    }).addTo(darkerLayer).bindTooltip(`Bortle ${s.bortle} · ${s.distance_km} km ${s.direction}`);
+  }
+  darkerList.append(li);
+}
+
 /** Legenda da camada: um gradiente do céu escuro ao brilho da cidade. */
 function addMapLegend() {
   const legend = L.control({ position: "bottomleft" });
@@ -1681,10 +1747,15 @@ mapBtn.addEventListener("click", () => {
   mapModal.hidden = false;
   mapLp.textContent = "";           // limpa o Bortle do ponto anterior
   mapLp.className = "map-lp";
+  darkerStatus.textContent = "";    // limpa sugestões da vez anterior
+  darkerList.hidden = true;
+  darkerList.innerHTML = "";
   if (!map) initMap();
+  if (darkerLayer) darkerLayer.clearLayers();
   setTimeout(() => map.invalidateSize(), 50);
   if (current) map.setView([current.lat, current.lon], 10);
 });
+darkerBtn.addEventListener("click", findDarkerNearby);
 mapClose.addEventListener("click", () => { mapModal.hidden = true; });
 mapModal.addEventListener("click", (e) => { if (e.target === mapModal) mapModal.hidden = true; });
 mapConfirm.addEventListener("click", () => {

@@ -38,3 +38,23 @@ def test_lightpollution_point_shape():
 
 def test_lightpollution_point_rejects_bad_coords():
     assert client.get("/api/lightpollution", params={"lat": 200, "lon": 0}).status_code == 422
+
+
+def test_darker_nearby_shape(monkeypatch):
+    # Mockar a fonte (o ambiente local pode ter chave real): sem dados → sugestões
+    # vazias, mas responde 200 com a forma que o mapa consome.
+    import app.lightpollution as lp
+
+    async def no_data(lat, lon, client=None):
+        return None
+    monkeypatch.setattr(lp, "fetch", no_data)
+    r = client.get("/api/darker-nearby", params={"lat": 38.72, "lon": -9.14})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["suggestions"] == []
+    assert "origin" in body and "radius_km" in body
+
+
+def test_darker_nearby_rejects_bad_radius():
+    r = client.get("/api/darker-nearby", params={"lat": 38.72, "lon": -9.14, "radius_km": 500})
+    assert r.status_code == 422

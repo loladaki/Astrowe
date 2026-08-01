@@ -28,7 +28,7 @@
   <meta name="twitter:image" content="https://astrowe.onrender.com/og.png" />
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="/style.css?v=22" />
+  <link rel="stylesheet" href="/style.css?v=23" />
 </head>
 <body>
   <div class="shell">
@@ -137,6 +137,11 @@
         <button type="button" id="map-close" class="btn-icon" title="Close">✕</button>
       </div>
       <div id="map"></div>
+      <div class="map-tools">
+        <button type="button" id="darker-btn" class="btn-ghost">🌑 Find darker skies nearby</button>
+        <span id="darker-status" class="darker-status"></span>
+      </div>
+      <ul id="darker-list" class="darker-list" hidden></ul>
       <div class="modal-foot">
         <div class="map-info">
           <span id="map-coords">Click the map to pick a point.</span>
@@ -182,6 +187,6 @@
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/app.js?v=22"></script>
+  <script src="/app.js?v=23"></script>
 </body>
 </html>
