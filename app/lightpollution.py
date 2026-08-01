@@ -117,12 +117,46 @@ async def _query_layer(client: httpx.AsyncClient, layer: str,
         raise LightPollutionError(body[:200], fatal) from None
 
 
-async def fetch(lat: float, lon: float) -> dict | None:
+async def _fetch_layers(client: httpx.AsyncClient, layers: list[str],
+                        lat: float, lon: float, key: str) -> dict | None:
+    """Percorre as camadas até uma dar dados; None se nenhuma der."""
+    for layer in layers:
+        try:
+            artificial = await _query_layer(client, layer, lat, lon, key)
+        except LightPollutionError as exc:
+            logger.warning("lightpollutionmap (%s): %s", layer, exc)
+            if exc.fatal:
+                break  # chave inválida ou quota esgotada: não insistir
+            continue
+        except httpx.HTTPError as exc:
+            logger.warning("lightpollutionmap (%s) falhou: %s", layer, exc)
+            continue
+        if artificial < 0:  # sentinela de "sem dados" do raster
+            logger.warning("lightpollutionmap (%s): sem dados neste ponto", layer)
+            continue
+        sqm = sqm_from_artificial(artificial)
+        bortle = bortle_from_sqm(sqm)
+        return {
+            "artificial_mcd_m2": round(artificial, 4),
+            "sqm": round(sqm, 2),
+            "bortle": bortle,
+            "description": bortle_phrase(bortle),
+            "source": f"lightpollutionmap.info ({layer})",
+        }
+    return None
+
+
+async def fetch(lat: float, lon: float,
+                client: httpx.AsyncClient | None = None) -> dict | None:
     """Poluição luminosa neste ponto, ou None se indisponível.
 
     Tenta a camada preferida e recua para a antiga se falhar. Devolve None
     (sem levantar exceção) quando não há chave ou tudo falha — a previsão deve
     continuar a funcionar sem este ingrediente.
+
+    Passa um `client` partilhado quando consultas muitos pontos de seguida (ex.:
+    sugerir sítios escuros): reutiliza a ligação em vez de abrir uma TLS por
+    ponto, o que é muito mais rápido.
     """
     cache_key = (round(lat, CACHE_PRECISION), round(lon, CACHE_PRECISION))
     if cache_key in _cache:
@@ -135,32 +169,11 @@ async def fetch(lat: float, lon: float) -> dict | None:
     preferred = os.environ.get(LAYER_ENV, "").strip() or DEFAULT_LAYER
     layers = [preferred] + ([FALLBACK_LAYER] if preferred != FALLBACK_LAYER else [])
 
-    result = None
-    async with httpx.AsyncClient(timeout=15.0) as client:
-        for layer in layers:
-            try:
-                artificial = await _query_layer(client, layer, lat, lon, key)
-            except LightPollutionError as exc:
-                logger.warning("lightpollutionmap (%s): %s", layer, exc)
-                if exc.fatal:
-                    break  # chave inválida ou quota esgotada: não insistir
-                continue
-            except httpx.HTTPError as exc:
-                logger.warning("lightpollutionmap (%s) falhou: %s", layer, exc)
-                continue
-            if artificial < 0:  # sentinela de "sem dados" do raster
-                logger.warning("lightpollutionmap (%s): sem dados neste ponto", layer)
-                continue
-            sqm = sqm_from_artificial(artificial)
-            bortle = bortle_from_sqm(sqm)
-            result = {
-                "artificial_mcd_m2": round(artificial, 4),
-                "sqm": round(sqm, 2),
-                "bortle": bortle,
-                "description": bortle_phrase(bortle),
-                "source": f"lightpollutionmap.info ({layer})",
-            }
-            break
+    if client is None:
+        async with httpx.AsyncClient(timeout=15.0) as own:
+            result = await _fetch_layers(own, layers, lat, lon, key)
+    else:
+        result = await _fetch_layers(client, layers, lat, lon, key)
 
     _cache[cache_key] = result
     return result

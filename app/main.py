@@ -12,7 +12,7 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from app import lightpollution, openmeteo, score
+from app import darksky, lightpollution, openmeteo, score
 
 # Lê LIGHTPOLLUTIONMAP_API_KEY de um .env na raiz do projeto, se existir.
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
@@ -113,6 +113,20 @@ async def light_pollution_point(
     cache por ~100 m, por isso clicar à volta do mesmo sítio não gasta quota.
     """
     return {"light_pollution": await lightpollution.fetch(lat, lon)}
+
+
+@app.get("/api/darker-nearby")
+async def darker_nearby(
+    lat: float = Query(..., ge=-90, le=90),
+    lon: float = Query(..., ge=-180, le=180),
+    radius_km: float = Query(30.0, ge=5.0, le=100.0),
+):
+    """Sítios mais escuros do que este ponto, dentro de `radius_km` — a "cunha".
+
+    On-demand (o utilizador carrega no botão), para não gastar quota do
+    lightpollutionmap.info em cada previsão. Ver `darksky.darker_nearby`.
+    """
+    return await darksky.darker_nearby(lat, lon, radius_km)
 
 
 @app.api_route("/api/health", methods=["GET", "HEAD"])
