@@ -606,6 +606,15 @@ button { font-family: inherit; cursor: pointer; border-radius: var(--r2); }
 #map { height: min(58vh, 440px); width: 100%; }
 .leaflet-container { background: var(--surface-2); }
 
+/* CTA na linha do local: leva ao mapa e já procura céu mais escuro. */
+.darker-cta {
+  align-self: flex-start; margin-top: var(--s2);
+  padding: 6px 12px; border-radius: var(--pill); cursor: pointer;
+  border: 1px solid var(--accent); background: var(--accent-soft);
+  color: var(--accent); font-size: var(--t-sm); font-weight: 600;
+}
+.darker-cta:hover { filter: brightness(1.1); }
+
 /* Barra e lista de "sítios mais escuros por perto" (a cunha). */
 .map-tools {
   display: flex; align-items: center; gap: var(--s3);
@@ -624,6 +633,11 @@ button { font-family: inherit; cursor: pointer; border-radius: var(--r2); }
 }
 .darker-item:hover { border-color: var(--border-lit); }
 .darker-bortle { font-weight: 600; }
+.darker-gain {
+  margin-left: var(--s2); padding: 0 6px; border-radius: var(--pill);
+  font-size: var(--t-xs); font-weight: 600;
+  color: var(--good); background: var(--bg-good);
+}
 .darker-item.is-good .darker-bortle { color: var(--good); }
 .darker-item.is-ok   .darker-bortle { color: var(--ok); }
 .darker-item.is-poor .darker-bortle { color: var(--poor); }

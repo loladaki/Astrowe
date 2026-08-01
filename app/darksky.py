@@ -20,14 +20,14 @@ from app.objects import compass_point
 
 EARTH_R_KM = 6371.0
 
-# Anéis (fração do raio) × direções: 2 × 8 = 16 candidatos. Poucos, para poupar
-# quota; chega para apanhar bolsas mais escuras à volta.
-RING_FRACTIONS = (0.5, 1.0)
+# Anéis (fração do raio) × direções: 4 × 8 = 32 candidatos. Anéis mais próximos
+# (~1/4 do raio) dão opções PERTO — o objetivo é o trade-off distância×escuridão,
+# não só o sítio mais escuro (que fica longe).
+RING_FRACTIONS = (0.25, 0.5, 0.75, 1.0)
 BEARINGS = tuple(range(0, 360, 45))     # N, NE, E, SE, S, SW, W, NW
 
-MIN_SQM_GAIN = 0.2      # tem de ser pelo menos isto mais escuro que a origem
-SPREAD_KM = 6.0         # não sugerir dois pontos quase em cima um do outro
-MAX_SUGGESTIONS = 3
+MIN_SQM_GAIN = 0.15     # ganho mínimo sobre a origem (~1 nível de Bortle no meio da escala)
+MAX_SUGGESTIONS = 5
 FETCH_CONCURRENCY = 8   # pedidos simultâneos ao lightpollutionmap.info (cliente partilhado)
 
 
@@ -88,6 +88,7 @@ async def darker_nearby(lat: float, lon: float, radius_km: float = 30.0) -> dict
             fetch(lat, lon), *(fetch(cy, cx) for cy, cx in cands))
 
     origin_sqm = origin["sqm"] if origin else None
+    origin_bortle = origin["bortle"] if origin else None
 
     scored = []
     for (cy, cx), lp in zip(cands, lps):
@@ -102,16 +103,28 @@ async def darker_nearby(lat: float, lon: float, radius_km: float = 30.0) -> dict
             "description": lp["description"],
             "distance_km": round(haversine_km(lat, lon, cy, cx)),
             "direction": compass_point(bearing_deg(lat, lon, cy, cx)),
+            "bortle_gain": (origin_bortle - lp["bortle"]) if origin_bortle else None,
         })
 
-    scored.sort(key=lambda s: (-s["sqm"], s["distance_km"]))
+    return {"origin": origin, "radius_km": radius_km,
+            "suggestions": _pareto_frontier(scored)}
 
-    picked: list[dict] = []
+
+def _pareto_frontier(scored: list[dict]) -> list[dict]:
+    """O compromisso distância × escuridão, não só os mais escuros.
+
+    Percorre por distância crescente e guarda um ponto só se for mais escuro do
+    que tudo o que está mais perto (skyline). Dá um menu do tipo "12 km → Bortle
+    3, 24 km → Bortle 2, 40 km → Bortle 1": para cada distância, o mais escuro
+    que se alcança, sem opções dominadas (mais longe E mais claras).
+    """
+    scored.sort(key=lambda s: (s["distance_km"], -s["sqm"]))
+    frontier: list[dict] = []
+    best_sqm = float("-inf")
     for s in scored:
-        if all(haversine_km(s["lat"], s["lon"], p["lat"], p["lon"]) >= SPREAD_KM
-               for p in picked):
-            picked.append(s)
-        if len(picked) >= MAX_SUGGESTIONS:
+        if s["sqm"] > best_sqm + 1e-9:   # mais escuro que qualquer um mais perto
+            frontier.append(s)
+            best_sqm = s["sqm"]
+        if len(frontier) >= MAX_SUGGESTIONS:
             break
-
-    return {"origin": origin, "radius_km": radius_km, "suggestions": picked}
+    return frontier
