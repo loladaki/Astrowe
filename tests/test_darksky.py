@@ -51,6 +51,26 @@ def test_darker_nearby_finds_the_dark_side(monkeypatch):
         assert s["distance_km"] > 0
 
 
+def test_darker_nearby_offers_the_distance_darkness_tradeoff(monkeypatch):
+    # Céu que escurece com a distância a norte: a fronteira deve dar VÁRIAS
+    # opções — perto+pouco mais escuro ATÉ longe+muito mais escuro —, não só a
+    # mais escura (longe). É o pedido do utilizador.
+    async def gradient(lat, lon, client=None):
+        sqm = round(18.0 + max(0.0, lat) * 9, 2)   # mais a norte = mais escuro
+        return {"sqm": sqm, "bortle": darksky.lightpollution.bortle_from_sqm(sqm),
+                "description": "x"}
+    monkeypatch.setattr(darksky.lightpollution, "fetch", gradient)
+
+    out = asyncio.run(darksky.darker_nearby(0.0, 0.0, radius_km=40))
+    s = out["suggestions"]
+    assert len(s) >= 3, "deve haver várias opções, não só a mais escura"
+    # Ordenadas por distância crescente, e cada uma mais escura que a anterior.
+    assert [x["distance_km"] for x in s] == sorted(x["distance_km"] for x in s)
+    assert all(a["sqm"] < b["sqm"] for a, b in zip(s, s[1:]))
+    assert s[0]["distance_km"] <= 15, "a mais próxima tem de ser mesmo perto"
+    assert s[0]["bortle"] > s[-1]["bortle"]   # a perto é mais clara que a longe
+
+
 def test_darker_nearby_empty_when_nothing_darker(monkeypatch):
     # Tudo à mesma luminosidade da origem: nada ganha o suficiente.
     monkeypatch.setattr(darksky.lightpollution, "fetch",

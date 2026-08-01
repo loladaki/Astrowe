@@ -32,6 +32,7 @@ const mapLp = $("map-lp");
 const darkerBtn = $("darker-btn");
 const darkerStatus = $("darker-status");
 const darkerList = $("darker-list");
+const darkerCta = $("darker-cta");
 const compareModal = $("compare-modal");
 const compareClose = $("compare-close");
 const compareBody = $("compare-body");
@@ -1346,6 +1347,7 @@ function render() {
     placeSkyEl.className = "place-sky is-missing";
     placeSkyEl.textContent = "light pollution not applied — scores are optimistic in urban areas";
   }
+  darkerCta.hidden = false;   // há um local: dá para procurar céu mais escuro por perto
 
   if (!selectedDate || !data.nights.some((n) => n.date === selectedDate)) {
     // Abre-se na noite MAIS PRÓXIMA — a pergunta é "vale a pena sair hoje?".
@@ -1699,7 +1701,8 @@ async function findDarkerNearby() {
         : "Sky darkness data isn't available here.";
       return;
     }
-    darkerStatus.textContent = `Darker skies within ${DARKER_RADIUS_KM} km — tap one to use it:`;
+    darkerStatus.textContent = "Darker skies nearby — closer & a bit darker, "
+      + "or farther & darkest. Tap one:";
     for (const s of suggestions) renderDarkerItem(s);
     darkerList.hidden = false;
   } catch {
@@ -1714,6 +1717,7 @@ function renderDarkerItem(s) {
   const info = el("div", "darker-info");
   info.append(el("span", "darker-bortle", `Bortle ${s.bortle}`),
               el("span", "darker-desc", ` · ${s.description}`));
+  if (s.bortle_gain > 0) info.append(el("span", "darker-gain", `−${s.bortle_gain}`));
   li.append(info, el("div", "darker-meta",
                      `${s.distance_km} km ${s.direction} · SQM ${s.sqm}`));
   li.addEventListener("click", () => {
@@ -1743,7 +1747,7 @@ function addMapLegend() {
   legend.addTo(map);
 }
 
-mapBtn.addEventListener("click", () => {
+function openMap() {
   mapModal.hidden = false;
   mapLp.textContent = "";           // limpa o Bortle do ponto anterior
   mapLp.className = "map-lp";
@@ -1754,8 +1758,11 @@ mapBtn.addEventListener("click", () => {
   if (darkerLayer) darkerLayer.clearLayers();
   setTimeout(() => map.invalidateSize(), 50);
   if (current) map.setView([current.lat, current.lon], 10);
-});
+}
+mapBtn.addEventListener("click", openMap);
 darkerBtn.addEventListener("click", findDarkerNearby);
+// CTA na previsão: abre o mapa e já corre a pesquisa a partir do local atual.
+darkerCta.addEventListener("click", () => { openMap(); findDarkerNearby(); });
 mapClose.addEventListener("click", () => { mapModal.hidden = true; });
 mapModal.addEventListener("click", (e) => { if (e.target === mapModal) mapModal.hidden = true; });
 mapConfirm.addEventListener("click", () => {
