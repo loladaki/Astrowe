@@ -606,6 +606,14 @@ button { font-family: inherit; cursor: pointer; border-radius: var(--r2); }
 #map { height: min(58vh, 440px); width: 100%; }
 .leaflet-container { background: var(--surface-2); }
 
+/* Resumo da noite: texto pronto a copiar/partilhar. */
+.night-summary {
+  white-space: pre-line; color: var(--text);
+  font-size: var(--t-sm); line-height: 1.55;
+}
+.summary-actions { display: flex; gap: var(--s2); }
+.summary-actions .btn-ghost { padding: 2px 12px; font-size: var(--t-xs); }
+
 /* CTA na linha do local: leva ao mapa e já procura céu mais escuro. */
 .darker-cta {
   align-self: flex-start; margin-top: var(--s2);
