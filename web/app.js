@@ -1190,6 +1190,91 @@ function buildISSOutlook(data) {
   return block("Space station (ISS)", box);
 }
 
+/** Resumo da noite em texto, das peças que já existem (sem AI) — para copiar ou
+ *  partilhar. É só juntar o que o site já sabe numa frase que se envia a um amigo. */
+function nightSummaryText(data, n) {
+  const place = (current && current.label) || "";
+  const day = n.in_progress ? "Tonight" : weekdayLong(n.date);
+  const usable = n.window_start !== null;
+  const lines = [];
+
+  lines.push(usable ? `${place} · ${day} — ${n.verdict} (${n.score}/100)`
+                    : `${place} · ${day} — ${n.headline}`);
+  if (usable) lines.push(`Dark window ${hhmm(n.window_start)}–${hhmm(n.window_end)}.`);
+
+  const c = n.cards, cond = [];
+  if (c && c.clouds_label) cond.push(c.clouds_label);
+  if (n.seeing) cond.push(`seeing ${n.seeing}`);
+  if (c && c.dew_label) cond.push(`dew ${c.dew_label.toLowerCase()}`);
+  if (cond.length) lines.push(cond.join(" · ") + ".");
+
+  if (n.moon_phase) {
+    lines.push(`${n.moon_phase}, ${Math.round(n.moon_illumination_pct)}% lit`
+      + (n.moonset ? `, sets ${hhmm(n.moonset)}.` : "."));
+  }
+  const lp = data.light_pollution;
+  if (lp) lines.push(`Sky: ${lp.description} (Bortle ${lp.bortle}).`);
+
+  const hi = [];
+  if (n.meteor_shower) hi.push(n.meteor_shower.name);
+  if (n.milky_way) hi.push("Milky Way visible");
+  if (n.iss_passes && n.iss_passes.length) hi.push(`ISS pass ${hhmm(n.iss_passes[0].start)}`);
+  if (hi.length) lines.push(`Highlights: ${hi.join(", ")}.`);
+
+  if (n.objects && n.objects.length) {
+    lines.push(`Targets: ${n.objects.slice(0, 3).map((o) => o.name).join(", ")}.`);
+  }
+  lines.push("astrowe.onrender.com");
+  return lines.join("\n");
+}
+
+/** Copia texto com recuo para `execCommand` quando o clipboard moderno falha
+ *  (sem foco, contexto não seguro, browsers antigos). */
+async function copyText(text) {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch { /* cai no recuo abaixo */ }
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.append(ta);
+    ta.focus();
+    ta.select();
+    const ok = document.execCommand("copy");
+    ta.remove();
+    return ok;
+  } catch { return false; }
+}
+
+function buildNightSummary(data, n) {
+  const text = nightSummaryText(data, n);
+  const body = el("p", "night-summary");
+  body.textContent = text;
+
+  const actions = el("div", "summary-actions");
+  const copyBtn = el("button", "btn-ghost", "Copy");
+  copyBtn.type = "button";
+  copyBtn.addEventListener("click", async () => {
+    copyBtn.textContent = (await copyText(text)) ? "Copied ✓" : "Copy failed";
+    setTimeout(() => { copyBtn.textContent = "Copy"; }, 1500);
+  });
+  actions.append(copyBtn);
+  if (navigator.share) {
+    const shareBtn = el("button", "btn-ghost", "Share");
+    shareBtn.type = "button";
+    shareBtn.addEventListener("click", () => {
+      navigator.share({ text, url: "https://astrowe.onrender.com/" }).catch(() => {});
+    });
+    actions.append(shareBtn);
+  }
+  return block("Night summary", body, actions);
+}
+
 const RAW_COLUMNS = [
   ["Time", (h) => hhmm(h.time)],
   ["Qual.", (h) => `${(h.quality * 100).toFixed(0)}%`],
@@ -1309,6 +1394,8 @@ function renderDetail(n) {
 
   const issOutlook = buildISSOutlook(lastData);
   if (issOutlook) detailEl.append(issOutlook);
+
+  detailEl.append(buildNightSummary(lastData, n));
 
   const raw = buildRaw(hrs);
   raw.hidden = true;
